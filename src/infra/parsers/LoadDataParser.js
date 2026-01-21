@@ -7,7 +7,7 @@ export const processExcelData = (arrayData) => {
         if (pIdx === -1) pIdx = rowStr.findIndex(c => c === 'load (kw)' || c === 'load' || (c.includes('load') && !c.includes('solar')));
         if (pIdx !== -1) {
             headerRowIndex = i; loadColIdx = pIdx; foundLoadName = row[pIdx];
-            const potentialTimeIndices = rowStr.map((c, idx) => (c.includes('time') || c.includes('date')) ? idx : -1).filter(idx => idx !== -1);
+            const potentialTimeIndices = rowStr.map((c, idx) => (c.includes('time') || c.includes('date') || c.includes('bắt đầu') || c.includes('kết thúc')) ? idx : -1).filter(idx => idx !== -1);
             if (potentialTimeIndices.length > 0) { for (let tCandidate of potentialTimeIndices) { let hasData = false; for (let j = 1; j <= 5; j++) { if (i + j < arrayData.length) { const val = arrayData[i + j][tCandidate]; if (val && String(val).trim() !== '') { hasData = true; break; } } } if (hasData) { timeColIdx = tCandidate; break; } } }
             break;
         }

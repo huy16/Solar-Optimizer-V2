@@ -23,7 +23,8 @@ import { FormulaModal } from './presentation/components/FormulaModal';
 import { Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
-import { PANEL_SPECS, DEFAULT_LOGO, INVERTER_DB, BESS_DB, INVERTER_OPTIONS, BESS_OPTIONS } from './data/sources/HardwareDatabase';
+import { PANEL_SPECS, INVERTER_DB, BESS_DB, INVERTER_OPTIONS, BESS_OPTIONS } from './data/sources/HardwareDatabase';
+import casLogo from './assets/cas_logo.png';
 
 
 
@@ -156,7 +157,8 @@ const SolarOptimizer = () => {
 
     const [isSwappedDate, setIsSwappedDate] = useState(false);
     const [calibrationFactor, setCalibrationFactor] = useState(100);
-    const [logoBase64, setLogoBase64] = useState(DEFAULT_LOGO);
+
+    // Logo removed (using static CAS logo)
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isManualConfig, setIsManualConfig] = useState(false);
@@ -190,7 +192,7 @@ const SolarOptimizer = () => {
     // Refs
     const fileInputRef = useRef(null);
     const solarFileInputRef = useRef(null);
-    const logoInputRef = useRef(null);
+
     const isNewFileLoad = useRef(true);
 
     // Helper Debug
@@ -340,10 +342,7 @@ const SolarOptimizer = () => {
 
 
 
-    const handleLogoUpload = (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader(); reader.onload = (evt) => { setLogoBase64(evt.target.result); }; reader.readAsDataURL(file);
-    };
+
 
     const toggleExportConfig = (key) => { setExportConfig(prev => ({ ...prev, [key]: !prev[key] })); };
 
@@ -984,7 +983,7 @@ const SolarOptimizer = () => {
                     {/* PAGE 1: OVERVIEW */}
                     {/* PAGE 1: OVERVIEW & CONFIG & DISPATCH */}
                     <div id="report-page-1" className="p-8 h-full bg-white flex flex-col justify-start gap-4">
-                        <div className="relative h-24 w-full shrink-0"><div className="absolute left-0 top-0 h-full flex items-center max-w-[300px]">{logoBase64 && <img src={logoBase64} className="max-h-16 w-auto object-contain" alt="Logo" />}</div><div className="w-full h-full flex flex-col justify-center items-center pointer-events-none"><h1 className="text-3xl font-bold text-blue-900 mb-1 uppercase text-center leading-tight">Báo Cáo Tính Toán<br />Công Suất Lắp Đặt</h1><p className="text-sm text-slate-500 italic">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p></div></div>
+                        <div className="relative h-24 w-full shrink-0"><div className="absolute left-0 top-0 h-full flex items-start pt-2 max-w-[200px]"><img src={casLogo} className="max-h-16 w-auto object-contain" alt="CAS Logo" /></div><div className="w-full h-full flex flex-col justify-start items-center pt-2 pointer-events-none"><h1 className="text-3xl font-bold text-blue-900 mb-1 uppercase text-center leading-tight">Báo Cáo Tính Toán<br />Công Suất Lắp Đặt</h1><p className="text-sm text-slate-500 italic">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p></div></div>
 
                         {/* 1. Overview */}
                         {exportConfig.overview && (
@@ -1473,11 +1472,7 @@ const SolarOptimizer = () => {
                                 </div>
                             </div>
 
-                            {/* LOGO REPORT CARD */}
-                            <div className={`px-3 py-2 rounded border text-sm ${logoBase64 ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
-                                <div className="flex justify-between items-center mb-1"><span className="font-medium text-slate-700">Logo Report</span><button onClick={() => logoInputRef.current?.click()} className="text-blue-600 hover:underline text-xs"><ImageIcon size={12} /></button></div><div className="text-xs text-slate-500 truncate">{logoBase64 !== DEFAULT_LOGO ? 'Đã tải lên (Mới)' : 'Mặc định'}</div>
-                            </div>
-                            <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoUpload} />
+
                         </div>
                     </div>
                 </div>
