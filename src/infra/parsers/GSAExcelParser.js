@@ -57,7 +57,8 @@ export const parseGSAExcel = (input) => {
     // GSA Matrix usually has Month Names as headers (Jan, Feb...) and Hours as Rows
     for (let i = 0; i < data.length - 24; i++) {
         const row = data[i]; if (!Array.isArray(row)) continue;
-        const rowStr = row.map(c => String(c).toLowerCase().trim());
+        // Fix: Use Array.from to handle sparse arrays
+        const rowStr = Array.from(row).map(c => (c === null || c === undefined) ? '' : String(c).toLowerCase().trim());
 
         // Find Jan and Feb to detect a header row
         const janIdx = rowStr.findIndex(c => c === 'jan' || c === 'january' || c === '1' || c === 'tháng 1' || c === 'th1');

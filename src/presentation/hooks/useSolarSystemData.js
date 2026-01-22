@@ -190,7 +190,7 @@ export const useSolarSystemData = () => {
             }
         } catch (error) {
             console.error("Error processing file:", error);
-            alert("Lỗi đọc file: " + error.message);
+            alert("Lỗi đọc file: " + error.message + "\n\n" + (error.stack || ''));
         }
     }, [solarLayers]);
 

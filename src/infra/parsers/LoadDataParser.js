@@ -2,8 +2,9 @@ export const processExcelData = (arrayData) => {
     let headerRowIndex = -1; let timeColIdx = -1; let loadColIdx = -1; let foundLoadName = '';
     for (let i = 0; i < Math.min(arrayData.length, 100); i++) {
         const row = arrayData[i]; if (!Array.isArray(row)) continue;
-        const rowStr = row.map(cell => String(cell).toLowerCase());
-        let pIdx = rowStr.findIndex(c => c.includes('σ p') || c.includes('sum p') || c.includes('total p') || c.includes('Σ p') || (c.includes('p') && c.includes('(kw)') && !c.includes('pa') && !c.includes('pb') && !c.includes('pc')));
+        // Fix: Use Array.from to handle sparse arrays from Excel, preventing undefined in findIndex
+        const rowStr = Array.from(row).map(cell => (cell === null || cell === undefined) ? '' : String(cell).toLowerCase());
+        let pIdx = rowStr.findIndex(c => c && (c.includes('σ p') || c.includes('sum p') || c.includes('total p') || c.includes('Σ p') || (c.includes('p') && c.includes('(kw)') && !c.includes('pa') && !c.includes('pb') && !c.includes('pc'))));
         if (pIdx === -1) pIdx = rowStr.findIndex(c => c === 'load (kw)' || c === 'load' || (c.includes('load') && !c.includes('solar')));
         if (pIdx !== -1) {
             headerRowIndex = i; loadColIdx = pIdx; foundLoadName = row[pIdx];

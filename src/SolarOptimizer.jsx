@@ -163,6 +163,7 @@ const SolarOptimizer = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isManualConfig, setIsManualConfig] = useState(false);
+    const [projectName, setProjectName] = useState('');
 
     // Processing UI States
     const [isProcessing, setIsProcessing] = useState(false);
@@ -369,7 +370,10 @@ const SolarOptimizer = () => {
         if (!customStats) return null;
         const systemCapex = realSystemSize * params.systemPrice;
         const batteryCapex = bessKwh * params.bessPrice;
-        const totalCapex = systemCapex + batteryCapex;
+        // Use Manual Total Investment if provided (handling empty string by Number coercion check)
+        const totalCapex = (finParams.manualCapex && Number(finParams.manualCapex) > 0)
+            ? Number(finParams.manualCapex)
+            : (systemCapex + batteryCapex);
 
         // Prices obj
         const prices = {
@@ -989,7 +993,16 @@ const SolarOptimizer = () => {
                     {/* PAGE 1: OVERVIEW */}
                     {/* PAGE 1: OVERVIEW & CONFIG & DISPATCH */}
                     <div id="report-page-1" className="p-8 h-full bg-white flex flex-col justify-start gap-4">
-                        <div className="relative h-24 w-full shrink-0"><div className="absolute left-0 top-0 h-full flex items-start pt-2 max-w-[200px]"><img src={casLogo} className="max-h-16 w-auto object-contain" alt="CAS Logo" /></div><div className="w-full h-full flex flex-col justify-start items-center pt-2 pointer-events-none"><h1 className="text-3xl font-bold text-blue-900 mb-1 uppercase text-center leading-tight">Báo Cáo Tính Toán<br />Công Suất Lắp Đặt</h1><p className="text-sm text-slate-500 italic">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p></div></div>
+                        <div className="relative h-24 w-full shrink-0 flex justify-between items-start">
+                            <div className="flex items-start pt-2 max-w-[200px]"><img src={casLogo} className="max-h-16 w-auto object-contain" alt="CAS Logo" /></div>
+                            <div className="flex flex-col items-center pt-2 grow">
+                                <h1 className="text-2xl font-bold text-blue-900 mb-1 uppercase text-center leading-tight">
+                                    Báo Cáo Tính Toán<br />Công Suất Lắp Đặt <span className="text-blue-900">{projectName || 'DỰ ÁN MỚI'}</span>
+                                </h1>
+                                <p className="text-sm text-slate-500 italic mt-1">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p>
+                            </div>
+                            <div className="w-[200px]"></div>
+                        </div>
 
                         {/* 1. Overview */}
                         {exportConfig.overview && (
@@ -1026,8 +1039,8 @@ const SolarOptimizer = () => {
                                                 <tr className="border-b border-slate-200">
                                                     <td className="py-2 font-bold text-slate-500">BIẾN TẦN (INVERTER)</td>
                                                     <td className="py-2">
-                                                        {inv1Qty > 0 && <div className="font-semibold text-slate-800">{inv1Qty} x {inv1?.name.split(' ').slice(1).join(' ')} ({inv1?.acPower}kW)</div>}
-                                                        {inv2Qty > 0 && <div className="font-semibold text-slate-800 mt-1">{inv2Qty} x {inv2?.name.split(' ').slice(1).join(' ')} ({inv2?.acPower}kW)</div>}
+                                                        {inv1Qty > 0 && <div className="font-semibold text-slate-800">{inv1Qty} x {inv1?.name} ({inv1?.acPower}kW)</div>}
+                                                        {(inv2Qty > 0 || inv2) && <div className="font-semibold text-slate-800 mt-1">{inv2Qty} x {inv2?.name} ({inv2?.acPower}kW)</div>}
                                                         <div className="text-[10px] text-slate-500 mt-0.5">Tỷ lệ DC/AC: {(realSystemSize / techParams.inverterMaxAcKw).toFixed(2)}</div>
                                                     </td>
                                                 </tr>
@@ -1413,6 +1426,10 @@ const SolarOptimizer = () => {
                     </div>
                     <div className="border-t border-slate-100 pt-4"><p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">Hành động</p>
                         {customStats && (<div className="space-y-2"><button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-3 px-3 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg text-sm transition font-medium"><Settings size={18} /> Cấu hình Báo cáo</button><button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-3 px-3 py-2.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm transition font-medium"><Calculator size={18} /> Xem Công Thức</button><button onClick={handleExportPDF} disabled={pdfLibStatus !== 'ready' || isExporting} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm transition disabled:bg-slate-400">{isExporting ? <RefreshCw className="animate-spin" size={16} /> : <Printer size={16} />}{isExporting ? 'Đang tạo PDF...' : 'Xuất PDF Báo cáo'}</button></div>)}
+                    </div>
+                    <div className="border-t border-slate-100 pt-4 px-2">
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Thông tin Dự án</label>
+                        <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Nhập tên dự án..." className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" />
                     </div>
                     <div className="border-t border-slate-100 pt-4"><p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">Dữ liệu đầu vào</p>
                         <div className="space-y-3">

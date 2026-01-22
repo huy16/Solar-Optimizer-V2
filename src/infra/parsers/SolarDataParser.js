@@ -3,7 +3,8 @@ import { parseAnyDate } from '../../utils/dateParsing';
 export const parsePVSystCSV = (dataArray) => {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(dataArray.length, 50); i++) {
-        const row = dataArray[i].map(c => String(c).toLowerCase().trim());
+        // Fix: Use Array.from to handle sparse arrays
+        const row = Array.from(dataArray[i]).map(c => (c === null || c === undefined) ? '' : String(c).toLowerCase().trim());
         if (row.includes('date') && (row.includes('e_grid') || row.includes('egrid') || row.includes('earray') || row.includes('globinc'))) {
             headerIdx = i;
             break;
@@ -136,7 +137,8 @@ export const parseStandardCSV = (dataArray) => {
     const timeKeywords = ['period_end', 'period', 'time', 'date', 'timestamp'];
     const valKeywords = ['ghi', 'global_horizontal', 'irradiance', 'shortwave'];
     for (let i = 0; i < Math.min(dataArray.length, 50); i++) {
-        const row = dataArray[i].map(c => String(c).toLowerCase().trim());
+        // Fix: Use Array.from to handle sparse arrays
+        const row = Array.from(dataArray[i]).map(c => (c === null || c === undefined) ? '' : String(c).toLowerCase().trim());
         const tIdx = row.findIndex(c => timeKeywords.some(k => c === k || c.includes(k)));
         const vIdx = row.findIndex(c => valKeywords.some(k => c === k || c.includes(k)));
         if (tIdx !== -1 && vIdx !== -1) { headerIdx = i; colMap.time = tIdx; colMap.val = vIdx; break; }

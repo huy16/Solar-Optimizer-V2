@@ -23,6 +23,21 @@ export const Finance = ({
                     </div>
                     <div className="mt-2 text-right"><label className="text-[9px] text-slate-400 font-bold block mb-0.5">PHÍ THAY PIN (% GIÁ GỐC)</label><div className="relative inline-block w-full"><input type="number" step={1} value={finParams.batteryReplaceCost} onChange={(e) => setFinParams(prev => ({ ...prev, batteryReplaceCost: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none" /><span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">%</span></div></div>
                     {bessKwh === 0 && (<div className="mt-2 bg-orange-50 border border-orange-100 rounded p-2 flex items-center gap-2"><AlertCircle size={12} className="text-orange-500" /><span className="text-[10px] text-orange-700">Chưa có Pin (0 kWh). Phí thay pin sẽ không tính.</span></div>)}
+
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                        <label className="text-[10px] text-blue-600 font-bold block mb-1">TỔNG VỐN ĐẦU TƯ (NHẬP TAY)</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                value={finParams.manualCapex || ''}
+                                onChange={(e) => setFinParams(prev => ({ ...prev, manualCapex: e.target.value }))}
+                                placeholder="Tự động tính..."
+                                className="w-full p-2 text-sm border rounded bg-blue-50/50 font-bold text-blue-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-300 outline-none"
+                            />
+                            <span className="absolute right-2 top-2 text-[10px] text-blue-400 select-none font-bold">VND</span>
+                        </div>
+                        <p className="text-[9px] text-slate-400 mt-1 italic">* Nhập số để ghi đè giá trị tính toán tự động</p>
+                    </div>
                 </div>
 
                 {/* NEW: Loan Configuration */}
