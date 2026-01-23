@@ -13,8 +13,17 @@ export const processExcelData = (arrayData) => {
             break;
         }
     }
-    if (headerRowIndex === -1 || loadColIdx === -1) { return []; } // Debug log removed (moved to caller or separate logger)
+    if (headerRowIndex === -1 || loadColIdx === -1) { return []; }
     if (timeColIdx === -1) { return []; }
+
+    // Detect Unit from Header
+    let scaleFactor = 1;
+    const lowerHeader = String(foundLoadName).toLowerCase();
+    if (lowerHeader.includes('(w)') || lowerHeader.includes(' watts ') || lowerHeader.endsWith(' w')) {
+        scaleFactor = 0.001; // W -> kW
+    } else if (lowerHeader.includes('(mw)') || lowerHeader.includes(' megawatts ')) {
+        scaleFactor = 1000; // MW -> kW
+    }
 
     // Return extracted data, caller handles state
     const extracted = [];
@@ -22,8 +31,24 @@ export const processExcelData = (arrayData) => {
         const row = arrayData[i]; if (!row) continue;
         const rawTime = row[timeColIdx]; const rawLoad = row[loadColIdx];
         if (rawTime === undefined || rawLoad === undefined) continue;
-        const loadKw = parseFloat(rawLoad);
-        if (!isNaN(loadKw)) extracted.push({ rawTime: rawTime, loadKw: loadKw });
+
+        let loadKw = parseFloat(rawLoad);
+        if (!isNaN(loadKw)) {
+            loadKw *= scaleFactor;
+            extracted.push({ rawTime: rawTime, loadKw: loadKw });
+        }
+    }
+
+    // Heuristic Check: If values are still massive (e.g., avg > 100,000), assume implicit Watts and scale down
+    if (extracted.length > 0) {
+        let sum = 0; extracted.forEach(e => sum += e.loadKw);
+        const avg = sum / extracted.length;
+        if (avg > 50000 && scaleFactor === 1) { // Threshold 50MW is unlikely for typical rooftop analysis
+            // Auto-correct: Assume W -> kW
+            extracted.forEach(e => e.loadKw /= 1000);
+            // We could log this or append to loadName, but silent fix is usually what user wants for "why is it large"
+            foundLoadName += " (Auto-scaled from Watts)";
+        }
     }
     return [{ data: extracted, loadName: foundLoadName }];
 };
