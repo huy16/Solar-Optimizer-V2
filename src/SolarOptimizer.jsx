@@ -727,8 +727,10 @@ const SolarOptimizer = () => {
                 financial_chart_title: "Cash Flow (Cumulative)",
                 finance_table: {
                     year: "Year",
+                    year_0: "Investment (Year 0)",
                     revenue: "Revenue",
                     om: "O&M",
+                    replacement: "Equipment Replacement",
                     net_flow: "Cashflow",
                     acc: "Cumulative"
                 },
@@ -737,10 +739,51 @@ const SolarOptimizer = () => {
                 mon_sat: "Mon-Sat",
                 sun: "Sun",
                 col_month: "Month",
-                col_solar: "Solar (kWh)",
-                col_load: "Load (kWh)",
-                col_pv_used: "PV Used (kWh)",
-                col_self_use_pct: "Self-use %"
+                col_solar: "Solar (MWh)",
+                col_load: "Load (MWh)",
+                col_pv_used: "Self-use (MWh)",
+                col_self_use_pct: "Self-use %",
+                tech_efficiency_title: "Technical Performance Overview",
+                pv_yield_yearly: "PV YIELD",
+                solar_used_yearly: "SOLAR SELF-CONSUMPTION",
+                grid_import_yearly: "FROM GRID",
+                mwh_year: "MWh/year",
+                yearly_summary: "Yearly Energy Summary",
+                curtailment: "Curtailment (MWh)",
+                ratio_pct: "Ratio %",
+                total_year: "TOTAL YEAR",
+                investment_indicators: "Investment Performance Indicators",
+                cashflow_chart: "Cash Flow Chart (Cumulative)",
+                energy_dispatch_day: "Typical Day Profile",
+                bess_dispatch_day: "BESS Dispatch (Typical Day)",
+                header_report: "CAPACITY CALCULATION REPORT",
+                header_install: "INSTALLATION DESIGN",
+                header_operation: "OPERATION DETAILS",
+                header_finance: "FINANCIAL ANALYSIS",
+                header_specs: "DETAILED SPECIFICATIONS",
+                load_weekday: "Load (Mon-Sat)",
+                load_weekend: "Load (Weekend)",
+                legend_self_use: "Self-Consumption",
+                legend_curtail: "Grid Export/Curtail",
+                legend_load: "Load Profile",
+                legend_grid_import: "Grid Import",
+                legend_bess_charge: "BESS Charge",
+                legend_bess_discharge: "BESS Discharge",
+                legend_load_avg: "Average Load",
+                legend_load_we: "Weekend Load",
+                no_bess: "Not used",
+                not_selected: "Not selected",
+                chart_load_solar: "Load vs Solar",
+                chart_grid_import_bess: "Grid Import vs Solar (with BESS)",
+                axis_solar_kw: "Solar Generation (kW)",
+                axis_load_kw: "Load Consumption (kW)",
+                axis_grid_kw: "Grid Import (kW)",
+                detailed_specs: "Detailed Technical Specifications (16 Items)",
+                spec_name: "SPECIFICATION",
+                spec_value: "VALUE",
+                spec_unit: "UNIT",
+                scenario_comparison: "Investment Scenario Comparison",
+                scenario_name: "SCENARIO"
             },
             months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
             months_short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -777,7 +820,15 @@ const SolarOptimizer = () => {
                 cashflow_table: "Detailed Cash Flow Table",
                 investment_analysis: "Investment Analysis",
                 close: "Close",
-                export: "Export PDF"
+                export: "Export PDF",
+                env_impact: "Environmental Impact",
+                co2_saved: "CO2 Emissions Reduced",
+                trees_planted: "Equivalent Trees Planted",
+                coal_saved: "Standard Coal Saved",
+                ton_year: "Tons/year",
+                trees: "Trees",
+                ton_coal: "Tons coal",
+                env_desc: "This project contributes positively to environmental protection and climate change mitigation."
             },
             alerts: {
                 lib_not_ready: "Libraries are not yet loaded. Please wait a moment.",
@@ -1836,12 +1887,12 @@ const SolarOptimizer = () => {
                             <div className="flex items-center gap-4">
                                 <img src={casLogoReport} className="h-16 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-2xl font-black text-blue-900 uppercase leading-none text-left">BÁO CÁO TÍNH TOÁN</h1>
-                                    <h2 className="text-xl font-bold text-blue-800 uppercase leading-tight text-left">CÔNG SUẤT LẮP ĐẶT {projectName || "SOLAR PROJECT"}</h2>
+                                    <h1 className="text-2xl font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_report || "BÁO CÁO TÍNH TOÁN"}</h1>
+                                    <h2 className="text-xl font-bold text-blue-800 uppercase leading-tight text-left">{t.pdf.header_install || "CÔNG SUẤT LẮP ĐẶT"} {projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString('vi-VN')}</p>
+                                <p className="text-xs text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
 
@@ -1856,17 +1907,17 @@ const SolarOptimizer = () => {
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Sun size={24} className="text-green-500 mb-2" />
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.pv_yield_yearly || "SẢN LƯỢNG PV"}</span>
-                                        <span className="text-xl font-black text-green-600">{(customStats.totalSolarGen / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">MWh/năm</small></span>
+                                        <span className="text-xl font-black text-green-600">{(customStats.totalSolarGen / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Zap size={24} className="text-blue-500 mb-2" />
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.solar_used_yearly || "NĂNG LƯỢNG SOLAR TỰ DÙNG"}</span>
-                                        <span className="text-xl font-black text-blue-600">{(customStats.totalUsed / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">MWh/năm</small></span>
+                                        <span className="text-xl font-black text-blue-600">{(customStats.totalUsed / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Grid3X3 size={24} className="text-slate-500 mb-2" />
                                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.grid_import_yearly || "TỪ LƯỚI"}</span>
-                                        <span className="text-xl font-black text-slate-700">{((customStats.totalLoad - customStats.totalUsed) / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">MWh/năm</small></span>
+                                        <span className="text-xl font-black text-slate-700">{((customStats.totalLoad - customStats.totalUsed) / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                 </div>
                             )}
@@ -1895,11 +1946,11 @@ const SolarOptimizer = () => {
                                         </tr>
                                         <tr>
                                             <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.bess}</td>
-                                            <td className="px-4 py-2 font-medium text-slate-700">{bessKwh > 0 ? `${bessKwh} kWh / ${bessMaxPower} kW` : "Không sử dụng"}</td>
+                                            <td className="px-4 py-2 font-medium text-slate-700">{bessKwh > 0 ? `${bessKwh} kWh / ${bessMaxPower} kW` : (t.pdf.no_bess || "Không sử dụng")}</td>
                                         </tr>
                                         <tr className="bg-blue-50/30">
                                             <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.area_province || "KHU VỰC / TỈNH THÀNH"}</td>
-                                            <td className="px-4 py-2 font-medium text-slate-700">{selectedProvince?.name || "Chưa chọn"}</td>
+                                            <td className="px-4 py-2 font-medium text-slate-700">{selectedProvince?.name || (t.pdf.not_selected || "Chưa chọn")}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1919,10 +1970,10 @@ const SolarOptimizer = () => {
                                         <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                         <YAxis tick={{ fontSize: 10 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                         <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                        <Bar dataKey="used" stackId="a" name="Sản lượng tự dùng" fill="#f97316" barSize={28} isAnimationActive={false} />
-                                        <Bar dataKey="curtailed" stackId="a" name="Phát lên lưới/Cắt giảm" fill="#22c55e" barSize={28} isAnimationActive={false} />
-                                        <Line type="monotone" dataKey="load" name="Phụ tải (Load)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3, fill: '#3b82f6', stroke: '#fff', strokeWidth: 1.5 }} isAnimationActive={false} />
-                                        <Line type="monotone" dataKey="gridImport" name="Điện mua lưới" stroke="#94a3b8" strokeWidth={4} strokeDasharray="5 5" dot={{ r: 2, fill: '#94a3b8' }} isAnimationActive={false} />
+                                        <Bar dataKey="used" stackId="a" name={t.pdf.legend_self_use || "Sản lượng tự dùng"} fill="#f97316" barSize={28} isAnimationActive={false} />
+                                        <Bar dataKey="curtailed" stackId="a" name={t.pdf.legend_curtail || "Phát lên lưới/Cắt giảm"} fill="#22c55e" barSize={28} isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="load" name={t.pdf.legend_load || "Phụ tải (Load)"} stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3, fill: '#3b82f6', stroke: '#fff', strokeWidth: 1.5 }} isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="gridImport" name={t.pdf.legend_grid_import || "Điện mua lưới"} stroke="#94a3b8" strokeWidth={4} strokeDasharray="5 5" dot={{ r: 2, fill: '#94a3b8' }} isAnimationActive={false} />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1932,7 +1983,7 @@ const SolarOptimizer = () => {
                         <div className="h-[400px]">
                             <h3 className="text-blue-700 font-bold text-lg mb-2 flex items-center gap-2">
                                 <div className="p-1.5 bg-amber-50 rounded text-amber-600"><Clock size={18} /></div>
-                                4. {bessKwh > 0 ? "Điều độ Pin Lưu trữ (Ngày điển hình)" : (t.pdf.energy_dispatch_day || "Biểu đồ Ngày điển hình")}
+                                4. {bessKwh > 0 ? (t.pdf.bess_dispatch_day || "Điều độ Pin Lưu trữ (Ngày điển hình)") : (t.pdf.energy_dispatch_day || "Biểu đồ Ngày điển hình")}
                             </h3>
                             <div className="h-[350px] w-full border border-slate-200 rounded-lg p-2">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -1954,10 +2005,10 @@ const SolarOptimizer = () => {
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
 
                                             <Area type="monotone" dataKey="solarProfile" stroke="#f59e0b" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
-                                            <Bar dataKey="avgBessCharge" name="Pin sạc" fill="#10b981" barSize={12} stackId="bess" isAnimationActive={false} />
-                                            <Bar dataKey="avgBessDischarge" name="Pin xả" fill="#f43f5e" barSize={12} stackId="bess" isAnimationActive={false} />
-                                            <Area type="monotone" dataKey="avgLoad" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name="Load (TB)" isAnimationActive={false} />
-                                            <Line type="monotone" dataKey="weekend" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" dot={false} name="Load (Weekend)" isAnimationActive={false} />
+                                            <Bar dataKey="avgBessCharge" name={t.pdf.legend_bess_charge || "Pin sạc"} fill="#10b981" barSize={12} stackId="bess" isAnimationActive={false} />
+                                            <Bar dataKey="avgBessDischarge" name={t.pdf.legend_bess_discharge || "Pin xả"} fill="#f43f5e" barSize={12} stackId="bess" isAnimationActive={false} />
+                                            <Area type="monotone" dataKey="avgLoad" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={t.pdf.legend_load_avg || "Load (TB)"} isAnimationActive={false} />
+                                            <Line type="monotone" dataKey="weekend" stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" dot={false} name={t.pdf.legend_load_we || "Load (Weekend)"} isAnimationActive={false} />
                                         </ComposedChart>
                                     ) : (
                                         <ComposedChart data={averageDayData} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
@@ -1980,8 +2031,8 @@ const SolarOptimizer = () => {
                                             <YAxis tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                             <Area type="monotone" dataKey="solarProfile" stroke="#22c55e" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
-                                            <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeDasharray="4 2" fill="url(#pdfColorWeekend)" fillOpacity={1} name="Tải cuối tuần" strokeWidth={2} dot={false} isAnimationActive={false} />
-                                            <Area type="monotone" dataKey="weekday" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name="Phụ tải (T2-T7)" isAnimationActive={false} />
+                                            <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeDasharray="4 2" fill="url(#pdfColorWeekend)" fillOpacity={1} name={t.pdf.load_weekend || "Tải cuối tuần"} strokeWidth={2} dot={false} isAnimationActive={false} />
+                                            <Area type="monotone" dataKey="weekday" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={t.pdf.load_weekday || "Phụ tải (T2-T7)"} isAnimationActive={false} />
                                         </ComposedChart>
                                     )}
                                 </ResponsiveContainer>
@@ -1998,15 +2049,15 @@ const SolarOptimizer = () => {
                                 <table className="w-full text-[10px] text-left">
                                     <thead className="bg-blue-50/50 text-slate-600 font-bold border-b border-blue-100 uppercase tracking-wider">
                                         <tr>
-                                            <th rowSpan={2} className="px-4 py-2 border-r border-blue-100 align-middle text-center">Kịch bản</th>
-                                            <th colSpan={2} className="px-4 py-1 border-r border-blue-100 text-center text-blue-600 border-b border-blue-100">Tự dùng (Self-Use)</th>
-                                            <th colSpan={2} className="px-4 py-1 text-center text-amber-600 border-b border-blue-100">Dư thừa (Export/Curtail)</th>
+                                            <th rowSpan={2} className="px-4 py-2 border-r border-blue-100 align-middle text-center">{t.pdf.scenario}</th>
+                                            <th colSpan={2} className="px-4 py-1 border-r border-blue-100 text-center text-blue-600 border-b border-blue-100">{t.pdf.self_use}</th>
+                                            <th colSpan={2} className="px-4 py-1 text-center text-amber-600 border-b border-blue-100">{t.pdf.excess}</th>
                                         </tr>
                                         <tr>
-                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-blue-500">Cao điểm</th>
-                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-blue-500">Bình thường</th>
-                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-amber-500">Cao điểm</th>
-                                            <th className="px-4 py-1 text-center text-amber-500">Bình thường</th>
+                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-blue-500">{t.pdf.peak}</th>
+                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-blue-500">{t.pdf.normal}</th>
+                                            <th className="px-4 py-1 border-r border-blue-100 text-center text-amber-500">{t.pdf.peak}</th>
+                                            <th className="px-4 py-1 text-center text-amber-500">{t.pdf.normal}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -2031,12 +2082,12 @@ const SolarOptimizer = () => {
                             <div className="flex items-center gap-2">
                                 <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">CHI TIẾT VẬN HÀNH</h1>
+                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_operation || "CHI TIẾT VẬN HÀNH"}</h1>
                                     <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString('vi-VN')}</p>
+                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
 
@@ -2050,24 +2101,24 @@ const SolarOptimizer = () => {
                                 <div className="grid grid-cols-2 gap-4 h-[320px]">
                                     {/* Load vs Solar */}
                                     <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-                                        <div className="text-[10px] font-bold text-indigo-600 mb-1 text-center uppercase">Tiêu thụ Load vs Solar</div>
+                                        <div className="text-[10px] font-bold text-indigo-600 mb-1 text-center uppercase">{t.pdf.chart_load_solar || "Tiêu thụ Load vs Solar"}</div>
                                         <ResponsiveContainer width="100%" height="90%">
                                             <ScatterChart margin={{ top: 5, right: 5, bottom: 15, left: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
-                                                <YAxis type="number" dataKey="load" name="Load" tick={{ fontSize: 8 }} label={{ value: "Tải tiêu thụ (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
+                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_solar_kw || "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
+                                                <YAxis type="number" dataKey="load" name="Load" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_load_kw || "Tải tiêu thụ (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
                                                 <Scatter name="Load" data={baseCorrelationData} fill="#6366f1" fillOpacity={0.5} shape="circle" isAnimationActive={false} />
                                             </ScatterChart>
                                         </ResponsiveContainer>
                                     </div>
                                     {/* Grid Import vs Solar with BESS */}
                                     <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-                                        <div className="text-[10px] font-bold text-emerald-600 mb-1 text-center uppercase">Grid Import vs Solar (Với BESS)</div>
+                                        <div className="text-[10px] font-bold text-emerald-600 mb-1 text-center uppercase">{t.pdf.chart_grid_import_bess || "Grid Import vs Solar (Với BESS)"}</div>
                                         <ResponsiveContainer width="100%" height="90%">
                                             <ScatterChart margin={{ top: 5, right: 5, bottom: 15, left: 0 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
-                                                <YAxis type="number" dataKey="gridImport" name="Grid Import" tick={{ fontSize: 8 }} domain={[0, 'auto']} label={{ value: "Điện mua lưới (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
+                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_solar_kw || "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
+                                                <YAxis type="number" dataKey="gridImport" name="Grid Import" tick={{ fontSize: 8 }} domain={[0, 'auto']} label={{ value: t.pdf.axis_grid_kw || "Điện mua lưới (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
                                                 <Scatter name="Grid Import" data={correlationData} fill="#10b981" fillOpacity={0.6} shape="circle" isAnimationActive={false} />
                                             </ScatterChart>
                                         </ResponsiveContainer>
@@ -2124,8 +2175,8 @@ const SolarOptimizer = () => {
                                             </ResponsiveContainer>
                                         </div>
                                         <div className="flex justify-center items-center gap-1.5 mt-0.5 w-full text-[6px] text-slate-500">
-                                            <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-blue-500"></div> T2-T7</div>
-                                            <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-red-500"></div> CN</div>
+                                            <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-blue-500"></div> {t.pdf.mon_sat}</div>
+                                            <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-red-500"></div> {t.pdf.sun}</div>
                                             <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-yellow-400"></div> Solar</div>
                                         </div>
                                     </div>
@@ -2147,8 +2198,8 @@ const SolarOptimizer = () => {
                                             <th className="px-3 py-2 border-r border-blue-100 text-center text-amber-600">{t.pdf.col_solar || "Solar (MWh)"}</th>
                                             <th className="px-3 py-2 border-r border-blue-100 text-center text-blue-600">{t.pdf.col_load || "Load (MWh)"}</th>
                                             <th className="px-3 py-2 border-r border-blue-100 text-center text-orange-600">{t.pdf.col_pv_used || "Tự dùng (MWh)"}</th>
-                                            <th className="px-3 py-2 border-r border-blue-100 text-center text-green-600">Cắt giảm (MWh)</th>
-                                            <th className="px-3 py-2 text-center text-slate-500">Tỷ lệ %</th>
+                                            <th className="px-3 py-2 border-r border-blue-100 text-center text-green-600">{t.pdf.curtailment || "Cắt giảm (MWh)"}</th>
+                                            <th className="px-3 py-2 text-center text-slate-500">{t.pdf.ratio_pct || "Tỷ lệ %"}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -2163,7 +2214,7 @@ const SolarOptimizer = () => {
                                             </tr>
                                         ))}
                                         <tr className="bg-blue-100/50 font-black">
-                                            <td className="px-3 py-2 text-center text-blue-800">TỔNG NĂM</td>
+                                            <td className="px-3 py-2 text-center text-blue-800">{t.pdf.total_year || "TỔNG NĂM"}</td>
                                             <td className="px-3 py-2 text-center text-amber-700">{formatNumber(monthlyDetails.reduce((s, m) => s + (m.solar || 0), 0) / 1000)}</td>
                                             <td className="px-3 py-2 text-center text-blue-700">{formatNumber(monthlyDetails.reduce((s, m) => s + (m.load || 0), 0) / 1000)}</td>
                                             <td className="px-3 py-2 text-center text-orange-600">{formatNumber(monthlyDetails.reduce((s, m) => s + (m.used || 0), 0) / 1000)}</td>
@@ -2183,12 +2234,12 @@ const SolarOptimizer = () => {
                             <div className="flex items-center gap-2">
                                 <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">PHÂN TÍCH TÀI CHÍNH</h1>
+                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_finance || "PHÂN TÍCH TÀI CHÍNH"}</h1>
                                     <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString('vi-VN')}</p>
+                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
@@ -2307,7 +2358,7 @@ const SolarOptimizer = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {currentFinance.cumulativeData.map((y, i) => (
                                             <tr key={i}>
-                                                <td className="p-2 font-black">{y.year === 0 ? t.pdf.finance_table.year_0 : `NĂM ${y.year}`}</td>
+                                                <td className="p-2 font-black">{y.year === 0 ? (t.pdf.finance_table.year_0 || "Investment (Year 0)") : `${t.pdf.finance_table.year || "Year"} ${y.year}`}</td>
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.revenue) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
@@ -2334,7 +2385,7 @@ const SolarOptimizer = () => {
                                 </div>
                                 <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-center">
                                     <p className="text-[9px] font-black text-indigo-600 uppercase">{t.pdf.payback}</p>
-                                    <p className="text-sm font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-[9px] font-normal">Năm</small></p>
+                                    <p className="text-sm font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-[9px] font-normal">{lang === 'en' ? 'years' : 'Năm'}</small></p>
                                 </div>
                                 <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-center">
                                     <p className="text-[9px] font-black text-slate-600 uppercase">ROI</p>
@@ -2351,12 +2402,12 @@ const SolarOptimizer = () => {
                             <div className="flex items-center gap-2">
                                 <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">THÔNG SỐ CHI TIẾT</h1>
+                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_specs || "THÔNG SỐ CHI TIẾT"}</h1>
                                     <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString('vi-VN')}</p>
+                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
 
