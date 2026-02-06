@@ -4,7 +4,20 @@
     "name": "Việt Nam",
     "peakSunHours": 3.8,
     "yield_yearly": 1387,
-    "monthly_distribution": []
+    "monthly_distribution": [
+      107,
+      79,
+      109,
+      119,
+      122,
+      111,
+      116,
+      112,
+      102,
+      100,
+      91,
+      87
+    ]
   },
   {
     "id": "an_giang",
