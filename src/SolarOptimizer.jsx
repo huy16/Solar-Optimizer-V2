@@ -17,7 +17,7 @@ import { Design } from './presentation/features/design/Design';
 import { Finance } from './presentation/features/finance/Finance';
 import { Report } from './presentation/features/report/Report';
 import { useSolarSystemData } from './presentation/hooks/useSolarSystemData';
-import { useSolarConfiguration } from './presentation/hooks/useSolarConfiguration';
+import { useSolarConfiguration, WEATHER_SCENARIOS } from './presentation/hooks/useSolarConfiguration';
 import PROVINCES from './data/provinces.json';
 import { useFinancialModel } from './presentation/hooks/useFinancialModel';
 import { FormulaModal } from './presentation/components/FormulaModal';
@@ -302,7 +302,9 @@ const SolarOptimizer = () => {
         handleMagicSuggest,
         handleOptimize,
         handleOptimizeBess,
+        handleSuggestBessSize,
         bessStrategy, setBessStrategy,
+        weatherScenario, setWeatherScenario,
         totalACPower,
         inverterMaxAcKw
     } = useSolarConfiguration({
@@ -588,9 +590,11 @@ const SolarOptimizer = () => {
                 curtailment: "Cắt giảm"
             },
             profile_types: {
-                shift_1: "1 Ca (Hành chính)",
-                shift_2: "2 Ca (Sáng/Chiều)",
-                shift_3: "3 Ca (24/7)",
+                shift_1: "🏢 1 Ca (Hành chính)",
+                shift_2: "🌅 2 Ca (Sáng/Chiều)",
+                shift_3: "🏭 3 Ca (24/7)",
+                weekend_off: "📅 Nghỉ cuối tuần",
+                fnb_retail: "🍽️ F&B/Bán lẻ",
                 none: "Chưa có"
             },
             status: {
@@ -840,9 +844,11 @@ const SolarOptimizer = () => {
                 curtailment: "Curtailment"
             },
             profile_types: {
-                shift_1: "1 Shift (Office)",
-                shift_2: "2 Shifts (Day/Eve)",
-                shift_3: "3 Shifts (24/7)",
+                shift_1: "🏢 1 Shift (Office)",
+                shift_2: "🌅 2 Shifts (Day/Eve)",
+                shift_3: "🏭 3 Shifts (24/7)",
+                weekend_off: "📅 Weekend Off",
+                fnb_retail: "🍽️ F&B/Retail",
                 none: "None"
             },
             status: {
@@ -1131,7 +1137,7 @@ const SolarOptimizer = () => {
                     bessStrategy === 'peak-shaving', // Derived from strategy
                     isGridCharge,
                     { ...deferredParams, calibrationFactor },
-                    { ...deferredTechParams, inverterMaxAcKw: totalACPower }
+                    { ...deferredTechParams, inverterMaxAcKw: totalACPower, weatherDerate: WEATHER_SCENARIOS[weatherScenario]?.derate || 1.0 }
                 );
                 setCustomStats(results);
             } catch (err) {
@@ -1142,7 +1148,7 @@ const SolarOptimizer = () => {
         }, 50); // Small delay to let UI paint fallbacks first
 
         return () => clearTimeout(timer);
-    }, [deferredSystemSize, processedData, deferredBessKwh, bessMaxPower, bessStrategy, isGridCharge, deferredParams, deferredTechParams, calibrationFactor, totalACPower]);
+    }, [deferredSystemSize, processedData, deferredBessKwh, bessMaxPower, bessStrategy, isGridCharge, deferredParams, deferredTechParams, calibrationFactor, totalACPower, weatherScenario]);
 
     const estimatedLosses = useMemo(() => {
         if (!customStats) return null;
@@ -1246,29 +1252,64 @@ const SolarOptimizer = () => {
             // One-pass summary statistics
             let nightLoadCount = 0;
             let eveningLoadCount = 0;
+            let lunchPeakCount = 0;
+            let dinnerPeakCount = 0;
             let sunSum = 0, sunCount = 0, weekSum = 0, weekCount = 0;
             let maxLoad = 0;
             const uniqueDaysSet = new Set();
+            const hourlyAvg = Array(24).fill(0);
+            const hourlyCounts = Array(24).fill(0);
 
             processedWithStep.forEach(d => {
                 const hour = d.hour;
+                hourlyAvg[hour] += d.load;
+                hourlyCounts[hour]++;
                 if (d.load > 10) {
                     if (hour === 2) nightLoadCount++;
                     if (hour === 20) eveningLoadCount++;
+                    // Detect F&B pattern: peaks at lunch (11-14h) and dinner (18-21h)
+                    if (hour >= 11 && hour <= 14) lunchPeakCount++;
+                    if (hour >= 18 && hour <= 21) dinnerPeakCount++;
                 }
                 if (d.day === 0) { sunSum += d.load; sunCount++; } else { weekSum += d.load; weekCount++; }
                 if (d.load > maxLoad) maxLoad = d.load;
                 uniqueDaysSet.add(d.date.toDateString());
             });
 
-            const uniqueDays = uniqueDaysSet.size;
-            let detectedType = t.profile_types.shift_1;
-            if (nightLoadCount > uniqueDays * 0.3) detectedType = t.profile_types.shift_3;
-            else if (eveningLoadCount > uniqueDays * 0.3) detectedType = t.profile_types.shift_2;
+            // Calculate hourly averages
+            for (let i = 0; i < 24; i++) {
+                if (hourlyCounts[i] > 0) hourlyAvg[i] /= hourlyCounts[i];
+            }
 
+            const uniqueDays = uniqueDaysSet.size;
+
+            // Detect F&B/Retail pattern: high lunch AND dinner peaks with lower mid-afternoon
+            const avgLunch = (hourlyAvg[11] + hourlyAvg[12] + hourlyAvg[13]) / 3;
+            const avgAfternoon = (hourlyAvg[14] + hourlyAvg[15] + hourlyAvg[16]) / 3;
+            const avgDinner = (hourlyAvg[18] + hourlyAvg[19] + hourlyAvg[20]) / 3;
+            const avgNight = (hourlyAvg[0] + hourlyAvg[1] + hourlyAvg[2] + hourlyAvg[3]) / 4;
+            const isFnbPattern = avgLunch > avgAfternoon * 1.2 && avgDinner > avgAfternoon * 1.2 && avgNight < avgLunch * 0.3;
+
+            // Detect shift type
+            let detectedType = t.profile_types.shift_1;
+            if (isFnbPattern) {
+                detectedType = t.profile_types.fnb_retail;
+            } else if (nightLoadCount > uniqueDays * 0.3) {
+                detectedType = t.profile_types.shift_3;
+            } else if (eveningLoadCount > uniqueDays * 0.3) {
+                detectedType = t.profile_types.shift_2;
+            }
+
+            // Detect weekend off
             const isWeekendOff = sunCount > 0 ? (sunSum / sunCount) < (weekSum / weekCount * 0.4) : false;
 
-            setLoadTag({ label: detectedType, isWeekendOff });
+            // Combine label with weekend info
+            let finalLabel = detectedType;
+            if (isWeekendOff && detectedType !== t.profile_types.fnb_retail) {
+                finalLabel = detectedType + ' + ' + t.profile_types.weekend_off;
+            }
+
+            setLoadTag({ label: finalLabel, isWeekendOff });
             setProcessedData(processedWithStep);
 
             setDetectedMaxLoad(maxLoad);
@@ -2507,7 +2548,7 @@ const SolarOptimizer = () => {
                         <span className="font-bold text-blue-100 text-[10px] tracking-widest uppercase">Optimizer</span>
                     </div>
                 </div>
-                <div className="p-4 flex-1 overflow-y-auto space-y-6">
+                <div className="p-3 flex-1 overflow-y-auto space-y-3">
                     <div className="space-y-1">
                         {[
                             { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
@@ -2515,33 +2556,33 @@ const SolarOptimizer = () => {
                             { id: 'finance', label: t.finance, icon: TrendingUp },
                             { id: 'report', label: t.report, icon: ClipboardList }
                         ].map(item => (
-                            <button key={item.id} onClick={() => { setActiveTab(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === item.id ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}><item.icon size={18} /> {item.label}</button>
+                            <button key={item.id} onClick={() => { setActiveTab(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === item.id ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}><item.icon size={15} /> {item.label}</button>
                         ))}
                     </div>
-                    <div className="border-t border-slate-200 pt-4"><p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">{t.actions}</p>
+                    <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.actions}</p>
                         {customStats && (
-                            <div className="space-y-2">
-                                <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-3 px-3 py-2.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-sm transition font-medium"><Settings size={18} /> {t.report_config}</button>
-                                <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-3 px-3 py-2.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm transition font-medium"><Calculator size={18} /> {t.view_formulas}</button>
-                                <button onClick={handleExportPDF} disabled={pdfLibStatus !== 'ready' || isExporting} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-700 to-blue-900 hover:shadow-lg text-white rounded-lg text-sm transition disabled:bg-slate-400 shadow-sm">{isExporting ? <RefreshCw className="animate-spin" size={16} /> : <Printer size={16} />}{isExporting ? t.generating_pdf : t.export_pdf}</button>
+                            <div className="space-y-1">
+                                <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded text-xs transition font-medium"><Settings size={14} /> {t.report_config}</button>
+                                <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs transition font-medium"><Calculator size={14} /> {t.view_formulas}</button>
+                                <button onClick={handleExportPDF} disabled={pdfLibStatus !== 'ready' || isExporting} className="w-full flex items-center justify-center gap-2 px-2 py-1.5 bg-gradient-to-r from-blue-700 to-blue-900 hover:shadow-lg text-white rounded text-xs transition disabled:bg-slate-400 shadow-sm">{isExporting ? <RefreshCw className="animate-spin" size={14} /> : <Printer size={14} />}{isExporting ? t.generating_pdf : t.export_pdf}</button>
                             </div>
                         )}
                     </div>
-                    <div className="border-t border-slate-200 pt-4 px-2">
-                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">{t.project_info}</label>
-                        <DebouncedInput value={projectName} onChange={setProjectName} placeholder={t.project_name + "..."} className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" />
+                    <div className="border-t border-slate-200 pt-2 px-1">
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">{t.project_info}</label>
+                        <DebouncedInput value={projectName} onChange={setProjectName} placeholder={t.project_name + "..."} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" />
                     </div>
-                    <div className="border-t border-slate-200 pt-4"><p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">{t.input_data}</p>
-                        <div className="space-y-3">
-                            <div className="px-3 py-2 bg-white rounded border border-slate-200 text-sm shadow-sm group hover:border-blue-300 transition-colors">
-                                <div className="flex justify-between items-center mb-1"><span className="font-medium text-slate-700">{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-xs"><RefreshCw size={12} /></button></div><div className="text-xs text-slate-500 truncate">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
+                    <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>
+                        <div className="space-y-2">
+                            <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
+                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Zap size={12} className="text-amber-500" />{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><RefreshCw size={10} /></button></div><div className="text-[10px] text-slate-500 truncate">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
                             </div>
                             <input type="file" ref={fileInputRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFileUpload} onClick={(e) => e.target.value = null} />
 
 
-                            <div className={`px-3 py-2 rounded border text-sm shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
-                                <div className="flex justify-between items-center mb-1"><span className="font-medium text-slate-700">{t.solar_data}</span><button onClick={() => solarFileInputRef.current?.click()} className="text-blue-600 hover:underline text-xs"><Upload size={12} /></button></div>
-                                <div className="text-xs text-slate-500 truncate" title={solarSourceName}>{solarLayers.length > 0 ? `${solarLayers.length} ${t.status.layers || 'Layers'}` : (realSolarProfile ? t.status.loaded_short : 'Default (Sine)')}</div>
+                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
+                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span><button onClick={() => solarFileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><Upload size={10} /></button></div>
+                                <div className="text-[10px] text-slate-500 truncate" title={solarSourceName}>{solarLayers.length > 0 ? `${solarLayers.length} ${t.status.layers || 'Layers'}` : (realSolarProfile ? t.status.loaded_short : 'Default (Sine)')}</div>
 
                                 {solarLayers.length > 0 ? (
                                     <div className="mt-2 pt-2 border-t border-slate-100">
@@ -2551,6 +2592,7 @@ const SolarOptimizer = () => {
                                             ))}
                                         </div>
                                         <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>
+
                                         {solarLayers[selectedLayerIndex]?.title.toLowerCase().includes('pvout') && (
                                             <div className="mt-1 p-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-blue-600 leading-tight italic">
                                                 {t.status.pvout_explanation}
@@ -2577,13 +2619,53 @@ const SolarOptimizer = () => {
                             </div>
                             <input type="file" ref={solarFileInputRef} accept=".csv,.txt,.xlsx,.xls,.met,.pdf" className="hidden" onChange={handleSolarUpload} onClick={(e) => e.target.value = null} />
 
-
+                            {/* Weather Scenario - Separate Box */}
+                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-green-50 border-green-200' :
+                                weatherScenario === 'rainy' ? 'bg-blue-50 border-blue-200' :
+                                    weatherScenario === 'bad' ? 'bg-amber-50 border-amber-200' :
+                                        'bg-red-50 border-red-200'
+                                }`}>
+                                <div className="flex justify-between items-center">
+                                    <span className={`font-medium flex items-center gap-1 ${weatherScenario === 'normal' ? 'text-green-700' :
+                                        weatherScenario === 'rainy' ? 'text-blue-700' :
+                                            weatherScenario === 'bad' ? 'text-amber-700' :
+                                                'text-red-700'
+                                        }`}><CloudSun size={12} /> {lang === 'vi' ? 'Thời tiết' : 'Weather'}</span>
+                                </div>
+                                <select
+                                    className={`w-full text-xs p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-green-700 border-green-300' :
+                                        weatherScenario === 'rainy' ? 'bg-white text-blue-700 border-blue-300' :
+                                            weatherScenario === 'bad' ? 'bg-white text-amber-700 border-amber-300' :
+                                                'bg-white text-red-700 border-red-300'
+                                        }`}
+                                    value={weatherScenario}
+                                    onChange={(e) => setWeatherScenario(e.target.value)}
+                                >
+                                    {Object.entries(WEATHER_SCENARIOS).map(([key, scenario]) => (
+                                        <option key={key} value={key}>
+                                            {scenario.icon} {lang === 'vi' ? scenario.label : scenario.labelEn} ({(scenario.derate * 100).toFixed(0)}%)
+                                        </option>
+                                    ))}
+                                </select>
+                                {weatherScenario !== 'normal' && (
+                                    <div className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${weatherScenario === 'rainy' ? 'text-blue-600 bg-blue-100' :
+                                        weatherScenario === 'bad' ? 'text-amber-600 bg-amber-100' :
+                                            'text-red-600 bg-red-100'
+                                        }`}>
+                                        <AlertTriangle size={10} />
+                                        {lang === 'vi'
+                                            ? `Sản lượng Solar giảm ${((1 - WEATHER_SCENARIOS[weatherScenario].derate) * 100).toFixed(0)}%`
+                                            : `Solar yield reduced by ${((1 - WEATHER_SCENARIOS[weatherScenario].derate) * 100).toFixed(0)}%`
+                                        }
+                                    </div>
+                                )}
+                            </div>
 
 
                         </div>
                     </div>
                 </div>
-                <div className="p-4 border-t border-slate-200 text-[10px] text-slate-400 text-center">CPS Solar Solutions © 2026 • Engineering Division</div>
+                <div className="p-2 border-t border-slate-200 text-[9px] text-slate-400 text-center">CPS Solar © 2026</div>
             </aside>
 
             <main className={`flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
@@ -2701,6 +2783,7 @@ const SolarOptimizer = () => {
                                 BESS_OPTIONS={BESS_OPTIONS}
                                 bessKwh={bessKwh} setBessKwh={setBessKwh}
                                 bessMaxPower={bessMaxPower} setBessMaxPower={setBessMaxPower}
+                                handleSuggestBessSize={handleSuggestBessSize}
                                 isGridCharge={isGridCharge} setIsGridCharge={setIsGridCharge}
                                 bessStrategy={bessStrategy} setBessStrategy={setBessStrategy}
                                 handleOptimize={handleOptimize}

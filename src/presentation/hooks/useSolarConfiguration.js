@@ -1,6 +1,15 @@
 import { useState, useCallback } from 'react';
 import { BESS_OPTIONS, INVERTER_OPTIONS, INVERTER_DB, BESS_DB } from '../../data/sources/HardwareDatabase';
 import { execute as optimizeSystem } from '../../domain/usecases/OptimizeSystem';
+import { execute as calculateEnergy } from '../../domain/usecases/CalculateEnergyGeneration';
+
+// Weather Scenario Configuration
+export const WEATHER_SCENARIOS = {
+    normal: { label: 'Bình thường', labelEn: 'Normal', icon: '☀️', derate: 1.0 },
+    rainy: { label: 'Mưa nhiều', labelEn: 'Rainy Year', icon: '🌦️', derate: 0.85 },
+    bad: { label: 'Thời tiết xấu', labelEn: 'Bad Weather', icon: '🌧️', derate: 0.75 },
+    extreme: { label: 'Cực đoan', labelEn: 'Extreme', icon: '⛈️', derate: 0.70 }
+};
 
 export const useSolarConfiguration = (initialParams, initialTechParams) => {
     // --- STATE SYSTEM CONFIG ---
@@ -14,6 +23,7 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
     const [bessMaxPower, setBessMaxPower] = useState(0);
     const [isGridCharge, setIsGridCharge] = useState(false);
     const [bessStrategy, setBessStrategy] = useState('self-consumption'); // 'self-consumption' | 'peak-shaving'
+    const [weatherScenario, setWeatherScenario] = useState('normal'); // Weather simulation
 
     // --- STATE PARAMETERS ---
     const [params, setParams] = useState(initialParams);
@@ -66,9 +76,6 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
             setBessMaxPower(bestBessKw);
 
             // Auto-select inverters for the new Solar size
-            // Note: We can simplify this by just calling handleMagicSuggest 
-            // but we need to ensure targetKwp state update is processed.
-            // For now, let's just let the user click Magic Suggest if needed or just do it here.
             const targetAC = kwp / 1.25;
             const bestInv = INVERTER_DB.reduce((prev, curr) =>
                 Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
@@ -102,6 +109,42 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         return null;
     }, [techParams, targetKwp]);
 
+    // Handle BESS Suggestion based on curtailment
+    const handleSuggestBessSize = useCallback((processedData) => {
+        if (!processedData || processedData.length === 0 || targetKwp <= 0) return;
+
+        // 1. Run a baseline simulation (0 battery) for current sizing
+        const stats = calculateEnergy(targetKwp, processedData, 0, 0, false, false, params, techParams);
+
+        if (!stats || !stats.hourlyBatteryData) return;
+
+        // 2. Identify Waste Energy (Curtailment + Export) that could be battery storage
+        const dailyWaste = new Map();
+        stats.hourlyBatteryData.forEach(p => {
+            // Robust date handling
+            const dateObj = (p.date instanceof Date) ? p.date : new Date(p.date || p.timestamp);
+            if (isNaN(dateObj.getTime())) return;
+
+            const dateStr = dateObj.toDateString();
+            // Use curtailed + exported (total energy that didn't go to self-consumption)
+            const waste = (p.curtailed || 0) + (p.exported || 0);
+            dailyWaste.set(dateStr, (dailyWaste.get(dateStr) || 0) + waste);
+        });
+
+        const dailyValues = Array.from(dailyWaste.values()).sort((a, b) => b - a);
+        if (dailyValues.length === 0) return;
+
+        // Take the 75th percentile (to capture significant waste without picking the absolute max day)
+        const targetIndex = Math.floor(dailyValues.length * 0.25);
+        const suggestedKwh = Math.round(dailyValues[targetIndex]);
+
+        if (suggestedKwh > 0) {
+            setSelectedBess('custom');
+            setBessKwh(suggestedKwh);
+            setBessMaxPower(Math.round(suggestedKwh / 2)); // Default 2h system
+        }
+    }, [targetKwp, params, techParams]);
+
     // Handle BESS Selection
     const handleBessSelect = useCallback((val) => {
         setSelectedBess(val);
@@ -110,7 +153,6 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
             setBessMaxPower(0);
             return;
         }
-        // Fix: Lookup from BESS_DB (full object) not BESS_OPTIONS (dropdown label/value)
         const selectedModel = BESS_DB.find(m => m.id === val);
         if (selectedModel) {
             setBessKwh(selectedModel.capacity);
@@ -141,7 +183,9 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         handleMagicSuggest,
         handleOptimize,
         handleOptimizeBess,
+        handleSuggestBessSize,
         bessStrategy, setBessStrategy,
+        weatherScenario, setWeatherScenario,
         totalACPower,
         inverterMaxAcKw
     };

@@ -95,18 +95,35 @@ export const Finance = ({
     }[lang];
 
     const [showDetailTable, setShowDetailTable] = useState(false);
+    const [showFinanceMap, setShowFinanceMap] = useState(false);
 
     return (
         <div className="space-y-6">
             <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                <h3 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2"><Coins size={16} className="text-emerald-600" /> {dt.title_finance}</h3>
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                    {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1 }, { l: dt.escalation, k: 'escalation', u: '%/Năm', v: finParams.escalation, step: 0.1 }, { l: dt.degradation, k: 'degradation', u: '%/Năm', v: finParams.degradation, step: 0.05 }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1 }, { l: dt.om, k: 'omPercent', u: '%/Năm', v: finParams.omPercent, step: 0.1 }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1 },].map((p, i) => (
-                        <div key={i}><label className="text-[9px] text-slate-400 font-bold block mb-0.5">{p.l}</label><div className="relative"><input type="number" step={p.step} value={p.v} onChange={(e) => setFinParams(prev => ({ ...prev, [p.k]: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white pr-6 font-bold text-slate-700 focus:ring-1 focus:ring-blue-200 outline-none" /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div></div>
-                    ))}
+                <div className={`flex justify-between items-center ${showFinanceMap ? 'mb-2' : ''}`}>
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Coins size={16} className="text-emerald-600" /> {dt.title_finance}</h3>
+                    <label className="inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={showFinanceMap}
+                            onChange={(e) => setShowFinanceMap(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="relative w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
                 </div>
-                <div className="mt-2 text-right"><label className="text-[9px] text-slate-400 font-bold block mb-0.5">{dt.battery_replace_pct}</label><div className="relative inline-block w-full"><input type="number" step={1} value={finParams.batteryReplaceCost} onChange={(e) => setFinParams(prev => ({ ...prev, batteryReplaceCost: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none" /><span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">%</span></div></div>
-                {bessKwh === 0 && (<div className="mt-2 bg-orange-50 border border-orange-100 rounded p-2 flex items-center gap-2"><AlertCircle size={12} className="text-orange-500" /><span className="text-[10px] text-orange-700">{dt.no_battery_msg}</span></div>)}
+
+                {showFinanceMap && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1 }, { l: dt.escalation, k: 'escalation', u: '%/Năm', v: finParams.escalation, step: 0.1 }, { l: dt.degradation, k: 'degradation', u: '%/Năm', v: finParams.degradation, step: 0.05 }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1 }, { l: dt.om, k: 'omPercent', u: '%/Năm', v: finParams.omPercent, step: 0.1 }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1 },].map((p, i) => (
+                                <div key={i}><label className="text-[9px] text-slate-400 font-bold block mb-0.5">{p.l}</label><div className="relative"><input type="number" step={p.step} value={p.v} onChange={(e) => setFinParams(prev => ({ ...prev, [p.k]: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white pr-6 font-bold text-slate-700 focus:ring-1 focus:ring-blue-200 outline-none" /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div></div>
+                            ))}
+                        </div>
+                        <div className="mt-2 text-right"><label className="text-[9px] text-slate-400 font-bold block mb-0.5">{dt.battery_replace_pct}</label><div className="relative inline-block w-full"><input type="number" step={1} value={finParams.batteryReplaceCost} onChange={(e) => setFinParams(prev => ({ ...prev, batteryReplaceCost: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none" /><span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">%</span></div></div>
+                        {bessKwh === 0 && (<div className="mt-2 bg-orange-50 border border-orange-100 rounded p-2 flex items-center gap-2"><AlertCircle size={12} className="text-orange-500" /><span className="text-[10px] text-orange-700">{dt.no_battery_msg}</span></div>)}
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

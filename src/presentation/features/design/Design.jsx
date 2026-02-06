@@ -14,6 +14,7 @@ export const Design = ({
     BESS_OPTIONS,
     bessKwh, setBessKwh,
     bessMaxPower, setBessMaxPower,
+    handleSuggestBessSize,
     isGridCharge, setIsGridCharge,
     bessStrategy, setBessStrategy,
     handleOptimize,
@@ -36,6 +37,7 @@ export const Design = ({
             title_bess: "Lưu trữ (BESS)",
             bess_model: "MODEL PIN LƯU TRỮ",
             capacity: "DUNG LƯỢNG (kWh)",
+            suggest_btn: "Gợi ý",
             power: "CÔNG SUẤT (kW)",
             grid_charge: "Cho phép sạc lưới (Giờ thấp điểm)",
             title_finance: "Giả định Giá điện & O&M",
@@ -67,6 +69,7 @@ export const Design = ({
             title_bess: "Energy Storage (BESS)",
             bess_model: "BATTERY MODEL",
             capacity: "CAPACITY (kWh)",
+            suggest_btn: "Suggest",
             power: "POWER (kW)",
             grid_charge: "Allow Grid Charging (Off-peak)",
             title_finance: "Electricity Price & O&M Assumptions",
@@ -219,7 +222,15 @@ export const Design = ({
                         {selectedBess === 'custom' && (
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.capacity}</label>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="text-[10px] font-bold text-slate-400 block">{dt.capacity}</label>
+                                        <button
+                                            onClick={() => handleSuggestBessSize(processedData)}
+                                            className="text-[9px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5"
+                                        >
+                                            <Wand2 size={10} /> {dt.suggest_btn}
+                                        </button>
+                                    </div>
                                     <input type="number" value={bessKwh} onChange={(e) => setBessKwh(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-1 focus:ring-emerald-500" />
                                 </div>
                                 <div>

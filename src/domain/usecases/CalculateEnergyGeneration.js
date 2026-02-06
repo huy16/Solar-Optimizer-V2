@@ -47,6 +47,9 @@ export const execute = (
     const totalLossPct = safeLoss(losses.temp) + safeLoss(losses.soiling) + safeLoss(losses.cable) + safeLoss(losses.inverter);
     const systemDerate = 1 - (totalLossPct / 100);
 
+    // Weather Scenario Derate Factor (for bad weather simulation)
+    const weatherDerate = isNaN(Number(techParams.weatherDerate)) ? 1.0 : Number(techParams.weatherDerate);
+
     // Sanitize System Size
     const safeSystemSize = isNaN(Number(systemSize)) ? 0 : Number(systemSize);
 
@@ -89,7 +92,7 @@ export const execute = (
 
         // 1. Calculate Solar Power (Raw) -- Robust Check
         const safeSolarUnit = isNaN(Number(point.solarUnit)) ? 0 : Number(point.solarUnit);
-        let solarPowerKw = safeSolarUnit * safeSystemSize * scaling * systemDerate;
+        let solarPowerKw = safeSolarUnit * safeSystemSize * scaling * systemDerate * weatherDerate;
         if (isNaN(solarPowerKw)) solarPowerKw = 0;
 
         // 2. Apply Inverter Clipping (AC Limit)
@@ -215,6 +218,8 @@ export const execute = (
             discharge: hourlyDischarge,
             solar: solarEnergy,
             load: loadEnergy,
+            curtailed: curtailedEnergy,
+            exported: exportedEnergy,
             gridImport: (loadEnergy - usedEnergy) + hourlyChargeFromGrid
         });
     }
