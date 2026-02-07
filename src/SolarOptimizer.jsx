@@ -1252,7 +1252,7 @@ const SolarOptimizer = () => {
                 // Load Scaling
                 tunedLoad = tunedLoad * (loadScaling / 100.0);
 
-                return { ...d, load: tunedLoad, timeStep };
+                return { ...d, load: tunedLoad, timeStep, dataSource: 'import' };
             });
 
             if (processedWithStep.length === 0) { setErrorMsg(`Loi format ngay thang.`); setIsProcessing(false); return; }
@@ -1697,7 +1697,8 @@ const SolarOptimizer = () => {
         const step = Math.ceil(daylightData.length / 500);
         return daylightData.filter((_, i) => i % step === 0).map(d => ({
             solar: d.solarUnit ? d.solarUnit * realSystemSize * (calibrationFactor / 100.0) : (d.solar || 0),
-            load: d.load
+            load: d.load,
+            dataSource: 'manual'
         }));
     }, [processedData, realSystemSize, calibrationFactor]);
 

@@ -35,10 +35,18 @@ export const execute = (processedData, techParams = {}) => {
     });
 
     // 2. Identify the month with the minimum total load
+    // This applies to ALL data sources (Import 8760 or Manual Bill)
+    // We want the system to be safe even in the lowest consumption month of the year.
     let minMonth = null;
     let minTotal = Infinity;
 
-    Object.entries(monthlyStats).forEach(([month, stats]) => {
+    // Filter out incomplete months (less than 15 days ~ 360 hours)
+    // We only consider months with "sufficient data" unless the whole dataset is short.
+    const monthList = Object.entries(monthlyStats);
+    const validMonths = monthList.filter(([_, stats]) => stats.points.length >= 360);
+    const candidateMonths = validMonths.length > 0 ? validMonths : monthList;
+
+    candidateMonths.forEach(([month, stats]) => {
         if (stats.totalLoad < minTotal && stats.totalLoad > 0) {
             minTotal = stats.totalLoad;
             minMonth = month;
@@ -50,24 +58,33 @@ export const execute = (processedData, techParams = {}) => {
     const targetMonthPoints = monthlyStats[minMonth].points;
 
     // 3. Filter for peak solar hours (11:00 - 13:00) within that month
-    // We look for the absolute minimum to be safe (conservative)
     const peakHourPoints = targetMonthPoints.filter(p => p.hour >= 11 && p.hour <= 13);
 
     if (peakHourPoints.length === 0) return null;
 
-    // 4. Find the minimum load in these peak hours (Normalized to kW)
-    // This represents the "trough" of the lowest month
-    let minLoadFound = Infinity;
+    // 4. Determine "Safe" Minimum Load Logic based on Data Source
+    // - Manual (EVN Bill): Strict "Original Formula" (Absolute Minimum Power in Peak Hours)
+    // - Import (8760 Data): "Safe Fit" (P50 / Median of peak hours in the lowest month to be less conservative)
 
-    peakHourPoints.forEach(p => {
-        // Calculate instantaneous power (kW)
-        // processedData already normalized this to kW in loadProfileGenerator
-        const powerKw = (p.load || 0);
+    const isImportData = processedData.length > 0 && processedData[0].dataSource === 'import';
 
-        if (powerKw < minLoadFound) {
-            minLoadFound = powerKw;
+    let safeLoad = 0;
+    const peakLoads = peakHourPoints.map(p => p.load || 0).sort((a, b) => a - b);
+
+    if (peakLoads.length > 0) {
+        if (isImportData) {
+            // Import: Use Median (P50) of the Lowest Month to be less conservative
+            // This suggests a capacity that fits the "typical" day of the lowest month
+            const p50Index = Math.floor(peakLoads.length * 0.5);
+            safeLoad = peakLoads[p50Index] || peakLoads[0];
+        } else {
+            // Manual: Use Strict Minimum (Original Formula)
+            // Since synthetic profiles are regular, this is safe and expected.
+            safeLoad = peakLoads[0]; // The absolute lowest value
         }
-    });
+    }
+
+    const minLoadFound = safeLoad;
 
     // 5. Convert required AC Power (kW) to DC Capacity (kWp) using efficiency factor
     // Target kWp = Min Load (kW) / Efficiency (Derate)

@@ -625,7 +625,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     <h3 className="text-3xl font-black text-slate-800 tracking-tighter">{t.ov_title}</h3>
                                     <div className="flex items-center gap-2 mt-1 px-1">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-                                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{t.ov_desc} <span className="opacity-50 ml-2">beta v2.1 (Fix Loss)</span></p>
+                                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{t.ov_desc} <span className="opacity-50 ml-2">beta v2.7 (Min 15-day Logic)</span></p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
