@@ -440,6 +440,22 @@ return { best: results[0], all: results }
 
 ---
 
+### 8.4 Zero-Export Conservative Sizing (Safe Fit)
+
+For systems where grid injection is strictly prohibited (Zero-Export), a more conservative approach is used to ensure no energy is wasted and no backfeed occurs:
+
+1. **Base Month Selection**: Identify the month with the minimum total energy consumption (typically January in C&I projects).
+2. **Daytime Load Calculation**:
+   - Calculate Average Base Load (Fixed 24/7).
+   - Calculate Average Variable Load (Daytime activity hours).
+   - `Daytime Avg = Base Load + Variable Load`.
+3. **Solar Peak Convergence**:
+   - Cross-reference with the hourly load profile.
+   - Find the *minimum* load recorded during peak solar hours (11:00 - 13:00) on the lowest activity days (Sundays/Weekends) of that base month.
+4. **Optimal Sizing**: The target kWp is set equal to this minimum recorded load (assuming 1:1 Solar-to-Load ratio at peak).
+
+---
+
 ## 📐 Formula Summary
 
 | Metric | Formula |
