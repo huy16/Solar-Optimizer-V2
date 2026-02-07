@@ -35,7 +35,8 @@ export const execute = (
     }
 
     // Define BESS Search Range (Hours of Solar Peak)
-    const bessHourOptions = constraints.bessHours || [0, 1, 2, 4];
+    // If noBess is set, only search with BESS = 0
+    const bessHourOptions = techParams.noBess ? [0] : (constraints.bessHours || [0, 1, 2, 4]);
 
     for (let kwp = startKwp; kwp <= endKwp; kwp += stepKwp) {
         // For each Solar Size, find optimal inverters

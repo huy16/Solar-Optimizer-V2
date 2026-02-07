@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { BESS_OPTIONS, INVERTER_OPTIONS, INVERTER_DB, BESS_DB } from '../../data/sources/HardwareDatabase';
 import { execute as optimizeSystem } from '../../domain/usecases/OptimizeSystem';
+import { execute as suggestSafeCapacity } from '../../domain/usecases/SuggestSafeCapacity';
 import { execute as calculateEnergy } from '../../domain/usecases/CalculateEnergyGeneration';
 
 // Weather Scenario Configuration
@@ -18,12 +19,17 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
     const [inv2Id, setInv2Id] = useState('');
     const [inv2Qty, setInv2Qty] = useState(0);
 
+    const [customInv1Power, setCustomInv1Power] = useState(0);
+    const [customInv2Power, setCustomInv2Power] = useState(0);
+
     const [selectedBess, setSelectedBess] = useState(BESS_OPTIONS[0]?.value || 'custom');
     const [bessKwh, setBessKwh] = useState(0);
     const [bessMaxPower, setBessMaxPower] = useState(0);
     const [isGridCharge, setIsGridCharge] = useState(false);
     const [bessStrategy, setBessStrategy] = useState('self-consumption'); // 'self-consumption' | 'peak-shaving'
     const [weatherScenario, setWeatherScenario] = useState('normal'); // Weather simulation
+    const [pricingType, setPricingType] = useState('business'); // Default pricing type
+    const [voltageLevelId, setVoltageLevelId] = useState('22kv_110kv'); // Default voltage level
 
     // --- STATE PARAMETERS ---
     const [params, setParams] = useState(initialParams);
@@ -58,6 +64,40 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
             setBessMaxPower(Math.round(suggestedKwh / 2)); // 2-hour system
         }
     }, [targetKwp, selectedBess, bessKwh]);
+
+    // Handle Solar-Only Optimization (No BESS)
+    const handleOptimizeNoBess = useCallback((processedData, prices, financialParams) => {
+        if (!processedData || processedData.length === 0) return;
+
+        // Optimize with BESS forced to 0
+        const result = optimizeSystem(processedData, prices, financialParams, { ...techParams, noBess: true });
+        if (result && result.best) {
+            const { kwp } = result.best;
+
+            // Apply recommended Solar size
+            setTargetKwp(kwp);
+
+            // Set BESS to 0
+            setSelectedBess('none');
+            setBessKwh(0);
+            setBessMaxPower(0);
+
+            // Auto-select inverters for the new Solar size
+            const targetAC = kwp / 1.25;
+            const bestInv = INVERTER_DB.reduce((prev, curr) =>
+                Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
+            );
+            if (bestInv) {
+                const qty = Math.ceil(targetAC / bestInv.acPower);
+                setInv1Id(bestInv.id);
+                setInv1Qty(qty);
+                setInv2Id('');
+                setInv2Qty(0);
+            }
+            return result.best;
+        }
+        return null;
+    }, [techParams]);
 
     // Handle System Optimization
     const handleOptimize = useCallback((processedData, prices, financialParams) => {
@@ -145,6 +185,29 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         }
     }, [targetKwp, params, techParams]);
 
+    // Handle Expert Conservative Sizing Suggestion
+    const handleSuggestSafeCapacity = useCallback((processedData) => {
+        if (!processedData || processedData.length === 0) return;
+
+        const suggestedKwp = suggestSafeCapacity(processedData, techParams);
+        if (suggestedKwp && suggestedKwp > 0) {
+            setTargetKwp(suggestedKwp);
+            // After setting capacity, auto-select inverters
+            const targetAC = suggestedKwp / 1.25;
+            const bestInv = INVERTER_DB.reduce((prev, curr) =>
+                Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
+            );
+            if (bestInv) {
+                const qty = Math.ceil(targetAC / bestInv.acPower);
+                setInv1Id(bestInv.id);
+                setInv1Qty(qty);
+                setInv2Id('');
+                setInv2Qty(0);
+            }
+            return suggestedKwp;
+        }
+    }, []);
+
     // Handle BESS Selection
     const handleBessSelect = useCallback((val) => {
         setSelectedBess(val);
@@ -163,7 +226,11 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
     // Calculate Totals
     const inv1 = INVERTER_DB.find(i => i.id === inv1Id);
     const inv2 = INVERTER_DB.find(i => i.id === inv2Id);
-    const totalACPower = (inv1 ? inv1.acPower * inv1Qty : 0) + (inv2 ? inv2.acPower * inv2Qty : 0);
+
+    const inv1Power = inv1Id === 'custom' ? customInv1Power : (inv1 ? inv1.acPower : 0);
+    const inv2Power = inv2Id === 'custom' ? customInv2Power : (inv2 ? inv2.acPower : 0);
+
+    const totalACPower = (inv1Power * inv1Qty) + (inv2Power * inv2Qty);
 
     // Sync inverter max AC to tech params (auto update limit)
     const inverterMaxAcKw = totalACPower > 0 ? totalACPower : (targetKwp / 1.1); // Fallback if no inverter selected
@@ -173,6 +240,8 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         inv1Qty, setInv1Qty,
         inv2Id, setInv2Id,
         inv2Qty, setInv2Qty,
+        customInv1Power, setCustomInv1Power,
+        customInv2Power, setCustomInv2Power,
         selectedBess, handleBessSelect,
         bessKwh, setBessKwh,
         bessMaxPower, setBessMaxPower,
@@ -182,11 +251,15 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         targetKwp, setTargetKwp,
         handleMagicSuggest,
         handleOptimize,
+        handleOptimizeNoBess,
         handleOptimizeBess,
         handleSuggestBessSize,
+        handleSuggestSafeCapacity,
         bessStrategy, setBessStrategy,
         weatherScenario, setWeatherScenario,
         totalACPower,
-        inverterMaxAcKw
+        inverterMaxAcKw,
+        pricingType, setPricingType,
+        voltageLevelId, setVoltageLevelId
     };
 };

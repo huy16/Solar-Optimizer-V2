@@ -89,3 +89,22 @@ export const interpolate30Min = (originalMap) => {
     return newMap;
 };
 
+
+export const generateInstantaneousSolar = (date, dailyPsh) => {
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    const time = hour + minute / 60;
+
+    // Simple model: Solar from 6am to 6pm (12 hours)
+    if (time < 6 || time > 18) return 0;
+
+    // Sine wave centered at 12:00
+    // Integral of A * sin(pi * (t-6) / 12) dt from 6 to 18 = A * 24/pi
+    // We want Integral = dailyPsh
+    // So A = dailyPsh * pi / 24
+
+    const peak = (dailyPsh * Math.PI) / 24;
+    const val = peak * Math.sin((Math.PI * (time - 6)) / 12);
+
+    return Math.max(0, val);
+};

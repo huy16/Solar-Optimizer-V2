@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
+import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, Zap, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 export const Finance = ({
@@ -9,9 +9,13 @@ export const Finance = ({
     formatMoney,
     scenarios,
     targetKwp, setTargetKwp,
+    pricingType, setPricingType,
+    voltageLevelId, setVoltageLevelId,
+    params, setParams,
     onSelectScenario,
     lang,
-    t
+    t,
+    EVN_TARIFFS
 }) => {
     const dt = {
         vi: {
@@ -253,6 +257,8 @@ export const Finance = ({
                     )}
                 </div>
             )}
+
+
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 border-b border-slate-100"><h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><BarChart2 size={18} className="text-slate-500" /> {dt.analysis_title}</h3><p className="text-sm text-slate-500">{dt.analysis_desc}</p></div>

@@ -1,10 +1,14 @@
-import { Zap, RefreshCw, BatteryCharging, Coins, Settings, Wand2, Target } from 'lucide-react';
+import { useEffect } from 'react';
+import { Zap, RefreshCw, BatteryCharging, Coins, Settings, Wand2, Target, ChevronDown, ShieldCheck } from 'lucide-react';
+import { EVN_TARIFFS, getTariffOptions, getVoltageLevelOptions } from '../../../data/evn_tariffs';
 
 export const Design = ({
     inv1Id, setInv1Id,
     inv1Qty, setInv1Qty,
     inv2Id, setInv2Id,
     inv2Qty, setInv2Qty,
+    customInv1Power, setCustomInv1Power,
+    customInv2Power, setCustomInv2Power,
     INVERTER_OPTIONS,
     totalACPower,
     targetKwp,
@@ -15,26 +19,47 @@ export const Design = ({
     bessKwh, setBessKwh,
     bessMaxPower, setBessMaxPower,
     handleSuggestBessSize,
+    handleSuggestSafeCapacity,
     isGridCharge, setIsGridCharge,
     bessStrategy, setBessStrategy,
     handleOptimize,
+    handleOptimizeNoBess,
     handleOptimizeBess,
     processedData,
     params, setParams,
     finParams, setFinParams,
+    tariffCategory, setTariffCategory,
+    voltageLevel, setVoltageLevel,
     lang,
     t
 }) => {
+    // Auto-update prices when tariff or voltage level changes
+    useEffect(() => {
+        if (!tariffCategory || !voltageLevel) return;
+        const tariff = EVN_TARIFFS[tariffCategory];
+        if (tariff) {
+            const level = tariff.voltage_levels.find(v => v.id === voltageLevel);
+            if (level && level.prices) {
+                setParams(p => ({
+                    ...p,
+                    pricePeak: level.prices.peak,
+                    priceNormal: level.prices.normal,
+                    priceOffPeak: level.prices.off_peak
+                }));
+            }
+        }
+    }, [tariffCategory, voltageLevel, setParams]);
+
     const dt = {
         vi: {
             title_inverter: "Cấu hình Inverter",
             auto_select: "Tự động chọn Inverter theo DC/AC ~ 1.25",
             main_machine: "MÁY CHÍNH",
-            sub_machine: "MÁY PHỤ (OPTIONAL)",
+            sub_machine: "MÁY PHỤ (TÙY CHỌN)",
             none: "-- Không --",
             qty: "SL",
             ac_sync_msg: "Công suất AC tối đa được đồng bộ theo cấu hình Inverter",
-            title_bess: "Lưu trữ (BESS)",
+            title_bess: "Lưu trữ năng lượng",
             bess_model: "MODEL PIN LƯU TRỮ",
             capacity: "DUNG LƯỢNG (kWh)",
             suggest_btn: "Gợi ý",
@@ -44,19 +69,27 @@ export const Design = ({
             price_peak: "GIÁ CAO ĐIỂM",
             price_normal: "BÌNH THƯỜNG",
             price_low: "THẤP ĐIỂM",
+            tariff_category: "LOẠI BIỂU GIÁ",
+            retail_group: "GIÁ BÁN LẺ",
+            wholesale_group: "GIÁ BÁN BUÔN",
+            voltage_level: "CẤP ĐIỆN ÁP",
             om_cost_capex: "CHI PHÍ O&M (% Capex)",
             inflation: "LẠM PHÁT ĐIỆN (%/Năm)",
             title_tech: "Tham số Kỹ thuật & Tổn thất",
             export_price: "GIÁ BÁN ĐIỆN DƯ (VNĐ)",
             total_derate: "Total Derate",
             bess_strategy: "CHIẾN LƯỢC XẢ PIN",
-            strat_self: "Tự dùng (Self-consumption)",
-            strat_shaving: "Tiết kiệm Cao điểm (Peak Shaving)",
+            strat_self: "Tự dùng (Tiêu thụ tại chỗ)",
+            strat_shaving: "Cắt giảm cao điểm",
             optimize_btn: "Tự động tối ưu",
             optimize_fixed_btn: "Tối ưu theo CS chọn",
             magic_btn: "Tính toán Thông minh",
+            optimize_no_bess: "Tối ưu (Không lưu trữ)",
             bess_none: "Không dùng",
-            bess_custom: "Tùy chỉnh"
+            bess_custom: "Tùy chỉnh",
+            custom_inv: "Tùy chỉnh",
+            power_per_unit: "CÔNG SUẤT MỖI MÁY (kW)",
+            expert_suggest_btn: "Gợi ý Chuyên gia (Safe Fit)"
         },
         en: {
             title_inverter: "Inverter Configuration",
@@ -72,12 +105,16 @@ export const Design = ({
             suggest_btn: "Suggest",
             power: "POWER (kW)",
             grid_charge: "Allow Grid Charging (Off-peak)",
-            title_finance: "Electricity Price & O&M Assumptions",
-            price_peak: "PEAK PRICE",
-            price_normal: "NORMAL",
-            price_low: "OFF-PEAK",
-            om_cost_capex: "O&M COST (% Capex)",
-            inflation: "POWER ESCALATION (%/Year)",
+            title_finance: "Giả định Giá điện & O&M",
+            price_peak: "GIÁ CAO ĐIỂM",
+            price_normal: "BÌNH THƯỜNG",
+            price_low: "THẤP ĐIỂM",
+            tariff_category: "LOẠI BIỂU GIÁ",
+            retail_group: "GIÁ BÁN LẺ",
+            wholesale_group: "GIÁ BÁN BUÔN",
+            voltage_level: "CẤP ĐIỆN ÁP",
+            om_cost_capex: "CHI PHÍ O&M (% Capex)",
+            inflation: "LẠM PHÁT ĐIỆN (%/Năm)",
             title_tech: "Technical Params & Losses",
             export_price: "GRID FEED-IN PRICE (VND)",
             total_derate: "Total Derate",
@@ -87,8 +124,12 @@ export const Design = ({
             optimize_btn: "Auto Optimize",
             optimize_fixed_btn: "Optimize by Selection",
             magic_btn: "Smart Suggest",
+            optimize_no_bess: "Optimize (No BESS)",
             bess_none: "None",
-            bess_custom: "Custom"
+            bess_custom: "Custom",
+            custom_inv: "Custom Size",
+            power_per_unit: "POWER PER UNIT (kW)",
+            expert_suggest_btn: "Expert Suggest (Safe Fit)"
         }
     }[lang];
     return (
@@ -111,6 +152,22 @@ export const Design = ({
                                 <Wand2 size={12} />
                                 <span>{dt.magic_btn}</span>
                             </button>
+                            <button
+                                onClick={() => handleSuggestSafeCapacity(processedData)}
+                                title={dt.expert_suggest_btn}
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold transition shadow-sm"
+                            >
+                                <ShieldCheck size={12} />
+                                <span>{dt.expert_suggest_btn}</span>
+                            </button>
+                            <button
+                                onClick={() => handleOptimizeNoBess(processedData, params, finParams)}
+                                title={dt.optimize_no_bess}
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition shadow-sm"
+                            >
+                                <Target size={12} />
+                                <span>{dt.optimize_no_bess}</span>
+                            </button>
                             <div className="text-[10px] px-2 py-0.5 bg-slate-100 rounded text-slate-500 font-medium whitespace-nowrap">
                                 DC/AC: {totalACPower > 0 ? (targetKwp / totalACPower).toFixed(2) : 'N/A'}
                             </div>
@@ -118,31 +175,53 @@ export const Design = ({
                     </div>
 
                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.main_machine}</label>
-                                <select value={inv1Id} onChange={(e) => setInv1Id(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500">
-                                    {INVERTER_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
+                        {/* MAIN INVERTER */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.main_machine}</label>
+                                    <select value={inv1Id} onChange={(e) => setInv1Id(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500">
+                                        <option value="custom" className="font-bold text-blue-600">{dt.custom_inv}</option>
+                                        <option disabled>──────────</option>
+                                        {INVERTER_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="w-16">
+                                    <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">{dt.qty}</label>
+                                    <input type="number" min="0" value={inv1Qty} onChange={(e) => setInv1Qty(Number(e.target.value))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-center text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
                             </div>
-                            <div className="w-16">
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">{dt.qty}</label>
-                                <input type="number" min="0" value={inv1Qty} onChange={(e) => setInv1Qty(Number(e.target.value))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-center text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
-                            </div>
+                            {inv1Id === 'custom' && (
+                                <div>
+                                    <label className="text-[10px] font-bold text-blue-500 block mb-1">{dt.power_per_unit}</label>
+                                    <input type="number" min="0" value={customInv1Power} onChange={(e) => setCustomInv1Power(Number(e.target.value))} className="w-full p-1.5 border border-blue-300 rounded bg-blue-50 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.sub_machine}</label>
-                                <select value={inv2Id} onChange={(e) => setInv2Id(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500">
-                                    <option value="">{dt.none}</option>
-                                    {INVERTER_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
+                        {/* SECONDARY INVERTER */}
+                        <div className="space-y-2 pt-2 border-t border-slate-200">
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.sub_machine}</label>
+                                    <select value={inv2Id} onChange={(e) => setInv2Id(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500">
+                                        <option value="">{dt.none}</option>
+                                        <option value="custom" className="font-bold text-blue-600">{dt.custom_inv}</option>
+                                        <option disabled>──────────</option>
+                                        {INVERTER_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="w-16">
+                                    <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">{dt.qty}</label>
+                                    <input type="number" min="0" value={inv2Qty} onChange={(e) => setInv2Qty(Number(e.target.value))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-center text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
                             </div>
-                            <div className="w-16">
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1 text-center">{dt.qty}</label>
-                                <input type="number" min="0" value={inv2Qty} onChange={(e) => setInv2Qty(Number(e.target.value))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-center text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
-                            </div>
+                            {inv2Id === 'custom' && (
+                                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <label className="text-[10px] font-bold text-blue-500 block mb-1">{dt.power_per_unit}</label>
+                                    <input type="number" min="0" value={customInv2Power} onChange={(e) => setCustomInv2Power(Number(e.target.value))} className="w-full p-1.5 border border-blue-300 rounded bg-blue-50 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
+                            )}
                         </div>
 
                         <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500 italic">
@@ -256,28 +335,98 @@ export const Design = ({
                         <Coins size={16} className="text-yellow-600" /> {dt.title_finance}
                     </h3>
                     <div className="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        {/* Tariff Category & Voltage Level Selectors */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 uppercase">{dt.tariff_category}</label>
+                                <div className="relative">
+                                    <select
+                                        value={tariffCategory || 'retail_manufacturing'}
+                                        onChange={(e) => {
+                                            const newCategory = e.target.value;
+                                            setTariffCategory(newCategory);
+                                            // Auto-select first voltage level and update prices
+                                            const tariff = EVN_TARIFFS[newCategory];
+                                            if (tariff && tariff.voltage_levels.length > 0) {
+                                                const firstLevel = tariff.voltage_levels[0];
+                                                setVoltageLevel(firstLevel.id);
+                                                setParams(p => ({
+                                                    ...p,
+                                                    pricePeak: firstLevel.prices.peak,
+                                                    priceNormal: firstLevel.prices.normal,
+                                                    priceOffPeak: firstLevel.prices.off_peak
+                                                }));
+                                            }
+                                        }}
+                                        className="w-full pl-3 pr-8 py-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-yellow-500 appearance-none"
+                                    >
+                                        <optgroup label={dt.retail_group}>
+                                            {getTariffOptions(lang).retail.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label={dt.wholesale_group}>
+                                            {getTariffOptions(lang).wholesale.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <ChevronDown size={14} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 uppercase">{dt.voltage_level}</label>
+                                <select
+                                    value={voltageLevel || ''}
+                                    onChange={(e) => {
+                                        const newLevel = e.target.value;
+                                        setVoltageLevel(newLevel);
+                                        // Update prices based on selected voltage level
+                                        const tariff = EVN_TARIFFS[tariffCategory || 'retail_manufacturing'];
+                                        if (tariff) {
+                                            const level = tariff.voltage_levels.find(v => v.id === newLevel);
+                                            if (level) {
+                                                setParams(p => ({
+                                                    ...p,
+                                                    pricePeak: level.prices.peak,
+                                                    priceNormal: level.prices.normal,
+                                                    priceOffPeak: level.prices.off_peak
+                                                }));
+                                            }
+                                        }
+                                    }}
+                                    className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-yellow-500"
+                                >
+                                    {getVoltageLevelOptions(tariffCategory || 'retail_manufacturing', lang).map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                         <div className="grid grid-cols-3 gap-2">
                             <div>
-                                <label className="text-[9px] font-bold text-slate-400 block">{dt.price_peak}</label>
-                                <input type="number" value={params.pricePeak} onChange={(e) => setParams(p => ({ ...p, pricePeak: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-bold" />
+                                <label className="text-[9px] font-bold text-slate-400 block uppercase">{dt.price_peak}</label>
+                                <input type="number" value={params.pricePeak} onChange={(e) => setParams(p => ({ ...p, pricePeak: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1 border border-slate-300 rounded bg-white text-xs text-center" />
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold text-slate-400 block">{dt.price_normal}</label>
-                                <input type="number" value={params.priceNormal} onChange={(e) => setParams(p => ({ ...p, priceNormal: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-bold" />
+                                <label className="text-[9px] font-bold text-slate-400 block uppercase">{dt.price_normal}</label>
+                                <input type="number" value={params.priceNormal} onChange={(e) => setParams(p => ({ ...p, priceNormal: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1 border border-slate-300 rounded bg-white text-xs text-center" />
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold text-slate-400 block">{dt.price_low}</label>
-                                <input type="number" value={params.priceOffPeak} onChange={(e) => setParams(p => ({ ...p, priceOffPeak: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-bold" />
+                                <label className="text-[9px] font-bold text-slate-400 block uppercase">{dt.price_low}</label>
+                                <input type="number" value={params.priceOffPeak} onChange={(e) => setParams(p => ({ ...p, priceOffPeak: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1 border border-slate-300 rounded bg-white text-xs text-center" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <label className="text-[9px] font-bold text-slate-400 block">{dt.om_cost_capex}</label>
-                                <input type="number" step="0.1" value={finParams.omPercent} onChange={(e) => setFinParams(p => ({ ...p, omPercent: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-bold" />
+                                <label className="text-[9px] font-bold text-slate-400 block uppercase">{dt.om_cost_capex}</label>
+                                <input type="number" step="0.1" value={finParams.omPercent} onChange={(e) => setFinParams(p => ({ ...p, omPercent: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1 border border-slate-300 rounded bg-white text-xs text-center" />
                             </div>
                             <div>
-                                <label className="text-[9px] font-bold text-slate-400 block">{dt.inflation}</label>
-                                <input type="number" step="0.1" value={finParams.escalation} onChange={(e) => setFinParams(p => ({ ...p, escalation: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-bold" />
+                                <label className="text-[9px] font-bold text-slate-400 block uppercase">{dt.inflation}</label>
+                                <input type="number" step="0.1" value={finParams.escalation} onChange={(e) => setFinParams(p => ({ ...p, escalation: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1 border border-slate-300 rounded bg-white text-xs text-center" />
                             </div>
                         </div>
                     </div>

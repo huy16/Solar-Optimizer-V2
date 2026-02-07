@@ -21,6 +21,7 @@ import { useSolarConfiguration, WEATHER_SCENARIOS } from './presentation/hooks/u
 import PROVINCES from './data/provinces.json';
 import { useFinancialModel } from './presentation/hooks/useFinancialModel';
 import { FormulaModal } from './presentation/components/FormulaModal';
+import { EVN_TARIFFS } from './data/evn_tariffs';
 
 import { Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
 import { SmartDesignSelector } from './presentation/components/SmartDesignSelector';
@@ -292,6 +293,8 @@ const SolarOptimizer = () => {
         inv1Qty, setInv1Qty,
         inv2Id, setInv2Id,
         inv2Qty, setInv2Qty,
+        customInv1Power, setCustomInv1Power,
+        customInv2Power, setCustomInv2Power,
         selectedBess, handleBessSelect,
         bessKwh, setBessKwh,
         bessMaxPower, setBessMaxPower,
@@ -301,10 +304,14 @@ const SolarOptimizer = () => {
         targetKwp, setTargetKwp,
         handleMagicSuggest,
         handleOptimize,
+        handleOptimizeNoBess,
         handleOptimizeBess,
         handleSuggestBessSize,
+        handleSuggestSafeCapacity,
         bessStrategy, setBessStrategy,
         weatherScenario, setWeatherScenario,
+        pricingType, setPricingType,
+        voltageLevelId, setVoltageLevelId,
         totalACPower,
         inverterMaxAcKw
     } = useSolarConfiguration({
@@ -332,6 +339,10 @@ const SolarOptimizer = () => {
             term: 10 // Years
         }
     });
+
+    // --- TARIFF CATEGORY STATE ---
+    const [tariffCategory, setTariffCategory] = useState('retail_manufacturing');
+    const [voltageLevel, setVoltageLevel] = useState('110kv_plus');
 
     // --- RESTORED LOCAL STATES & REFS ---
     // --- RESTORED LOCAL STATES & REFS ---
@@ -905,11 +916,8 @@ const SolarOptimizer = () => {
                 try {
                     const syntheticProfile = generateSyntheticProfile(data, profileType, new Date().getFullYear(), options);
                     // Format for rawData (cleanData mapping expects { rawTime, loadKw })
-                    const formattedData = syntheticProfile.map(p => ({
-                        rawTime: p.timestamp,
-                        loadKw: p.consumption
-                    }));
-                    setRawData(formattedData);
+                    // generateSyntheticProfile ALREADY returns { rawTime, loadKw }
+                    setRawData(syntheticProfile);
                     setIsManualConfig(false); // treat as if we have a file
                     setActiveTab('dashboard');
                 } catch (e) {
@@ -1797,7 +1805,12 @@ const SolarOptimizer = () => {
         setTimeout(async () => {
             try {
                 console.log('Starting PDF generation (5 Pages)...');
-                const doc = new jsPDF('p', 'mm', 'a4');
+                const doc = new jsPDF({
+                    orientation: 'p',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
                 const pageWidth = doc.internal.pageSize.getWidth();
                 let isFirstPage = true;
 
@@ -1815,9 +1828,9 @@ const SolarOptimizer = () => {
                         }
 
                         console.log(` capturing ${elementId}...`);
-                        const dataUrl = await htmlToImage.toPng(element, {
-                            quality: 1,
-                            pixelRatio: 2,
+                        const dataUrl = await htmlToImage.toJpeg(element, {
+                            quality: 0.8,
+                            pixelRatio: 1.5,
                             backgroundColor: '#ffffff',
                             skipAutoScale: true,
                             cacheBust: true,
@@ -1829,7 +1842,7 @@ const SolarOptimizer = () => {
                         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
                         if (!isFirstPage) doc.addPage();
-                        doc.addImage(dataUrl, 'PNG', 10, 10, pdfWidth, pdfHeight);
+                        doc.addImage(dataUrl, 'JPEG', 10, 10, pdfWidth, pdfHeight, undefined, 'FAST');
                         isFirstPage = false;
                     } catch (secErr) {
                         console.error(`Error adding section ${elementId}:`, secErr);
@@ -2132,58 +2145,13 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
 
-                        {/* 6. CORRELATION */}
-                        <div className={bessKwh > 0 ? "h-[365px]" : "h-[400px]"}>
-                            <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
-                                <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><BarChart2 size={18} /></div>
-                                6. {t.pdf.correlation || "Tương quan Load - Solar"}
-                            </h3>
-                            {bessKwh > 0 ? (
-                                <div className="grid grid-cols-2 gap-4 h-[320px]">
-                                    {/* Load vs Solar */}
-                                    <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-                                        <div className="text-[10px] font-bold text-indigo-600 mb-1 text-center uppercase">{t.pdf.chart_load_solar || "Tiêu thụ Load vs Solar"}</div>
-                                        <ResponsiveContainer width="100%" height="90%">
-                                            <ScatterChart margin={{ top: 5, right: 5, bottom: 15, left: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_solar_kw || "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
-                                                <YAxis type="number" dataKey="load" name="Load" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_load_kw || "Tải tiêu thụ (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
-                                                <Scatter name="Load" data={baseCorrelationData} fill="#6366f1" fillOpacity={0.5} shape="circle" isAnimationActive={false} />
-                                            </ScatterChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    {/* Grid Import vs Solar with BESS */}
-                                    <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-                                        <div className="text-[10px] font-bold text-emerald-600 mb-1 text-center uppercase">{t.pdf.chart_grid_import_bess || "Grid Import vs Solar (Với BESS)"}</div>
-                                        <ResponsiveContainer width="100%" height="90%">
-                                            <ScatterChart margin={{ top: 5, right: 5, bottom: 15, left: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                                <XAxis type="number" dataKey="solar" name="Solar" tick={{ fontSize: 8 }} label={{ value: t.pdf.axis_solar_kw || "Sản lượng Solar (kW)", position: 'insideBottom', offset: -10, fontSize: 8 }} />
-                                                <YAxis type="number" dataKey="gridImport" name="Grid Import" tick={{ fontSize: 8 }} domain={[0, 'auto']} label={{ value: t.pdf.axis_grid_kw || "Điện mua lưới (kW)", angle: -90, position: 'insideLeft', fontSize: 8 }} />
-                                                <Scatter name="Grid Import" data={correlationData} fill="#10b981" fillOpacity={0.6} shape="circle" isAnimationActive={false} />
-                                            </ScatterChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="h-full w-full border border-slate-200 rounded-lg p-4 bg-slate-50/50">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                            <XAxis type="number" dataKey="solar" name="Solar" unit="kW" tick={{ fontSize: 10 }} label={{ value: "Solar (kW)", position: 'insideBottom', offset: -15, fontSize: 10 }} />
-                                            <YAxis type="number" dataKey="load" name="Load" unit="kW" tick={{ fontSize: 10 }} label={{ value: "Load (kW)", angle: -90, position: 'insideLeft', fontSize: 10 }} />
-                                            <Scatter name="Load" data={correlationData} fill="#6366f1" fillOpacity={0.6} line={false} shape="circle" isAnimationActive={false} />
-                                        </ScatterChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-                        </div>
+
 
                         {/* 7. POWER CURVES */}
                         <div>
                             <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                                 <div className="p-1.5 bg-blue-50 rounded text-blue-600"><Activity size={18} /></div>
-                                7. {t.pdf.power_curves || "Power Curves (12 Tháng)"}
+                                6. {t.pdf.power_curves || "Power Curves (12 Tháng)"}
                             </h3>
                             <div className="grid grid-cols-4 gap-2">
                                 {monthlyPowerCurves.map((mItem, idx) => (
@@ -2229,7 +2197,7 @@ const SolarOptimizer = () => {
                         <div>
                             <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                                 <div className="p-1.5 bg-emerald-50 rounded text-emerald-600"><Table size={18} /></div>
-                                8. {t.pdf.yearly_summary || "Tổng hợp Năng lượng theo Năm"}
+                                7. {t.pdf.yearly_summary || "Tổng hợp Năng lượng theo Năm"}
                             </h3>
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
                                 <table className="w-full text-[10px] text-left">
@@ -2285,7 +2253,7 @@ const SolarOptimizer = () => {
                         </div>
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-blue-50 rounded text-blue-600"><TrendingUp size={18} /></div>
-                            9. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
+                            8. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
                         </h3>
 
                         {/* FRAME 1: ENVIRONMENTAL IMPACT */}
@@ -2750,7 +2718,20 @@ const SolarOptimizer = () => {
 
                 <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
                     <div className="max-w-6xl mx-auto space-y-6 pb-12">
-                        {activeTab === 'dashboard' && (
+                        {(!designMode && activeTab === 'dashboard') && (
+                            <SmartDesignSelector
+                                lang={lang}
+                                setLang={setLang}
+                                onSelect={handleInitialSelect}
+                                pricingType={pricingType}
+                                setPricingType={setPricingType}
+                                voltageLevelId={voltageLevelId}
+                                setVoltageLevelId={setVoltageLevelId}
+                                EVN_TARIFFS={EVN_TARIFFS}
+                            />
+                        )}
+
+                        {activeTab === 'dashboard' && designMode && (
                             <Dashboard
                                 customStats={customStats}
                                 isSimulating={isSimulating}
@@ -2774,6 +2755,8 @@ const SolarOptimizer = () => {
                                 inv1Qty={inv1Qty} setInv1Qty={setInv1Qty}
                                 inv2Id={inv2Id} setInv2Id={setInv2Id}
                                 inv2Qty={inv2Qty} setInv2Qty={setInv2Qty}
+                                customInv1Power={customInv1Power} setCustomInv1Power={setCustomInv1Power}
+                                customInv2Power={customInv2Power} setCustomInv2Power={setCustomInv2Power}
                                 INVERTER_OPTIONS={INVERTER_OPTIONS}
                                 totalACPower={totalACPower}
                                 targetKwp={targetKwp}
@@ -2784,13 +2767,17 @@ const SolarOptimizer = () => {
                                 bessKwh={bessKwh} setBessKwh={setBessKwh}
                                 bessMaxPower={bessMaxPower} setBessMaxPower={setBessMaxPower}
                                 handleSuggestBessSize={handleSuggestBessSize}
+                                handleSuggestSafeCapacity={handleSuggestSafeCapacity}
                                 isGridCharge={isGridCharge} setIsGridCharge={setIsGridCharge}
                                 bessStrategy={bessStrategy} setBessStrategy={setBessStrategy}
                                 handleOptimize={handleOptimize}
+                                handleOptimizeNoBess={handleOptimizeNoBess}
                                 handleOptimizeBess={handleOptimizeBess}
                                 processedData={processedData}
                                 params={params} setParams={setParams}
                                 finParams={finParams} setFinParams={setFinParams}
+                                tariffCategory={tariffCategory} setTariffCategory={setTariffCategory}
+                                voltageLevel={voltageLevel} setVoltageLevel={setVoltageLevel}
                                 lang={lang}
                                 t={t}
                             />
@@ -2804,9 +2791,13 @@ const SolarOptimizer = () => {
                                 formatMoney={formatMoney}
                                 scenarios={scenarios}
                                 targetKwp={targetKwp} setTargetKwp={setTargetKwp}
+                                pricingType={pricingType} setPricingType={setPricingType}
+                                voltageLevelId={voltageLevelId} setVoltageLevelId={setVoltageLevelId}
+                                params={params} setParams={setParams}
                                 onSelectScenario={handleSelectScenario}
                                 lang={lang}
                                 t={t}
+                                EVN_TARIFFS={EVN_TARIFFS}
                             />
                         )}
 

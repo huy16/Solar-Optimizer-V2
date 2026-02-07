@@ -516,45 +516,6 @@ export const Dashboard = ({
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                    <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg text-purple-500">
-                            <BarChart2 size={20} />
-                        </div>
-                        {dt.correlation_title}
-                    </h3>
-                    <div className={`grid gap-6 ${bessKwh > 0 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                        {/* 1. Original Load vs Solar */}
-                        <div className="h-72 w-full">
-                            <h4 className="text-xs font-semibold text-slate-500 mb-2 text-center uppercase">{dt.load_vs_solar}</h4>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ScatterChart margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" strokeOpacity={0.8} />
-                                    <XAxis type="number" dataKey="solar" name="Solar" unit="kW" tick={{ fontSize: 10 }} label={{ value: dt.solar_gen_kw, position: 'insideBottom', offset: -5, fontSize: 10 }} />
-                                    <YAxis type="number" dataKey="load" name="Load" unit="kW" tick={{ fontSize: 10 }} label={{ value: dt.load_cons_kw, angle: -90, position: 'insideLeft', fontSize: 10 }} />
-                                    <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} />
-                                    <Scatter name="Load" data={correlationData} fill="#8884d8" fillOpacity={0.5} />
-                                </ScatterChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* 2. New Grid Import vs Solar (BESS Active) */}
-                        {bessKwh > 0 && (
-                            <div className="h-72 w-full border-l border-slate-100 pl-4 md:pl-6">
-                                <h4 className="text-xs font-semibold text-slate-500 mb-2 text-center uppercase">{dt.grid_import_bess}</h4>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ScatterChart margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" strokeOpacity={0.8} />
-                                        <XAxis type="number" dataKey="solar" name="Solar" unit="kW" tick={{ fontSize: 10 }} label={{ value: dt.solar_gen_kw, position: 'insideBottom', offset: -5, fontSize: 10 }} />
-                                        <YAxis type="number" dataKey="gridImport" name="Grid Import" unit="kW" tick={{ fontSize: 10 }} domain={[0, 'auto']} label={{ value: dt.grid_import_kw, angle: -90, position: 'insideLeft', fontSize: 10 }} />
-                                        <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} />
-                                        <Scatter name="Grid Import" data={correlationData} fill="#10b981" fillOpacity={0.5} />
-                                    </ScatterChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-                    </div>
-                </div>
 
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                     <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-3">
