@@ -1162,7 +1162,7 @@ const SolarOptimizer = () => {
         if (!customStats) return null;
         // Calculate total loss percentage from techParams to match calculated stats
         const currentLosses = techParams.losses || { temp: 0, soiling: 0, cable: 0, inverter: 0 };
-        const totalLoss = Object.values(currentLosses).reduce((sum, val) => sum + val, 0);
+        const totalLoss = Object.values(currentLosses).reduce((sum, val) => sum + (Number(val) || 0), 0);
         return { systemLossPct: totalLoss, breakdown: currentLosses };
     }, [customStats, techParams.losses]);
 
