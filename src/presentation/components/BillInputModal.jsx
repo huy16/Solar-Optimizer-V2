@@ -368,6 +368,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             workSchedule: SCHEDULE_MAP[workSchedule] || SCHEDULE_MAP.mon_sat,
             seasonalCooling,
             customPrice: currentPrice,
+            isManualPrice,
             priceEscalation,
             evCharging,
             extraLoadType

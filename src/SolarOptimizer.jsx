@@ -340,9 +340,9 @@ const SolarOptimizer = () => {
         }
     });
 
-    // --- TARIFF CATEGORY STATE ---
-    const [tariffCategory, setTariffCategory] = useState('retail_manufacturing');
-    const [voltageLevel, setVoltageLevel] = useState('110kv_plus');
+    // --- TARIFF CATEGORY STATE (REMOVED - Use pricingType/voltageLevelId from hook) ---
+    // const [tariffCategory, setTariffCategory] = useState('retail_manufacturing');
+    // const [voltageLevel, setVoltageLevel] = useState('110kv_plus');
 
     // --- RESTORED LOCAL STATES & REFS ---
     // --- RESTORED LOCAL STATES & REFS ---
@@ -899,13 +899,30 @@ const SolarOptimizer = () => {
                 setSelectedProvince(options.provinceData);
                 setParams(prev => ({ ...prev, psh: options.provinceData.peakSunHours }));
             }
-            if (options.customPrice) {
+            // UPDATE PRICING TYPE & VOLTAGE
+            if (options.customerGroup) setPricingType(options.customerGroup);
+            if (options.voltageLevel) setVoltageLevelId(options.voltageLevel);
+
+            if (options.isManualPrice) {
+                // Manual overrides ALL prices (Flat Rate)
                 setParams(prev => ({
                     ...prev,
                     priceNormal: options.customPrice,
                     pricePeak: options.customPrice,
                     priceOffPeak: options.customPrice
                 }));
+            } else if (options.customerGroup && options.voltageLevel) {
+                // EVN Tariff: Lookup actual TOU prices
+                const group = EVN_TARIFFS[options.customerGroup];
+                const level = group?.voltage_levels.find(v => v.id === options.voltageLevel);
+                if (level && level.prices) {
+                    setParams(prev => ({
+                        ...prev,
+                        priceNormal: level.prices.normal,
+                        pricePeak: level.prices.peak,
+                        priceOffPeak: level.prices.off_peak
+                    }));
+                }
             }
             if (options.priceEscalation !== undefined) {
                 setFinParams(prev => ({ ...prev, escalation: options.priceEscalation }));
@@ -2777,8 +2794,8 @@ const SolarOptimizer = () => {
                                 processedData={processedData}
                                 params={params} setParams={setParams}
                                 finParams={finParams} setFinParams={setFinParams}
-                                tariffCategory={tariffCategory} setTariffCategory={setTariffCategory}
-                                voltageLevel={voltageLevel} setVoltageLevel={setVoltageLevel}
+                                tariffCategory={pricingType} setTariffCategory={setPricingType}
+                                voltageLevel={voltageLevelId} setVoltageLevel={setVoltageLevelId}
                                 lang={lang}
                                 t={t}
                             />
