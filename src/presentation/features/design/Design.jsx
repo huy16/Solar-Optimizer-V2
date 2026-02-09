@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Zap, RefreshCw, BatteryCharging, Coins, Settings, Wand2, Target, ChevronDown, ShieldCheck } from 'lucide-react';
 import { EVN_TARIFFS, getTariffOptions, getVoltageLevelOptions } from '../../../data/evn_tariffs';
+import { execute as verifyTechnicalConfig } from '../../../domain/usecases/VerifyTechnicalConfig';
+import { INVERTER_DB, PANEL_SPECS } from '../../../data/sources/HardwareDatabase';
 
 export const Design = ({
     inv1Id, setInv1Id,
@@ -227,6 +229,47 @@ export const Design = ({
                         <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500 italic">
                             <span>{dt.ac_sync_msg} ({new Intl.NumberFormat('vi-VN').format(totalACPower)} kW)</span>
                         </div>
+
+                        {/* TECHNICAL VALIDATION WARNINGS */}
+                        {(() => {
+                            const selectedInv = INVERTER_DB.find(i => i.id === inv1Id);
+                            const validation = verifyTechnicalConfig(selectedInv, PANEL_SPECS, {
+                                totalPanels: Math.ceil((targetKwp * 1000) / PANEL_SPECS.power), // Estimate panels based on kWp
+                                inverterQty: inv1Qty
+                            });
+
+                            // DEBUG:
+                            // console.log('Validation:', validation);
+
+                            return (
+                                <div className="mt-2 space-y-1">
+                                    {/* DEBUG INFO - REMOVE LATER */}
+                                    {/* <div className="text-[9px] text-gray-400">
+                                        Panels: {Math.ceil((targetKwp * 1000) / PANEL_SPECS.power)} | 
+                                        InvQty: {inv1Qty} | 
+                                        Valid: {validation.isValid ? 'Yes' : 'No'} | 
+                                        Warns: {validation.warnings.length}
+                                    </div> */}
+
+                                    {validation.warnings.length > 0 ? (
+                                        validation.warnings.map((w, idx) => (
+                                            <div key={idx} className={`text-[10px] flex items-center gap-1.5 p-1.5 rounded ${w.level === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                                                <ShieldCheck size={12} />
+                                                <span className="font-bold">{w.msg}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        // Force show if high ratio but no warning (sanity check)
+                                        (targetKwp / totalACPower > 1.5) && (
+                                            <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-orange-50 text-orange-600 border border-orange-100">
+                                                <ShieldCheck size={12} />
+                                                <span className="font-bold">Check: Ratio {(targetKwp / totalACPower).toFixed(2)} is High</span>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
