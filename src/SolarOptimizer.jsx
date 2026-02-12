@@ -310,6 +310,7 @@ const SolarOptimizer = () => {
         handleSuggestSafeCapacity,
         bessStrategy, setBessStrategy,
         weatherScenario, setWeatherScenario,
+        handleWeatherChange, // Added missing function
         pricingType, setPricingType,
         voltageLevelId, setVoltageLevelId,
         totalACPower,
@@ -1162,7 +1163,7 @@ const SolarOptimizer = () => {
                     bessStrategy === 'peak-shaving', // Derived from strategy
                     isGridCharge,
                     { ...deferredParams, calibrationFactor },
-                    { ...deferredTechParams, inverterMaxAcKw: totalACPower, weatherDerate: WEATHER_SCENARIOS[weatherScenario]?.derate || 1.0 }
+                    { ...deferredTechParams, inverterMaxAcKw: totalACPower } // Removed hardcoded weatherDerate override
                 );
                 setCustomStats(results);
             } catch (err) {
@@ -1338,7 +1339,7 @@ const SolarOptimizer = () => {
             setProcessedData(processedWithStep);
 
             setDetectedMaxLoad(maxLoad);
-            const autoMaxKwp = Math.ceil(maxLoad * 2.5);
+            const autoMaxKwp = Math.max(Math.ceil(maxLoad * 5), 5000);
             setMaxKwpRef(autoMaxKwp);
             if (isNewFileLoad.current) { setTargetKwp(detectedKwp || Math.round(maxLoad)); isNewFileLoad.current = false; }
             setIsProcessing(false);
@@ -1422,7 +1423,7 @@ const SolarOptimizer = () => {
                 const scenarioPrices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: 0 };
                 const fin = calculateAdvancedFinancials(capex, stats, scenarioPrices, { ...finParams, batteryCapex: 0 });
 
-                return { ...tScenario, kwp: finalKwp, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, config: finalInverters };
+                return { ...tScenario, kwp: finalKwp, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, lcoe: fin.lcoe, config: finalInverters };
             });
 
             // Base Scenario
@@ -1432,7 +1433,7 @@ const SolarOptimizer = () => {
             const prices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: techParams.gridInjectionPrice };
             const blFin = calculateAdvancedFinancials(blCapex, blStats, prices, { ...finParams, batteryCapex: bessKwh * params.bessPrice });
 
-            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, config: blInverters }, ...computedScenarios]);
+            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, lcoe: blFin.lcoe, config: blInverters }, ...computedScenarios]);
 
         }, 100); // 100ms Delay to unblock UI
 
@@ -2625,7 +2626,7 @@ const SolarOptimizer = () => {
                                                 'bg-white text-red-700 border-red-300'
                                         }`}
                                     value={weatherScenario}
-                                    onChange={(e) => setWeatherScenario(e.target.value)}
+                                    onChange={(e) => handleWeatherChange(e.target.value)}
                                 >
                                     {Object.entries(WEATHER_SCENARIOS).map(([key, scenario]) => (
                                         <option key={key} value={key}>
@@ -2651,7 +2652,7 @@ const SolarOptimizer = () => {
                         </div>
                     </div>
                 </div>
-                <div className="p-2 border-t border-slate-200 text-[9px] text-slate-400 text-center">CPS Solar © 2026</div>
+                <div className="p-2 border-t border-slate-200 text-[9px] text-slate-400 text-center"><span className="font-bold">CPS Solar Solutions</span> © 2026 • Engineering Division</div>
             </aside>
 
             <main className={`flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>

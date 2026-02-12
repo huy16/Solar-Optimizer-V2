@@ -190,6 +190,44 @@ export const execute = (
         }
     }
 
+    // LCOE Calculation
+    let npvCosts = (Number(equity) || 0) + (Number(loanAmount) || 0); // Initial Capex (Year 0)
+    let npvEnergy = 0;
+
+    for (let i = 1; i <= years; i++) {
+        const degFactor = Math.pow(1 - (Number(degradation) || 0) / 100, i - 1);
+        const escFactor = Math.pow(1 + (Number(escalation) || 0) / 100, i - 1);
+        const discountFactor = Math.pow(1 + safeDiscountRate / 100, i);
+
+        // Annual Energy (kWh). We use Net Solar delivered (Used + Exported - Grid Charged)
+        // to reflect the true economic cost per useful kWh.
+        const netSolarUsed = (Number(customStats.totalUsed) || 0) + (Number(customStats.totalExported) || 0) - (Number(customStats.totalGridCharge) || 0);
+        const annualGen = Math.max(0, netSolarUsed) * degFactor;
+
+        // Annual Costs (O&M + Insurance + Replacement)
+        const omCost = safeCapex * ((omPercent || 0) / 100) * escFactor;
+        const insCost = safeCapex * ((insuranceRate || 0) / 100);
+        let replaceCost = 0;
+
+        // Replacement Logic (Duplicate from Main Loop - ideally refactor but keeping inline for safety)
+        const effectiveBatReplacePct = batteryReplaceCost !== undefined ? batteryReplaceCost : batteryReplaceCostPct;
+        if (safeBatteryCapex > 0 && i % (batteryLife || 10) === 0 && i < years) {
+            replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
+        }
+        if (i % (inverterLife || 10) === 0 && i < years) {
+            replaceCost += systemCapexOnly * ((inverterReplaceCostPct || 0) / 100) * escFactor;
+        }
+
+        npvCosts += (omCost + insCost + replaceCost) / discountFactor;
+        npvEnergy += annualGen / discountFactor;
+    }
+
+    let lcoe = 0;
+    if (npvEnergy > 0) {
+        lcoe = npvCosts / npvEnergy;
+    }
+    if (isNaN(lcoe) || !isFinite(lcoe)) lcoe = 0;
+
     return {
         npv,
         payback: paybackYear || years + 1,
@@ -197,6 +235,6 @@ export const execute = (
         roi: equity > 0 ? (cumulativeData[years] ? (cumulativeData[years].acc + equity) / equity * 100 : 0) : 0,
         cumulativeData,
         firstYearRevenue: firstYearOperatingIncome,
-        lcoe: 0
+        lcoe: lcoe
     };
 };

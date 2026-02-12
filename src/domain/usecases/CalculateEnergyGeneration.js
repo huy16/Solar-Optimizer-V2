@@ -54,9 +54,15 @@ export const execute = (
     const safeSystemSize = isNaN(Number(systemSize)) ? 0 : Number(systemSize);
 
     // --- BESS PARAMS ---
-    const CHARGE_EFF = 0.95;
-    const DISCHARGE_EFF = 0.95;
-    const DOD_LIMIT = 0.90;
+    // Use techParams or defaults. Round Trip Eff -> Single Way = sqrt(RT)
+    const rtEff = techParams.bessEffRoundTrip !== undefined ? Number(techParams.bessEffRoundTrip) : 0.90; // Default 90% RT (~95% one way)
+    const singleWayEff = Math.sqrt(rtEff);
+
+    // Explicit or Derived
+    const CHARGE_EFF = singleWayEff;
+    const DISCHARGE_EFF = singleWayEff;
+
+    const DOD_LIMIT = techParams.bessDod !== undefined ? Number(techParams.bessDod) : 0.90;
     const minSocKwh = bessCapacityKwh * (1 - DOD_LIMIT);
 
     // Helper: Determine TOU Type

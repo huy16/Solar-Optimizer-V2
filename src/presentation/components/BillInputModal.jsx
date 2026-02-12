@@ -271,15 +271,35 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
         setMonthlyData(Array(12).fill(numValue));
     };
 
+    const [region, setRegion] = useState('north'); // north, central, south
+
     const handleSeasonalDist = (value) => {
         const base = value === '' ? 0 : parseInt(value);
         if (base === 0) return;
-        // Vietnamese seasonal curve (Peak in Summer May-Aug)
-        // Normalized so that the base value (Jan) is approximately 0.85 of peak
-        const coefficients = [0.85, 0.82, 0.9, 1.05, 1.15, 1.25, 1.3, 1.28, 1.15, 1.05, 0.95, 0.9];
-        // Calculate new values relative to the Jan input (first coefficient is 0.85)
-        // We want newData[0] to be close to 'base'
-        const newData = coefficients.map(c => Math.round((base / 0.85) * c));
+
+        let coefficients = [];
+
+        if (region === 'north') {
+            // MOVED: North - Summer Peak (May-Aug)
+            coefficients = [0.85, 0.82, 0.9, 1.05, 1.15, 1.25, 1.3, 1.28, 1.15, 1.05, 0.95, 0.9];
+        } else if (region === 'central') {
+            // Central - Summer Peak (May-Aug) similar to North but maybe sharper?
+            // Let's use a slightly modified curve or same for now if not specified.
+            // "May-August Peak" - using similar to North for now.
+            coefficients = [0.9, 0.9, 0.95, 1.1, 1.2, 1.25, 1.25, 1.2, 1.1, 1.0, 0.95, 0.9];
+        } else {
+            // South - Dry Season Peak (Mar-May) / Rainy Season Low (Aug-Oct) - but relatively flat
+            // "Flat / Slight Dry Season Peak"
+            coefficients = [0.98, 0.98, 1.05, 1.1, 1.1, 1.05, 1.0, 0.98, 0.98, 0.98, 0.98, 0.98];
+        }
+
+        // Normalize to keep average ~ base? Or base = Jan? 
+        // Existing logic: "Normalize so that base (Jan) is approx 0.85 of peak?" -> No, logic was "Input is Jan".
+        // Code: `const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));` 
+        // Wait, original code was: `Math.round((base / 0.85) * c)`. 0.85 was the first coeff.
+        // So generic formula: `Math.round((base / coefficients[0]) * c)`
+
+        const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));
         setMonthlyData(newData);
     };
 
@@ -692,6 +712,16 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     </div>
 
                                     <div className="flex items-stretch gap-2">
+                                        <select
+                                            value={region}
+                                            onChange={(e) => setRegion(e.target.value)}
+                                            className="px-2 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
+                                            title="Chọn vùng để phân bổ mùa"
+                                        >
+                                            <option value="north">MB</option>
+                                            <option value="central">MT</option>
+                                            <option value="south">MN</option>
+                                        </select>
                                         <button
                                             onClick={handleCopy}
                                             title="Copy dữ liệu 12 tháng (để backup hoặc paste lại sau)"
