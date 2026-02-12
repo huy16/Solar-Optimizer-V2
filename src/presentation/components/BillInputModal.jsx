@@ -88,7 +88,10 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_sat_tip: "Thứ 2-7: 100% tải. Chủ nhật: 30% tải nền.",
             all_days_tip: "Cả tuần: 100% tải.",
             auto_fill: "Bù tháng thiếu",
-            auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống."
+            auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống.",
+            region_north: "Miền Bắc",
+            region_central: "Miền Trung",
+            region_south: "Miền Nam"
         },
         en: {
             config: "Configuration",
@@ -150,7 +153,10 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             schedule_help: "Defines which days have consumption. Non-working days will be simulated with minimal base load.",
             mon_fri_tip: "Mon-Fri: 100% load. Sat: 40% base. Sun: 30% base.",
             mon_sat_tip: "Mon-Sat: 100% load. Sunday: 30% base load.",
-            all_days_tip: "All days: 100% load."
+            all_days_tip: "All days: 100% load.",
+            region_north: "North",
+            region_central: "Central",
+            region_south: "South"
         }
     };
 
@@ -716,11 +722,11 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                             value={region}
                                             onChange={(e) => setRegion(e.target.value)}
                                             className="px-2 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
-                                            title="Chọn vùng để phân bổ mùa"
+                                            title={lang === 'vi' ? "Chọn vùng để phân bổ mùa" : "Select region for seasonal distribution"}
                                         >
-                                            <option value="north">MB</option>
-                                            <option value="central">MT</option>
-                                            <option value="south">MN</option>
+                                            <option value="north">{t.region_north}</option>
+                                            <option value="central">{t.region_central}</option>
+                                            <option value="south">{t.region_south}</option>
                                         </select>
                                         <button
                                             onClick={handleCopy}
