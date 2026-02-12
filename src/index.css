@@ -109,6 +109,45 @@ body {
   }
 }
 
+@keyframes ekg {
+  0% {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-12px);
+    opacity: 0;
+  }
+}
+
+@keyframes scrolling-ekg {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-14px);
+  }
+}
+
+.animate-scrolling-ekg {
+  animation: scrolling-ekg 0.6s linear infinite;
+}
+
+/* Force animation on group hover for the scroller */
+.group:hover .animate-scrolling-ekg-hover {
+  animation: scrolling-ekg 0.6s linear infinite;
+}
+
 .animation-delay-2000 {
   animation-delay: 2s;
 }

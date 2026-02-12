@@ -73,6 +73,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             generate: "Tạo Profile",
             view_year: "Năm",
             view_day: "Ngày (Mẫu)",
+            distribute: "Phân bổ\nmùa",
             hourly_weights: "Tỷ trọng tiêu thụ theo giờ",
             months: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
             price_escalation: "Tăng giá điện dự kiến",
@@ -87,7 +88,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri_tip: "Thứ 2-6: 100% tải. Thứ 7: 40% tải nền. CN: 30% tải nền.",
             mon_sat_tip: "Thứ 2-7: 100% tải. Chủ nhật: 30% tải nền.",
             all_days_tip: "Cả tuần: 100% tải.",
-            auto_fill: "Bù tháng thiếu",
+            auto_fill: "Bù tháng\nthiếu",
             auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống.",
             region_north: "Miền Bắc",
             region_central: "Miền Trung",
@@ -710,14 +711,14 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                             {/* 3. Monthly Input Grid */}
                             <div className="bg-white rounded-[32px] border border-slate-100 p-6 space-y-6 shadow-sm">
                                 <div className="flex items-center justify-between px-2">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl shadow-sm border border-blue-100">
-                                            <Table size={20} />
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="p-1.5 bg-blue-50 text-blue-600 rounded-xl shadow-sm border border-blue-100 shrink-0">
+                                            <Table size={14} />
                                         </div>
-                                        <h4 className="text-lg font-black text-slate-700 tracking-tight uppercase leading-none">{t.monthly_inputs}</h4>
+                                        <h4 className="text-[11px] font-black text-slate-700 tracking-tight uppercase leading-tight">{t.monthly_inputs}</h4>
                                     </div>
 
-                                    <div className="flex items-stretch gap-2">
+                                    <div className="flex items-center flex-nowrap gap-1.5 shrink-0">
                                         <select
                                             value={region}
                                             onChange={(e) => setRegion(e.target.value)}
@@ -731,28 +732,43 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         <button
                                             onClick={handleCopy}
                                             title="Copy dữ liệu 12 tháng (để backup hoặc paste lại sau)"
-                                            className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
                                             <Copy size={16} className="group-hover:scale-110 transition-transform" /> Copy
                                         </button>
                                         <button
                                             onClick={handleAutoCompleteMissing}
                                             title={t.auto_fill_tip}
-                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50/50 border border-blue-100 rounded-xl text-blue-600 font-bold text-[10px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-blue-50/50 border border-blue-100 rounded-xl text-blue-600 font-bold text-[10px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <Sparkles size={14} className="group-hover:animate-spin" /> {t.auto_fill}
+                                            <Sparkles size={14} className="group-hover:animate-spin shrink-0" />
+                                            <div className="flex flex-col">
+                                                {t.auto_fill.split('\n').map((line, idx) => (
+                                                    <span key={idx} className="whitespace-nowrap">{line}</span>
+                                                ))}
+                                            </div>
                                         </button>
                                         <button
                                             onClick={() => handleFillAll(monthlyData[0])}
-                                            className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
-                                            <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" /> {t.fill_all}
+                                            <RefreshCw size={14} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
                                         </button>
                                         <button
                                             onClick={() => handleSeasonalDist(monthlyData[0])}
-                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <Activity size={14} className="group-hover:scale-110 transition-transform" /> {t.distribute}
+                                            <div className="relative w-3.5 h-3.5 overflow-hidden shrink-0">
+                                                <div className="flex absolute top-0 left-0 animate-scrolling-ekg-hover opacity-70 group-hover:opacity-100 transition-opacity">
+                                                    <Activity size={14} className="shrink-0" />
+                                                    <Activity size={14} className="shrink-0" />
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                {t.distribute.split('\n').map((line, idx) => (
+                                                    <span key={idx} className="whitespace-nowrap">{line}</span>
+                                                ))}
+                                            </div>
                                         </button>
                                     </div>
                                 </div>
