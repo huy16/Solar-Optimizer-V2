@@ -613,7 +613,8 @@ const SolarOptimizer = () => {
                 select_layer: "CHỌN LỚP DỮ LIỆU",
                 loaded_short: "Đã tải",
                 loaded: "Đã tải: ",
-                pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần)."
+                pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
+                sun_off: "CN Nghỉ"
             },
             formulas: {
                 pv_total: "Σ ( Sản lượng PV hàng tháng )",
@@ -867,7 +868,8 @@ const SolarOptimizer = () => {
                 select_layer: "SELECT LAYER",
                 loaded_short: "Loaded",
                 loaded: "Loaded: ",
-                pvout_explanation: "PVOUT data already includes system losses (Temp, Soiling, Cable, Inverter)."
+                pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
+                sun_off: "Sun Off"
             },
             formulas: {
                 pv_total: "Σ ( Monthly Solar Generation )",
@@ -2528,7 +2530,17 @@ const SolarOptimizer = () => {
             }
 
             <aside className={`fixed inset-y-0 left-0 z-20 w-64 bg-slate-50 border-r border-slate-200 transform transition-transform duration-200 ease-in-out shrink-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="h-20 flex items-center justify-start pl-6 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => { setDesignMode(null); setProcessedData([]); }}>
+                <div className="h-20 flex items-center justify-start pl-6 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => {
+                    setDesignMode(null);
+                    setProcessedData([]);
+                    setRawData([]);
+                    setSolarLayers([]);
+                    setLoadTag({ label: '', isWeekendOff: false });
+                    setSolarMetadata({});
+                    setCustomStats(null);
+                    setScenarios([]);
+                    setActiveTab('dashboard');
+                }}>
                     <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-3 transition-transform group-hover:scale-105" />
                     <div className="flex flex-col">
                         <span className="font-black text-sm leading-tight text-white drop-shadow-sm">SOLAR</span>
@@ -2562,7 +2574,7 @@ const SolarOptimizer = () => {
                     <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>
                         <div className="space-y-2">
                             <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
-                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Zap size={12} className="text-amber-500" />{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><RefreshCw size={10} /></button></div><div className="text-[10px] text-slate-500 truncate">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
+                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Zap size={12} className="text-amber-500" />{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><RefreshCw size={10} /></button></div><div className="text-[10px] text-slate-500 whitespace-normal">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
                             </div>
                             <input type="file" ref={fileInputRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFileUpload} onClick={(e) => e.target.value = null} />
 

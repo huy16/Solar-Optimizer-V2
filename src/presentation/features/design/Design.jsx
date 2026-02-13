@@ -322,15 +322,15 @@ export const Design = ({
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
                             <label className="text-[9px] font-bold text-blue-500 block">{t.weather_derate_label || "Hệ số Thời tiết (%)"}</label>
-                            <div className="relative w-16">
+                            <div className="relative w-20">
                                 <input
                                     type="number"
                                     min="0" max="100"
                                     value={Math.round(techParams.weatherDerate * 100)}
                                     onChange={(e) => setTechParams(prev => ({ ...prev, weatherDerate: Number(e.target.value) / 100 }))}
-                                    className="w-full p-1 border border-blue-200 rounded text-right text-xs font-bold text-blue-600 outline-none"
+                                    className="w-full p-1 pr-5 border border-blue-200 rounded text-right text-xs font-bold text-blue-600 outline-none"
                                 />
-                                <span className="absolute right-4 top-1 text-[9px] text-slate-400 select-none">%</span>
+                                <span className="absolute right-1.5 top-1.5 text-[9px] text-slate-400 select-none">%</span>
                             </div>
                         </div>
                         <div className="text-right text-[10px] font-bold text-slate-400 mt-1">

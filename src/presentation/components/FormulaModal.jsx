@@ -21,14 +21,14 @@ export const FormulaModal = ({ onClose, lang }) => {
                 desc: "Các hệ số mặc định: Temp (6.5%), Soiling (4.0%), Mismatch (1.5%), Ohmic (1.5%), Inverter (2.0%)."
             },
             bess: {
-                title: "3. Lưu trữ BESS (Mới cập nhật)",
+                title: "3. Lưu trữ BESS",
                 charge: "Sạc thực tế = Năng lượng vào * Hiệu suất sạc (95%)",
                 discharge: "Xả thực tế = Năng lượng ra / Hiệu suất xả (95%)",
                 dod: "Giới hạn xả sâu (DoD): 90% (Ngắt khi còn 10%)",
                 desc: "Mô phỏng thực tế tổn thất năng lượng khi đi qua pin lưu trữ và bảo vệ tuổi thọ pin."
             },
             finance: {
-                title: "4. Chỉ số Tài chính (Nâng cao)",
+                title: "4. Chỉ số Tài chính",
                 net_flow: "Dòng tiền ròng (Net Cashflow) =",
                 revenue: "Doanh thu (Tiết kiệm điện)",
                 om: "Chi phí O&M (Vận hành)",
@@ -40,7 +40,10 @@ export const FormulaModal = ({ onClose, lang }) => {
                 tax_calc: "Thuế phải nộp = Max(0, Thu nhập chịu thuế * 20%)",
                 tax_desc: "Khấu hao tài sản cố định đóng vai trò là \"Lá chắn thuế\" (Tax Shield) giúp giảm thuế phải đóng.",
                 efficiency: "Chỉ số Hiệu quả:",
-                payback_desc: "Payback = Thời gian để Tổng dòng tiền tích lũy >= 0"
+                efficiency: "Chỉ số Hiệu quả:",
+                payback_desc: "Payback = Thời gian để Tổng dòng tiền tích lũy >= 0",
+                irr: "IRR = Tỷ suất hoàn vốn nội bộ (NPV = 0)",
+                lcoe: "LCOE = Chi phí quy dẫn (NPV Costs / NPV Gen)"
             },
             assumptions: {
                 title: "5. Các giả định Chi phí khác",
@@ -88,7 +91,10 @@ export const FormulaModal = ({ onClose, lang }) => {
                 tax_calc: "Tax Due = Max(0, Taxable Income * 20%)",
                 tax_desc: "Fixed asset depreciation acts as a \"Tax Shield\", reducing the taxable amount.",
                 efficiency: "Performance Indices:",
-                payback_desc: "Payback = Time when Cumulative Cashflow >= 0"
+                efficiency: "Performance Indices:",
+                payback_desc: "Payback = Time when Cumulative Cashflow >= 0",
+                irr: "IRR = Internal Rate of Return (NPV = 0)",
+                lcoe: "LCOE = Levelized Cost of Energy (NPV Costs / NPV Gen)"
             },
             assumptions: {
                 title: "5. Other Cost Assumptions",
@@ -132,10 +138,11 @@ export const FormulaModal = ({ onClose, lang }) => {
                     <div>
                         <h4 className="font-bold text-slate-700 text-xs uppercase tracking-wide mb-1.5 flex items-center gap-2"><Activity size={14} className="text-emerald-600" /> {t.losses.title}</h4>
                         <div className="bg-slate-50 p-2.5 rounded border border-slate-200 text-xs space-y-1">
-                            <div className="font-mono text-slate-700">Total Derate = (1 - Temp) * (1 - Soiling) * (1 - Mismatch) * (1 - Ohmic) * (1 - Inverter)</div>
-                            <div className="font-mono text-slate-700 mt-1">Loss Percent = (1 - Total Derate) * 100</div>
+                            <div className="font-mono text-slate-700">System Derate = (1 - Temp) * (1 - Soiling) ... * (1 - Inverter)</div>
+                            <div className="font-mono text-slate-700 font-bold">Total Eff = System Derate * Weather Derate (%)</div>
+                            <div className="font-mono text-slate-700 mt-1">Loss Percent = (1 - Total Eff) * 100</div>
                         </div>
-                        <p className="text-[10px] text-slate-500 mt-1 italic">{t.losses.desc}</p>
+                        <p className="text-[10px] text-slate-500 mt-1 italic">{t.losses.desc} Thêm hệ số "Weather Derate" tùy chỉnh.</p>
                     </div>
 
                     {/* 3. LUU TRU BESS */}
@@ -177,7 +184,9 @@ export const FormulaModal = ({ onClose, lang }) => {
                                 <span className="font-bold text-slate-700 block mb-1">{t.finance.efficiency}</span>
                                 <div className="font-mono text-xs text-slate-600 pl-3 border-l-2 border-slate-300">
                                     NPV = Σ [ Net Cashflow / (1 + DiscountRate)^n ] <br />
-                                    {t.finance.payback_desc}
+                                    {t.finance.payback_desc} <br />
+                                    {t.finance.irr} <br />
+                                    {t.finance.lcoe}
                                 </div>
                             </div>
                         </div>
