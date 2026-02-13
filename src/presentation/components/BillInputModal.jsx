@@ -40,6 +40,10 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             business: "Kinh doanh",
             manufacture: "Sản xuất",
             admin: "Hành chính sự nghiệp",
+            retail_group: "GIÁ BÁN LẺ",
+            wholesale_group: "GIÁ BÁN BUÔN",
+            select_province: "Chọn tỉnh thành...",
+            search_placeholder: "Tìm kiếm...",
             voltage_level: "Cấp điện áp",
             "110kv_plus": "Cao thế (> 110kV)",
             "22kv_110kv": "Trung thế (22kV - 110kV)",
@@ -103,6 +107,10 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             business: "Business",
             manufacture: "Manufacturing",
             admin: "Administrative",
+            retail_group: "RETAIL PRICE",
+            wholesale_group: "WHOLESALE PRICE",
+            select_province: "Select Province...",
+            search_placeholder: "Search...",
             voltage_level: "Voltage Level",
             "110kv_plus": "High Voltage (> 110kV)",
             "22kv_110kv": "Medium Voltage (22kV - 110kV)",
@@ -431,7 +439,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                             <div>
                                 <div className="flex items-center gap-2 mb-1.5 opacity-60">
                                     <Zap size={14} className="text-blue-600 fill-current" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.config_label || "CẤU HÌNH"}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.config}</span>
                                 </div>
                                 <h2 className="text-2xl font-black text-slate-800 tracking-tighter leading-tight">
                                     {t.evn_tariff}
@@ -449,7 +457,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-[11px] font-bold cursor-pointer hover:border-blue-400 transition-all shadow-sm flex items-center justify-between group"
                                 >
                                     <span className={province ? 'text-slate-800' : 'text-slate-400'}>
-                                        {province || "Chọn tỉnh thành..."}
+                                        {province || t.select_province}
                                     </span>
                                     <MapPin size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                                 </div>
@@ -459,7 +467,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                             <input
                                                 type="text"
                                                 autoFocus
-                                                placeholder="Tìm kiếm..."
+                                                placeholder={t.search_placeholder}
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
                                                 className="w-full px-4 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
@@ -495,7 +503,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         }}
                                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none cursor-pointer"
                                     >
-                                        <optgroup label="GIÁ BÁN LẺ">
+                                        <optgroup label={t.retail_group}>
                                             {Object.entries(EVN_TARIFFS)
                                                 .filter(([_, g]) => g.group === 'retail')
                                                 .map(([key, group]) => (
@@ -504,7 +512,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                     </option>
                                                 ))}
                                         </optgroup>
-                                        <optgroup label="GIÁ BÁN BUÔN">
+                                        <optgroup label={t.wholesale_group}>
                                             {Object.entries(EVN_TARIFFS)
                                                 .filter(([_, g]) => g.group === 'wholesale')
                                                 .map(([key, group]) => (

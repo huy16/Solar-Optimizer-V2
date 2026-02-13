@@ -46,9 +46,9 @@ const TRANSLATIONS = {
         btn_profile_main: "Chọn file Load Profile",
         btn_bill_sub: "Chưa có dữ liệu?",
         btn_bill_main: "Nhập Hóa đơn EVN",
-        feature_1: "Phân tích hệ thống thông minh",
-        feature_2: "Tối ưu hóa Pin lưu trữ (BESS)",
-        feature_3: "Báo cáo chuẩn ESG & Tài chính",
+        feature_1: "Phân tích hệ thống",
+        feature_2: "Tối ưu hóa BESS",
+        feature_3: "Báo cáo ESG & Tài chính",
         bill_modal_title: "Nhập Hóa đơn Tiền điện",
         stats: [
             { label: "Năm kinh nghiệm", value: "20+" },
@@ -234,7 +234,7 @@ export const SmartDesignSelector = ({ onSelect, lang, setLang }) => {
                     </div>
 
                     {/* Trust Indicators */}
-                    <div className="pt-6 border-t border-slate-200/60 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-slate-500 animate-fade-in-up [animation-delay:1000ms]">
+                    <div className="pt-6 border-t border-slate-200/60 flex flex-wrap gap-x-3 gap-y-2 text-[13px] sm:text-sm font-medium text-slate-500 animate-fade-in-up [animation-delay:1000ms]">
                         <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_1}</div>
                         <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_2}</div>
                         <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_3}</div>

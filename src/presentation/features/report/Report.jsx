@@ -316,9 +316,9 @@ export const Report = ({
                                                     {dt.year_0}
                                                     <div className="group relative">
                                                         <Info size={12} className="text-slate-400 cursor-help" />
-                                                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm whitespace-nowrap">
+                                                        <div className="absolute left-0 bottom-full mb-2 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm whitespace-nowrap">
                                                             {dt.capex_tooltip}
-                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            <div className="absolute top-full left-2 border-4 border-transparent border-t-slate-800"></div>
                                                         </div>
                                                     </div>
                                                 </div>

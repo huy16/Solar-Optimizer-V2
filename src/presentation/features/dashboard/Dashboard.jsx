@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart } from 'recharts';
-import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw } from 'lucide-react';
+import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw, Leaf, Factory, Recycle, Trees } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 
 const TOOLTIP_STYLE = { borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' };
@@ -136,7 +136,17 @@ export const Dashboard = ({
             chart_weekday_load: "Phụ tải (T2-T7)",
             chart_solar_yield: "Sản lượng Solar",
             chart_self_use: "Sản lượng tự dùng",
-            chart_grid_import: "Điện mua lưới"
+            chart_solar_yield: "Sản lượng Solar",
+            chart_self_use: "Sản lượng tự dùng",
+            chart_grid_import: "Điện mua lưới",
+            esg_title: "Tác động Môi trường & Xã hội",
+            co2_saved: "Giảm phát thải CO₂",
+            trees_planted: "Cây trồng tương đương",
+            coal_saved: "Than đá tiết kiệm",
+            trash_recycled: "Túi rác tái chế",
+            unit_ton: "Tấn",
+            unit_trees: "Cây",
+            unit_bags: "Túi"
         },
         en: {
             calculating: "Simulation calculating...",
@@ -184,7 +194,15 @@ export const Dashboard = ({
             chart_weekday_load: "Weekday Load",
             chart_solar_yield: "Solar Production",
             chart_self_use: "Self-consumption",
-            chart_grid_import: "Grid Import"
+            chart_grid_import: "Grid Import",
+            esg_title: "Environmental & Social Impact",
+            co2_saved: "CO₂ Avoided",
+            trees_planted: "Equivalent Trees Planted",
+            coal_saved: "Coal Saved",
+            trash_recycled: "Trash Bags Recycled",
+            unit_ton: "Tonnes",
+            unit_trees: "Trees",
+            unit_bags: "Bags"
         }
     }[lang];
 
@@ -268,6 +286,71 @@ export const Dashboard = ({
                                 <Line type="monotone" dataKey="weekend" name={`${dt.load} (${dt.weekend})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" dot={false} isAnimationActive={false} />
                             </ComposedChart>
                         </ResponsiveContainer>
+                    </div>
+                </div>
+            )}
+
+            {/* ESG IMPACT SECTION */}
+            {customStats && (
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-green-50/30">
+                    <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
+                        <div className="p-2 bg-green-50 rounded-lg text-green-600">
+                            <Leaf size={20} />
+                        </div>
+                        {dt.esg_title}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* CO2 Saved */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full">
+                                <Leaf size={24} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.co2_saved}</p>
+                                <p className="text-xl font-black text-slate-800">
+                                    {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612))} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Equivalent Trees */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div className="p-3 bg-green-100 text-green-600 rounded-full">
+                                <Trees size={24} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.trees_planted}</p>
+                                <p className="text-xl font-black text-slate-800">
+                                    {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612) * 67)} <span className="text-xs font-normal text-slate-500">{dt.unit_trees}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Coal Saved */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div className="p-3 bg-slate-100 text-slate-600 rounded-full">
+                                <Factory size={24} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.coal_saved}</p>
+                                <p className="text-xl font-black text-slate-800">
+                                    {formatNumber(customStats.totalSolarGen / 1000 * 0.4)} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Trash Recycled */}
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                            <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
+                                <Recycle size={24} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.trash_recycled}</p>
+                                <p className="text-xl font-black text-slate-800">
+                                    {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612) * 95.2)} <span className="text-xs font-normal text-slate-500">{dt.unit_bags}</span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
