@@ -87,9 +87,63 @@ export const execute = (processedData, techParams = {}) => {
     const minLoadFound = safeLoad;
 
     // 5. Convert required AC Power (kW) to DC Capacity (kWp) using efficiency factor
-    // Target kWp = Min Load (kW) / Efficiency (Derate)
-    const suggestedKwp = isFinite(minLoadFound) ? (minLoadFound / derateFactor) : null;
+    // Instead of using the absolute strict minimum load, we now use a simulated approach
+    // to find the max capacity that keeps annual curtailment under 0.75% (so UI rounds to 0%).
+    // We already have `safeLoad` as a starting point. Let's do a quick upward scan.
 
-    // Round to nearest integer for clean kWp
-    return suggestedKwp !== null ? Math.round(suggestedKwp) : null;
+    // Fallback if we don't have enough data to simulate full year
+    if (processedData.length < 365 * 24) {
+        const suggestedKwp = isFinite(minLoadFound) ? (minLoadFound / derateFactor) : null;
+        return suggestedKwp !== null ? Math.round(suggestedKwp) : null;
+    }
+
+    // Fast simulation helper to check curtailment % for a given kWp
+    const checkCurtailment = (kwp) => {
+        let totalGen = 0;
+        let totalCurtailed = 0;
+        for (let i = 0; i < processedData.length; i++) {
+            const point = processedData[i];
+            const safeSolarUnit = isNaN(Number(point.solarUnit)) ? 0 : Number(point.solarUnit);
+            let solarPowerKw = safeSolarUnit * kwp * derateFactor;
+
+            const loadPower = isNaN(Number(point.load)) ? 0 : Number(point.load);
+
+            totalGen += solarPowerKw;
+            if (solarPowerKw > loadPower) {
+                totalCurtailed += (solarPowerKw - loadPower);
+            }
+        }
+        return totalGen > 0 ? (totalCurtailed / totalGen) * 100 : 0;
+    };
+
+    // Start from the strict absolute minimum
+    let currentKwp = isFinite(minLoadFound) ? Math.floor(minLoadFound / derateFactor) : 1;
+    if (currentKwp < 1) currentKwp = 1;
+
+    // Scan upwards until curtailment exceeds 0.75%
+    let bestKwp = currentKwp;
+    let step = 10; // Start with bigger steps to save time
+
+    // Phase 1: Rough scan
+    while (true) {
+        const curtPct = checkCurtailment(currentKwp + step);
+        if (curtPct > 0.75) {
+            break;
+        }
+        currentKwp += step;
+        bestKwp = currentKwp;
+    }
+
+    // Phase 2: Fine scan
+    step = 1;
+    while (true) {
+        const curtPct = checkCurtailment(currentKwp + step);
+        if (curtPct > 0.75) {
+            break;
+        }
+        currentKwp += step;
+        bestKwp = currentKwp;
+    }
+
+    return bestKwp;
 };

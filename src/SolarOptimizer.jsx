@@ -1402,12 +1402,16 @@ const SolarOptimizer = () => {
                 { label: `${t.scenarios.curtailment} 20%`, val: 0.20 }
             ];
 
-            const computedScenarios = targets.map(tScenario => {
+            const computedScenarios = targets.map((tScenario) => {
                 let low = 1, high = maxKwpRef * 1.5; let bestKwp = low; let minDiff = 1;
 
+                // Adjust the target value for the 0% scenario to allow up to 0.75% curtailment
+                // This matches the SuggestSafeCapacity logic and UI rounding (0.75% -> 0%)
+                const targetVal = tScenario.val === 0 ? 0.0075 : tScenario.val;
+
                 // OPTIMIZATION: Pre-filter data ONCE outside loop (was filtering 12x per scenario!)
-                const validDataForSim = processedData.filter(d => {
-                    const peak = Math.max(...(dayMap.get(d.date.toDateString()) || []).map(p => p.load));
+                const validDataForSim = processedData.filter((d) => {
+                    const peak = Math.max(...(dayMap.get(d.date.toDateString()) || []).map((p) => p.load));
                     return peak > 5;
                 });
                 const simData = validDataForSim.length > 0 ? validDataForSim : processedData;
@@ -1418,13 +1422,20 @@ const SolarOptimizer = () => {
                     // FIX: Do NOT use discrete inverter selection inside the loop. Use continuous approximation.
                     // Assuming default DC/AC ratio of 1.2 (or whatever is set) prevents "stepping" artifacts.
                     // If we use selectOptimalInverters here, it snaps to 30kW/50kW steps, making optimization fail for small % changes.
-                    const estimatedAcKw = mid / (dcAcRatio || 1.25);
+                    const estimatedAcKw = mid / 1.25;
                     const optParams = { ...techParams, inverterMaxAcKw: estimatedAcKw, gridInjectionPrice: 0 };
 
                     const stats = calculateSystemStats(mid, simData, 0, 0, false, false, { ...params, calibrationFactor }, optParams);
-                    const diff = stats.curtailmentRate - tScenario.val;
-                    if (Math.abs(diff) < minDiff) { minDiff = Math.abs(diff); bestKwp = mid; }
-                    if (stats.curtailmentRate < tScenario.val) low = mid; else high = mid;
+                    const diff = stats.curtailmentRate - targetVal;
+                    if (Math.abs(diff) < minDiff) {
+                        minDiff = Math.abs(diff);
+                        bestKwp = mid;
+                    }
+                    if (stats.curtailmentRate < targetVal) {
+                        low = mid;
+                    } else {
+                        high = mid;
+                    }
                 }
                 let finalKwp = Math.round(bestKwp); if (finalKwp < 1) finalKwp = 1;
 
