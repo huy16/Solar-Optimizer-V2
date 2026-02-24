@@ -85,41 +85,48 @@ export const processExcelData = (arrayData) => {
         if (rawTime === undefined || rawLoad === undefined) continue;
 
         // Custom JANDS Parsing: "MM DD HH mm" (05 07 07 00)
-        // Check strict format to avoid false positives
+        // OR mixed formats like "13/01/2025 00:00"
         let finalTime = rawTime;
-        if (typeof rawTime === 'string' && /^\d{2}\s\d{2}\s\d{2}\s\d{2}$/.test(rawTime.trim())) {
-            const parts = rawTime.trim().split(/\s+/);
-            const mon = parseInt(parts[0]);
-            const day = parseInt(parts[1]);
-            const HH = parts[2];
-            const mm = parts[3];
 
-            // Infer Year based on Month
-            // If we have startYear/endYear (e.g. 2024-2025):
-            // Nov (11) -> 2024. May (05) -> 2025.
-            // Heuristic: If mon > 6 (July+), use startYear. Else use endYear.
-            // Adjust heuristic based on actual start/end months if needed, 
-            // but simple split at mid-year often works for 12-month trailing data.
-            // Let's use the explicit range if available.
-            let y = endYear;
-            if (foundYears && startYear !== endYear) {
-                // If the month is part of the "start" segment (e.g. Nov, Dec)
-                // Assuming data is continuous.
-                // Simple logic: If month >= StartMonth (of the range), use StartYear.
-                // Parsing range string again or storing startMonth in extract logic would be better.
-                // Re-parsing simplicity:
-                const row3Header = arrayData.slice(0, 5).find(r => r && String(r[0]).includes('from'));
-                if (row3Header) {
-                    const m2 = String(row3Header[0]).match(/from\s+(\d+)\/(\d+)\/(\d+)/);
-                    if (m2 && parseInt(m2[2]) === mon) y = parseInt(m2[3]);
-                    else if (mon > 6 && startYear < endYear) y = startYear; // Fallback
-                    else y = endYear;
-                } else if (mon > 6 && startYear < endYear) {
-                    y = startYear;
+        if (typeof rawTime === 'number') {
+            // Excel Serial
+            const jsDate = new Date(Math.round((rawTime - 25569) * 86400 * 1000));
+            // Format directly to ISO-like string
+            const y = jsDate.getFullYear();
+            const mon = jsDate.getMonth() + 1;
+            const date = jsDate.getDate();
+            const h = jsDate.getHours();
+            const m = jsDate.getMinutes();
+            finalTime = `${y}-${String(mon).padStart(2, '0')}-${String(date).padStart(2, '0')} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+        else if (typeof rawTime === 'string') {
+            const cleanStr = rawTime.trim();
+            // Check for "13/01/2025 00:00" format (DD/MM/YYYY HH:mm)
+            if (cleanStr.includes('/') && cleanStr.includes(':')) {
+                const [dPart, tPart] = cleanStr.split(/\s+/);
+                if (dPart && tPart) {
+                    const [day, month, year] = dPart.split('/').map(Number);
+                    const [hr, min] = tPart.split(':').map(Number);
+                    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                        finalTime = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                    }
                 }
             }
+            // Legacy check for "05 07 07 00"
+            else if (/^\d{2}\s\d{2}\s\d{2}\s\d{2}$/.test(cleanStr)) {
+                const parts = cleanStr.split(/\s+/);
+                const mon = parseInt(parts[0]);
+                const day = parseInt(parts[1]);
+                const HH = parts[2];
+                const mm = parts[3];
 
-            finalTime = `${y}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')} ${HH}:${mm}`;
+                let y = endYear;
+                if (foundYears && startYear !== endYear) {
+                    if (mon > 6 && startYear < endYear) y = startYear;
+                    else y = endYear;
+                }
+                finalTime = `${y}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')} ${HH}:${mm}`;
+            }
         }
 
         let loadKw = parseFloat(rawLoad);

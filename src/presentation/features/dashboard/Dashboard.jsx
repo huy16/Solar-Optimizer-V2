@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart } from 'recharts';
-import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw, Leaf, Factory, Recycle, Trees } from 'lucide-react';
+import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw, Leaf, Factory, Fuel, Trees, Globe } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 
 const TOOLTIP_STYLE = { borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' };
@@ -10,6 +10,20 @@ const formatKwShort = (val) => `${Math.round(Number(val))} kW`;
 const formatKValue = (val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val;
 const formatHour = (val) => `${val}h`;
 
+// Custom ESG Icon (3 leaves based on user reference)
+const ESGIcon = ({ size = 24, className, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+        {/* Leaf 1 - Center Top */}
+        <path d="M12 12C12 12 10 7 12 4C14 7 12 12 12 12Z" fill="currentColor" />
+        {/* Leaf 2 - Left Bottom */}
+        <path d="M12 12C12 12 7 13 5 16C7 17 12 12 12 12Z" fill="currentColor" />
+        {/* Leaf 3 - Right Bottom */}
+        <path d="M12 12C12 12 17 13 19 16C17 17 12 12 12 12Z" fill="currentColor" />
+    </svg>
+);
+
+
 export const Dashboard = ({
     customStats,
     isSimulating,
@@ -17,6 +31,7 @@ export const Dashboard = ({
     params,
     bessKwh,
     averageDayData,
+    peakDayProfiles,
     solarMetadata,
     correlationData,
     monthlyDetails,
@@ -26,6 +41,7 @@ export const Dashboard = ({
     t
 }) => {
     const [energyViewMode, setEnergyViewMode] = useState('day');
+    const [chartViewMode, setChartViewMode] = useState('avg'); // 'avg' | 'peakLoad' | 'peakSun'
     const [selectedMonth, setSelectedMonth] = useState(() => {
         if (dailyStats && dailyStats.length > 0) return dailyStats[0].fullDate.getMonth();
         return new Date().getMonth();
@@ -143,10 +159,12 @@ export const Dashboard = ({
             co2_saved: "Giảm phát thải CO₂",
             trees_planted: "Cây trồng tương đương",
             coal_saved: "Than đá tiết kiệm",
-            trash_recycled: "Túi rác tái chế",
+            oil_saved: "Dầu tiết kiệm",
             unit_ton: "Tấn",
             unit_trees: "Cây",
-            unit_bags: "Túi"
+            unit_liters: "Lít",
+            view_avg: "TB Năm",
+            view_peak_load: "Tải Cao Nhất"
         },
         en: {
             calculating: "Simulation calculating...",
@@ -199,10 +217,12 @@ export const Dashboard = ({
             co2_saved: "CO₂ Avoided",
             trees_planted: "Equivalent Trees Planted",
             coal_saved: "Coal Saved",
-            trash_recycled: "Trash Bags Recycled",
+            oil_saved: "Standard Oil Saved",
             unit_ton: "Tonnes",
             unit_trees: "Trees",
-            unit_bags: "Bags"
+            unit_liters: "Liters",
+            view_avg: "Avg Year",
+            view_peak_load: "Peak Load"
         }
     }[lang];
 
@@ -295,7 +315,7 @@ export const Dashboard = ({
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-green-50/30">
                     <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
                         <div className="p-2 bg-green-50 rounded-lg text-green-600">
-                            <Leaf size={20} />
+                            <ESGIcon size={20} />
                         </div>
                         {dt.esg_title}
                     </h3>
@@ -339,15 +359,15 @@ export const Dashboard = ({
                             </div>
                         </div>
 
-                        {/* Trash Recycled */}
+                        {/* Oil Saved */}
                         <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
                             <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
-                                <Recycle size={24} />
+                                <Fuel size={24} />
                             </div>
                             <div>
-                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.trash_recycled}</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase">{dt.oil_saved}</p>
                                 <p className="text-xl font-black text-slate-800">
-                                    {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612) * 95.2)} <span className="text-xs font-normal text-slate-500">{dt.unit_bags}</span>
+                                    {formatNumber(customStats.totalSolarGen * 0.25)} <span className="text-xs font-normal text-slate-500">{dt.unit_liters}</span>
                                 </p>
                             </div>
                         </div>
@@ -370,7 +390,18 @@ export const Dashboard = ({
                                 </div>
                                 {dt.energy_management}
                             </h3>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
+                                {/* Day View sub-toggle: Avg / Peak Load / Peak Sun */}
+                                {energyViewMode === 'day' && peakDayProfiles && peakDayProfiles.peakLoadDay.length > 0 && (
+                                    <div className="flex bg-slate-100 rounded-lg p-0.5 mr-1">
+                                        <button onClick={() => setChartViewMode('avg')} className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition ${chartViewMode === 'avg' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                            {dt.view_avg}
+                                        </button>
+                                        <button onClick={() => setChartViewMode('peakLoad')} className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1 ${chartViewMode === 'peakLoad' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                            <Zap size={11} />{dt.view_peak_load}
+                                        </button>
+                                    </div>
+                                )}
                                 {energyViewMode === 'year' && availableYears.length > 1 && (
                                     <select
                                         value={selectedYear}
@@ -556,7 +587,7 @@ export const Dashboard = ({
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             {energyViewMode === 'day' ? (
-                                <ComposedChart data={averageDayData} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
+                                <ComposedChart data={chartViewMode === 'peakLoad' && peakDayProfiles?.peakLoadDay?.length > 0 ? peakDayProfiles.peakLoadDay : averageDayData} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
                                     <defs>
                                         <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} /></linearGradient>
                                         <linearGradient id="colorWeekend" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} /><stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} /></linearGradient>
@@ -565,12 +596,12 @@ export const Dashboard = ({
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                     <XAxis dataKey="hour" tick={{ fontSize: 9 }} stroke="#94a3b8" />
                                     <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" />
-                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
+                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} formatter={(val) => `${Number(val).toFixed(1)} kW`} />
                                     <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} iconSize={10} />
-                                    {/* Order in legend: 1. Solar, 2. Cuối Tuần, 3. Phụ tải (T2-T7) */}
                                     <Area type="monotone" dataKey="solarProfile" stroke="#22c55e" fill="url(#colorSolarRef)" strokeWidth={2} fillOpacity={1} dot={false} name={dt.chart_solar} isAnimationActive={false} />
+                                    {/* Show weekend load for all views */}
                                     <Area type="monotone" dataKey="weekend" stroke="#ef4444" fill="url(#colorWeekend)" fillOpacity={1} name={dt.chart_weekend_load} strokeWidth={2} strokeDasharray="4 2" dot={false} isAnimationActive={false} />
-                                    <Area type="monotone" dataKey="weekday" stroke="#3b82f6" fill="url(#colorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={dt.chart_weekday_load} isAnimationActive={false} />
+                                    <Area type="monotone" dataKey={chartViewMode === 'avg' ? 'weekday' : 'avgLoad'} stroke="#3b82f6" fill="url(#colorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={chartViewMode === 'avg' ? dt.chart_weekday_load : dt.load} isAnimationActive={false} />
                                 </ComposedChart>
                             ) : energyViewMode === 'month' ? (
                                 <BarChart data={monthlyChartData} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
@@ -617,7 +648,7 @@ export const Dashboard = ({
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                 <XAxis dataKey="month" tick={{ fontSize: 9 }} stroke="#94a3b8" />
                                 <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" tickFormatter={formatKValue} />
-                                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={TOOLTIP_STYLE} formatter={formatNumber} />
+                                <RechartsTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={TOOLTIP_STYLE} formatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(1).replace('.', ',') + 'k' : Math.round(val)} kWh`} />
                                 <Legend wrapperStyle={{ paddingTop: '5px', fontSize: '10px' }} />
                                 <Bar dataKey="used" stackId="solar" name={dt.solar_used} fill="#f97316" isAnimationActive={false} />
                                 <Bar dataKey="curtailed" stackId="solar" name={dt.curtailed} fill="#22c55e" fillOpacity={0.6} radius={[4, 4, 0, 0]} isAnimationActive={false} />

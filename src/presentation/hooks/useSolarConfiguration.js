@@ -40,7 +40,8 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         // Actually, let's make it Round Trip in UI (0.9) and calc sqrt for calc? 
         // Plan said "Round-trip Efficiency". Let's store "bessEffRoundTrip" = 0.90.
         bessEffRoundTrip: 0.90,
-        bessDod: 0.90
+        bessDod: 0.90,
+        oversizingRatio: 1.25 // Default DC/AC Ratio
     });
     const [targetKwp, setTargetKwp] = useState(0);
 
@@ -61,7 +62,9 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         if (targetKwp <= 0) return;
 
         // 1. Select Inverter (DC/AC ~ 1.25)
-        const targetAC = targetKwp / 1.25;
+        // 1. Select Inverter (DC/AC ~ techParams.oversizingRatio || 1.25)
+        const ratio = techParams.oversizingRatio || 1.25;
+        const targetAC = targetKwp / ratio;
         const bestInv = INVERTER_DB.reduce((prev, curr) =>
             Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
         );

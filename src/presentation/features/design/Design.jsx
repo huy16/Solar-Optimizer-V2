@@ -321,6 +321,24 @@ export const Design = ({
                             ))}
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1 group relative cursor-help">
+                                Tỷ lệ DC/AC (Oversizing) <HelpCircle size={8} />
+                                <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                    Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).
+                                    <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                </div>
+                            </label>
+                            <input
+                                type="number"
+                                step="0.05"
+                                min="1.0"
+                                max="2.0"
+                                value={techParams.oversizingRatio || 1.25}
+                                onChange={(e) => setTechParams(prev => ({ ...prev, oversizingRatio: Number(e.target.value) }))}
+                                className="w-16 p-1 border border-slate-300 rounded text-right text-xs font-bold text-slate-600 outline-none focus:border-blue-500"
+                            />
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
                             <label className="text-[9px] font-bold text-blue-500 block">{t.weather_derate_label || "Hệ số Thời tiết (%)"}</label>
                             <div className="relative w-20">
                                 <input
