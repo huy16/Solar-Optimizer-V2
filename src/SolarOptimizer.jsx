@@ -321,7 +321,7 @@ const SolarOptimizer = () => {
         gridInjectionPrice: 600,
         inverterMaxAcKw: 0, // Will be updated by hook logic or manual
         inverterMaxAcKw: 0, // Will be updated by hook logic or manual
-        losses: { temp: -0.5, soiling: 0, cable: 0, inverter: 0 } // Total -0.5% (match Excel)
+        losses: { temp: 0, soiling: 0, cable: 0, inverter: 0 } // Total 0%
     });
 
     const [chartViewMode, setChartViewMode] = useState('average'); // 'average' | 'peak'
@@ -1139,13 +1139,13 @@ const SolarOptimizer = () => {
             setCalibrationFactor(100);
             setTechParams(prev => ({
                 ...prev,
-                losses: { temp: -0.5, soiling: 0, cable: 0, inverter: 0 } // -0.5% (match Excel)
+                losses: { temp: 0, soiling: 0, cable: 0, inverter: 0 }
             }));
         } else if (titleLower.includes('dni')) {
             setCalibrationFactor(100);
             setTechParams(prev => ({
                 ...prev,
-                losses: { temp: -0.5, soiling: 0, cable: 0, inverter: 0 } // -0.5% (match Excel)
+                losses: { temp: 0, soiling: 0, cable: 0, inverter: 0 }
             }));
         }
     };
