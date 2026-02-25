@@ -102,6 +102,29 @@ export const Dashboard = ({
         return paddedData;
     }, [dailyStats, selectedMonth, selectedYear, energyViewMode]);
 
+    // Data for Yearly chart (12 months of selected year)
+    const yearlyChartData = React.useMemo(() => {
+        if (energyViewMode !== 'year') return [];
+
+        const monthlyAcc = Array(12).fill(0).map((_, i) => ({
+            month: t.months_short ? t.months_short[i] : (i + 1).toString(),
+            solar: 0, load: 0, used: 0, gridImport: 0, curtailed: 0
+        }));
+
+        dailyStats.forEach(d => {
+            if (d.fullDate.getFullYear() === selectedYear) {
+                const m = d.fullDate.getMonth();
+                monthlyAcc[m].solar += (d.solar || 0);
+                monthlyAcc[m].load += (d.load || 0);
+                monthlyAcc[m].used += (d.used || 0);
+                monthlyAcc[m].gridImport += (d.gridImport || 0);
+                monthlyAcc[m].curtailed += (d.curtailed || 0);
+            }
+        });
+
+        return monthlyAcc;
+    }, [dailyStats, selectedYear, energyViewMode, t]);
+
     // If averageDayData is empty, we haven't even processed basic files yet
     if (!averageDayData || averageDayData.length === 0) return null;
 
@@ -608,18 +631,18 @@ export const Dashboard = ({
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                     <XAxis dataKey="displayDay" tick={{ fontSize: 9 }} stroke="#94a3b8" />
                                     <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" />
-                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
+                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} formatter={(val) => `${formatNumber(Math.round(val))} kWh`} />
                                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} />
                                     <Bar dataKey="solar" name={dt.chart_solar_yield} fill="#22c55e" stackId="a" isAnimationActive={false} />
                                     <Bar dataKey="used" name={dt.chart_self_use} fill="#f97316" stackId="b" isAnimationActive={false} />
                                     <Bar dataKey="gridImport" name={dt.chart_grid_import} fill="#94a3b8" stackId="b" isAnimationActive={false} />
                                 </BarChart>
                             ) : (
-                                <BarChart data={monthlyDetails} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
+                                <BarChart data={yearlyChartData} margin={{ top: 10, right: 0, left: 0, bottom: 10 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                     <XAxis dataKey="month" tick={{ fontSize: 9 }} stroke="#94a3b8" />
                                     <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" />
-                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
+                                    <RechartsTooltip contentStyle={TOOLTIP_STYLE} formatter={(val) => `${formatNumber(Math.round(val))} kWh`} />
                                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} />
                                     <Bar dataKey="solar" name={dt.chart_solar_yield} fill="#22c55e" stackId="a" isAnimationActive={false} />
                                     <Bar dataKey="used" name={dt.chart_self_use} fill="#f97316" stackId="b" isAnimationActive={false} />

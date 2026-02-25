@@ -5,13 +5,37 @@ export const generateSolarProfile = (monthlyGhi, metadata, sourceName) => {
         // monthlyGhi is usually kWh/m2/month or similar.
         // Convert to daily avg peak sun hours (PSH)
         const avgDailyPsh = monthlySum / daysInMonth;
-        const amplitude = (avgDailyPsh * Math.PI) / 24; // Simple sinusoidal model
+        // 1. Calculate the base shape integral (sum of half-hours)
+        let shapeSum = 0;
+        for (let h = 0; h < 24; h++) {
+            if (h >= 6 && h <= 18) {
+                shapeSum += Math.pow(Math.sin((Math.PI * (h - 6)) / 12), 3);
+            }
+            const hNext = h + 0.5;
+            if (hNext >= 6 && hNext <= 18) {
+                shapeSum += Math.pow(Math.sin((Math.PI * (hNext - 6)) / 12), 3);
+            }
+        }
+
+        // 2. The total daily energy is (Peak * shapeSum * 0.5).
+        // We want Energy = avgDailyPsh. So Peak = avgDailyPsh / (shapeSum * 0.5).
+        const peak = avgDailyPsh / (shapeSum * 0.5);
+
         for (let d = 1; d <= daysInMonth; d++) {
             for (let h = 0; h < 24; h++) {
-                let val = 0; if (h > 6 && h < 18) val = amplitude * Math.sin(((h - 6) * Math.PI) / 12);
-                if (val < 0) val = 0;
-                solarMap.set(`${m}-${d}-${h}-0`, val);
-                solarMap.set(`${m}-${d}-${h}-30`, val);
+                let valCurrent = 0;
+                let valNext = 0;
+
+                if (h >= 6 && h <= 18) {
+                    valCurrent = peak * Math.pow(Math.sin((Math.PI * (h - 6)) / 12), 3);
+                }
+                const hNext = h + 0.5;
+                if (hNext >= 6 && hNext <= 18) {
+                    valNext = peak * Math.pow(Math.sin((Math.PI * (hNext - 6)) / 12), 3);
+                }
+
+                solarMap.set(`${m}-${d}-${h}-0`, Math.max(0, valCurrent));
+                solarMap.set(`${m}-${d}-${h}-30`, Math.max(0, valNext));
             }
         }
     }
@@ -37,26 +61,27 @@ export const interpolate30Min = (originalMap) => {
         const year = 2023;
         for (let m = 0; m < 12; m++) {
             const daysInMonth = new Date(year, m + 1, 0).getDate();
+
             for (let d = 1; d <= daysInMonth; d++) {
                 for (let h = 0; h < 24; h++) {
-                    const keyCurrent = `MONTHLY-${m}-${h}`;
-                    const valCurrent = originalMap.get(keyCurrent) || 0;
+                    const currentHourSum = originalMap.get(`MONTHLY-${m}-${h}`) || 0;
+                    const nextHourSum = originalMap.get(`MONTHLY-${m}-${h + 1 === 24 ? 0 : h + 1}`) || 0;
 
-                    const keyNext = `MONTHLY-${m}-${(h + 1) % 24}`; // Simple wrap-around for H=23->0
-                    const valNext = originalMap.get(keyNext) || 0;
+                    // MONTHLY-m-h contains the Monthly Sum of specific yield for that hour.
+                    // We divide by daysInMonth to get the daily specific yield for that hour.
+                    const valCurrent = currentHourSum / daysInMonth;
 
-                    // Calculate 30m value (avg)
-                    // Logic: If Solar at 18:00 is >0 and 19:00 is 0, 18:30 is avg.
-                    let val30 = 0;
-                    // Only interpolate if endpoints reasonable (e.g. not wrapping noon to midnight)
-                    // H=23 to H=0 is acceptable (night to night is 0 to 0)
-                    if (Math.abs(h - (h + 1) % 24) === 1 || h === 23) {
-                        val30 = (valCurrent + valNext) / 2;
-                    }
+                    // Interpret the 30-min data point as the average between this hour and next hour
+                    const valNextHour = nextHourSum / daysInMonth;
+                    let valNext = (valCurrent + valNextHour) / 2;
+
+                    // Edge case: don't interpolate night hours into morning artificially if current is 0
+                    if (valCurrent === 0 && valNextHour > 0) valNext = valNextHour * 0.1;
+                    if (valCurrent > 0 && valNextHour === 0) valNext = valCurrent * 0.1;
 
                     // Key Format: M-D-H-0 and M-D-H-30 (SolarOptimizer expects these for exact match)
-                    newMap.set(`${m}-${d}-${h}-0`, valCurrent);
-                    newMap.set(`${m}-${d}-${h}-30`, val30);
+                    newMap.set(`${m}-${d}-${h}-0`, Math.max(0, valCurrent));
+                    newMap.set(`${m}-${d}-${h}-30`, Math.max(0, valNext));
                 }
             }
         }
@@ -99,12 +124,12 @@ export const generateInstantaneousSolar = (date, dailyPsh) => {
     if (time < 6 || time > 18) return 0;
 
     // Sine wave centered at 12:00
-    // Integral of A * sin(pi * (t-6) / 12) dt from 6 to 18 = A * 24/pi
+    // Integral of A * sin^3(pi * (t-6) / 12) dt from 6 to 18 = A * 16/pi
     // We want Integral = dailyPsh
-    // So A = dailyPsh * pi / 24
+    // So A = dailyPsh * pi / 16
 
-    const peak = (dailyPsh * Math.PI) / 24;
-    const val = peak * Math.sin((Math.PI * (time - 6)) / 12);
+    const peak = (dailyPsh * Math.PI) / 16;
+    const val = peak * Math.pow(Math.sin((Math.PI * (time - 6)) / 12), 3);
 
     return Math.max(0, val);
 };

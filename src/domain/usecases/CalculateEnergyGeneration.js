@@ -45,10 +45,13 @@ export const execute = (
     const losses = techParams.losses || {};
     const safeLoss = (val) => isNaN(Number(val)) ? 0 : Number(val);
     const totalLossPct = safeLoss(losses.temp) + safeLoss(losses.soiling) + safeLoss(losses.cable) + safeLoss(losses.inverter);
-    const systemDerate = 1 - (totalLossPct / 100);
+
+    // If the data is already an Actual Yield profile (like PVSyst PVOUT), do not double-penalize
+    const isActualYield = techParams.isActualYield === true;
+    const systemDerate = isActualYield ? 1.0 : 1 - (totalLossPct / 100);
 
     // Weather Scenario Derate Factor (for bad weather simulation)
-    const weatherDerate = isNaN(Number(techParams.weatherDerate)) ? 1.0 : Number(techParams.weatherDerate);
+    const weatherDerate = isActualYield ? 1.0 : (isNaN(Number(techParams.weatherDerate)) ? 1.0 : Number(techParams.weatherDerate));
 
     // Sanitize System Size
     const safeSystemSize = isNaN(Number(systemSize)) ? 0 : Number(systemSize);
@@ -217,6 +220,7 @@ export const execute = (
 
         hourlyBatteryData.push({
             date: point.date,
+            timeStep: timeFactor,
             soc: currentSoc,
             charge: hourlyChargeFromSolar + hourlyChargeFromGrid,
             chargeFromSolar: hourlyChargeFromSolar,

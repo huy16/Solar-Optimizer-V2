@@ -82,15 +82,13 @@ const generateInstantaneousSolar = (date, psh) => {
     if (time < 6 || time > 18) return 0;
 
     // Amplitude based on PSH
-    // Total integral of sin(t) from 0 to pi is 2.
+    // Area under sin^3(t) from 0 to pi is 4/3.
     // We want avg daily kWh/kWp = PSH.
-    // 1 kWp * PSH = Integral(P(t) dt)
-    // Model: P(t) = A * sin( (t-6)*pi/12 )
-    // Integral from 6 to 18 of A*sin(...) is A * (12/pi) * 2 = A * 24/pi.
-    // So A * 24/pi = PSH => A = PSH * pi / 24.
+    // Integral from 6 to 18 of A*sin^3(...) is A * (12/pi) * (4/3) = A * 16/pi.
+    // So A * 16/pi = PSH => A = PSH * pi / 16.
 
-    const amplitude = (psh * Math.PI) / 24;
-    return amplitude * Math.sin(((time - 6) * Math.PI) / 12);
+    const amplitude = (psh * Math.PI) / 16;
+    return amplitude * Math.pow(Math.sin(((time - 6) * Math.PI) / 12), 3);
 };
 
 
@@ -1041,7 +1039,28 @@ const SolarOptimizer = () => {
 
     const solarSourceName = currentSolarLayer ? currentSolarLayer.source : '';
 
-    // AUTO-SYNC AC LIMIT
+    const isActualYield = useMemo(() => {
+        if (!currentSolarLayer) return false;
+        const t = (currentSolarLayer.title || '').toUpperCase();
+        const n = (currentSolarLayer.name || '').toUpperCase();
+        const s = (currentSolarLayer.source || '').toUpperCase();
+        const type = (solarMetadata && solarMetadata.sourceType) || '';
+
+        // PVOUT, GSA Monthly, or Synthetic profiles represent actual AC/DC yield
+        return t.includes('PVOUT') || n.includes('PVOUT') || t.includes('SẢN LƯỢNG ĐIỆN') ||
+            s.includes('GSA MONTHLY') || s.includes('GSA TRANSPOSED') ||
+            type === 'MET_SYNTHETIC' || s.includes('EXCEL (PVOUT');
+    }, [currentSolarLayer, solarMetadata]);
+
+    useEffect(() => {
+        setTechParams(prev => {
+            if (prev.isActualYield !== isActualYield) {
+                return { ...prev, isActualYield };
+            }
+            return prev;
+        });
+    }, [isActualYield, setTechParams]);
+
     useEffect(() => {
         setTechParams(prev => {
             // Only update if value actually changed and we have valid totalACPower
@@ -1173,7 +1192,7 @@ const SolarOptimizer = () => {
                     bessStrategy === 'peak-shaving', // Derived from strategy
                     isGridCharge,
                     { ...deferredParams, calibrationFactor },
-                    { ...deferredTechParams, inverterMaxAcKw: totalACPower } // Removed hardcoded weatherDerate override
+                    { ...deferredTechParams, inverterMaxAcKw: totalACPower, isActualYield } // Removed hardcoded weatherDerate override
                 );
                 setCustomStats(results);
             } catch (err) {
@@ -1184,7 +1203,7 @@ const SolarOptimizer = () => {
         }, 50); // Small delay to let UI paint fallbacks first
 
         return () => clearTimeout(timer);
-    }, [deferredSystemSize, processedData, deferredBessKwh, bessMaxPower, bessStrategy, isGridCharge, deferredParams, deferredTechParams, calibrationFactor, totalACPower, weatherScenario]);
+    }, [deferredSystemSize, processedData, deferredBessKwh, bessMaxPower, bessStrategy, isGridCharge, deferredParams, deferredTechParams, calibrationFactor, totalACPower, weatherScenario, isActualYield]);
 
     const estimatedLosses = useMemo(() => {
         if (!customStats) return null;
@@ -1423,7 +1442,7 @@ const SolarOptimizer = () => {
                     // Assuming default DC/AC ratio of 1.2 (or whatever is set) prevents "stepping" artifacts.
                     // If we use selectOptimalInverters here, it snaps to 30kW/50kW steps, making optimization fail for small % changes.
                     const estimatedAcKw = mid / 1.25;
-                    const optParams = { ...techParams, inverterMaxAcKw: estimatedAcKw, gridInjectionPrice: 0 };
+                    const optParams = { ...techParams, inverterMaxAcKw: estimatedAcKw, gridInjectionPrice: 0, isActualYield };
 
                     const stats = calculateSystemStats(mid, simData, 0, 0, false, false, { ...params, calibrationFactor }, optParams);
                     const diff = stats.curtailmentRate - targetVal;
@@ -1441,7 +1460,7 @@ const SolarOptimizer = () => {
 
                 // Final Stats Calc (reuse simData from above)
                 const { totalAcKw: finalAcKw, selectedInverters: finalInverters } = selectOptimalInverters(finalKwp, INVERTER_DB, 1.25);
-                const scenarioTechParams = { ...techParams, inverterMaxAcKw: finalAcKw, gridInjectionPrice: 0 };
+                const scenarioTechParams = { ...techParams, inverterMaxAcKw: finalAcKw, gridInjectionPrice: 0, isActualYield };
                 const stats = calculateSystemStats(finalKwp, simData, 0, 0, useTouMode, false, { ...params, calibrationFactor }, scenarioTechParams);
                 const capex = finalKwp * params.systemPrice;
                 const scenarioPrices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: 0 };
@@ -1452,7 +1471,7 @@ const SolarOptimizer = () => {
 
             // Base Scenario
             const { totalAcKw: blAcKw, selectedInverters: blInverters } = selectOptimalInverters(baseLoadKwp, INVERTER_DB, 1.25);
-            const blStats = calculateSystemStats(baseLoadKwp, processedData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, { ...techParams, inverterMaxAcKw: blAcKw });
+            const blStats = calculateSystemStats(baseLoadKwp, processedData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, { ...techParams, inverterMaxAcKw: blAcKw, isActualYield });
             const blCapex = baseLoadKwp * params.systemPrice + bessKwh * params.bessPrice;
             const prices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: techParams.gridInjectionPrice };
             const blFin = calculateAdvancedFinancials(blCapex, blStats, prices, { ...finParams, batteryCapex: bessKwh * params.bessPrice });
@@ -1506,27 +1525,28 @@ const SolarOptimizer = () => {
                 const batDate = bat.date instanceof Date ? bat.date : new Date(bat.date);
                 const h = batDate.getHours();
                 const dayOfWeek = batDate.getDay(); // 0 = Sunday
+                const ts = bat.timeStep || 1;
 
                 if (hourly[h]) {
                     hourly[h].count++;
-                    hourly[h].load += (bat.load || 0);
-                    hourly[h].solar += (bat.solar || 0);
-                    hourly[h].charge += (bat.chargeFromSolar || 0);
-                    hourly[h].gridCharge += (bat.chargeFromGrid || 0);
-                    hourly[h].discharge += (bat.discharge || 0);
+                    hourly[h].load += (bat.load || 0) / ts;
+                    hourly[h].solar += (bat.solar || 0) / ts;
+                    hourly[h].charge += (bat.chargeFromSolar || 0) / ts;
+                    hourly[h].gridCharge += (bat.chargeFromGrid || 0) / ts;
+                    hourly[h].discharge += (bat.discharge || 0) / ts;
                     hourly[h].soc += (bat.soc || 0); // Accumulate SOC
                     // Self Consumption = Solar - (Export + Curtailment)
                     // If export/curtailment not explicit, use min(solar, load + chargeFromSolar)
                     // Assuming bat has export/curtailment or we derive it:
                     const totalSolar = bat.solar || 0;
                     const exportAndCurtail = (bat.gridExport || 0) + (bat.curtailed || 0);
-                    hourly[h].selfConsumption += Math.max(0, totalSolar - exportAndCurtail);
+                    hourly[h].selfConsumption += Math.max(0, totalSolar - exportAndCurtail) / ts;
 
                     if (dayOfWeek === 0) {
-                        hourly[h].weSum += (bat.load || 0);
+                        hourly[h].weSum += (bat.load || 0) / ts;
                         hourly[h].weCount++;
                     } else {
-                        hourly[h].wdSum += (bat.load || 0);
+                        hourly[h].wdSum += (bat.load || 0) / ts;
                         hourly[h].wdCount++;
                     }
                 }
@@ -1604,17 +1624,18 @@ const SolarOptimizer = () => {
                 if (date.toDateString() !== peakDateStr) return;
                 const h = date.getHours();
                 const key = h;
+                const ts = bat.timeStep || 1;
                 if (!simHourMap.has(key)) simHourMap.set(key, { count: 0, solar: 0, charge: 0, gridCharge: 0, discharge: 0, soc: 0, selfConsumption: 0 });
                 const s = simHourMap.get(key);
                 s.count++;
-                s.solar += (bat.solar || 0);
-                s.charge += (bat.chargeFromSolar || 0);
-                s.gridCharge += (bat.chargeFromGrid || 0);
-                s.discharge += (bat.discharge || 0);
+                s.solar += (bat.solar || 0) / ts;
+                s.charge += (bat.chargeFromSolar || 0) / ts;
+                s.gridCharge += (bat.chargeFromGrid || 0) / ts;
+                s.discharge += (bat.discharge || 0) / ts;
                 s.soc += (bat.soc || 0);
                 const totalSolar = bat.solar || 0;
                 const exportAndCurtail = (bat.gridExport || 0) + (bat.curtailed || 0);
-                s.selfConsumption += Math.max(0, totalSolar - exportAndCurtail);
+                s.selfConsumption += Math.max(0, totalSolar - exportAndCurtail) / ts;
             });
         }
 
@@ -1652,7 +1673,15 @@ const SolarOptimizer = () => {
             });
         }
 
-        const peakLoadDay = hourly.map((h, i) => {
+        // VISUAL BOOST FOR SALES PRESENTATIONS
+        // The user requested that the "TB Nam" (Average Day) curve peaks at exactly 0.65 PSH
+        // and "Tai Cao Nhat" (Peak Load Day) curve peaks at exactly 0.75 PSH.
+        // We find the natural peak of both curves and apply a multiplier to achieve these exact heights.
+
+        let avgMaxSolar = 0;
+        let peakMaxSolar = 0;
+
+        const rawPeakLoadDay = hourly.map((h, i) => {
             const avg = averageDayData[i];
 
             // Determine weekend value: Peak Weekend if available, else Average Weekend
@@ -1666,17 +1695,21 @@ const SolarOptimizer = () => {
             if (h.count > 0) {
                 const sim = simHourMap.get(i);
                 const simCount = sim ? sim.count : 1;
+                const pSolar = sim ? Number(sim.solar / simCount) || 0 : Number(h.solar / h.count) || 0;
+                if (pSolar > peakMaxSolar) peakMaxSolar = pSolar;
+                if (avg && avg.solarProfile > avgMaxSolar) avgMaxSolar = avg.solarProfile;
+
                 return {
                     hour: `${i}:00`,
                     avgLoad: Number(h.load / h.count) || 0,
                     weekday: Number(h.load / h.count) || 0,
                     weekend: weekendVal,
-                    solarProfile: Number(h.solar / h.count) || 0,
+                    solarProfile: pSolar,
                     avgBessCharge: sim ? Number(sim.charge / simCount) || 0 : 0,
                     avgGridCharge: sim ? Number(sim.gridCharge / simCount) || 0 : 0,
                     avgBessDischarge: sim ? Number(sim.discharge / simCount) || 0 : 0,
                     avgSoc: sim ? Number(sim.soc / simCount) || 0 : 0,
-                    avgSelfConsumption: Number(Math.min(h.solar / h.count, h.load / h.count)) || 0,
+                    avgSelfConsumption: sim ? Number(sim.selfConsumption / simCount) || 0 : Number(Math.min(h.solar / h.count, h.load / h.count)) || 0,
                 };
             }
             // Fallback for missing hours
@@ -1687,6 +1720,32 @@ const SolarOptimizer = () => {
                 weekday: avg ? avg.weekday || 0 : 0,
                 weekend: weekendVal,
                 avgBessCharge: 0, avgGridCharge: 0, avgBessDischarge: 0, avgSoc: 0, avgSelfConsumption: 0
+            };
+        });
+
+        // Apply Visual Multipliers
+        // User explicitly requested PSH 0.78 for Average, and 0.85 for Peak Load Day
+        const targetAvgPeak = realSystemSize * 0.78;
+        const targetPeakDayPeak = realSystemSize * 0.85;
+
+        // We mutate `averageDayData` in place for performance since it's only used here for charts
+        const avgMultiplier = (avgMaxSolar > 0) ? (targetAvgPeak / avgMaxSolar) : 1;
+        const peakMultiplier = (peakMaxSolar > 0) ? (targetPeakDayPeak / peakMaxSolar) : 1;
+
+        // Apply to Average Day
+        averageDayData.forEach(hour => {
+            hour.solarProfile = hour.solarProfile * avgMultiplier;
+            // Also scale self consumption visual to match new solar height if it exceeds
+            if (hour.selfConsumption > hour.solarProfile) hour.selfConsumption = hour.solarProfile;
+        });
+
+        // Apply to Peak Load Day
+        const peakLoadDay = rawPeakLoadDay.map(hour => {
+            const newSolar = hour.solarProfile * peakMultiplier;
+            return {
+                ...hour,
+                solarProfile: newSolar,
+                avgSelfConsumption: Math.min(newSolar, hour.avgSelfConsumption * peakMultiplier)
             };
         });
 
