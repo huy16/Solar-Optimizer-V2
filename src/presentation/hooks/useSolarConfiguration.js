@@ -28,7 +28,7 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
     const [isGridCharge, setIsGridCharge] = useState(false);
     const [bessStrategy, setBessStrategy] = useState('self-consumption'); // 'self-consumption' | 'peak-shaving'
     const [weatherScenario, setWeatherScenario] = useState('normal'); // Weather simulation
-    const [pricingType, setPricingType] = useState('business'); // Default pricing type
+    const [pricingType, setPricingType] = useState('retail_manufacturing'); // Default pricing type
     const [voltageLevelId, setVoltageLevelId] = useState('22kv_110kv'); // Default voltage level
 
     // --- STATE PARAMETERS ---

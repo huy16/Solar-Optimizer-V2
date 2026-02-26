@@ -37,9 +37,29 @@ export const Design = ({
 }) => {
     // Auto-update prices when tariff or voltage level changes
     useEffect(() => {
-        if (!tariffCategory || !voltageLevel) return;
+        if (!tariffCategory) return;
+
         const tariff = EVN_TARIFFS[tariffCategory];
         if (tariff) {
+            // If voltageLevel is missing or not in the current tariff category, 
+            // auto-select the first available one to prevent empty selection
+            const isValidLevel = tariff.voltage_levels.some(v => v.id === voltageLevel);
+
+            if (!voltageLevel || !isValidLevel) {
+                if (tariff.voltage_levels.length > 0) {
+                    const firstLevel = tariff.voltage_levels[0];
+                    setVoltageLevel(firstLevel.id);
+                    setParams(p => ({
+                        ...p,
+                        pricePeak: firstLevel.prices.peak,
+                        priceNormal: firstLevel.prices.normal,
+                        priceOffPeak: firstLevel.prices.off_peak
+                    }));
+                }
+                return;
+            }
+
+            // Normal update when valid level exists
             const level = tariff.voltage_levels.find(v => v.id === voltageLevel);
             if (level && level.prices) {
                 setParams(p => ({
@@ -50,7 +70,7 @@ export const Design = ({
                 }));
             }
         }
-    }, [tariffCategory, voltageLevel, setParams]);
+    }, [tariffCategory, voltageLevel, setVoltageLevel, setParams]);
 
     const dt = {
         vi: {
