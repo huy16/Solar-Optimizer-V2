@@ -456,6 +456,8 @@ const SolarOptimizer = () => {
                 efficiency: "Hiệu suất"
             },
             pdf: {
+                exec_summary: "Đánh giá Hiệu quả Vận hành",
+                energy_scenario_comparison: "Năng lượng giữa các Kịch bản",
                 title: "Báo Cáo Tính Toán Công Suất Lắp Đặt",
                 report_date: "Ngày báo cáo",
                 tech_overview: "Tổng quan Hiệu quả Kỹ thuật",
@@ -535,6 +537,9 @@ const SolarOptimizer = () => {
             pdf_config: {
                 title: "Tùy chọn xuất PDF",
                 desc: "Chọn các phần bạn muốn đưa vào báo cáo:",
+                chart_mode: "DỮ LIỆU BIỂU ĐỒ",
+                mode_avg: "Trung bình Năm",
+                mode_peak: "Tải Cao Nhất",
                 overview: "Tổng quan & Sản lượng tháng",
                 system_config: "Cấu hình hệ thống & Kịch bản",
                 daily_charts: "Biểu đồ ngày & Tuần",
@@ -709,6 +714,8 @@ const SolarOptimizer = () => {
                 col_self_use_pct: "Self-Use (%)"
             },
             pdf: {
+                exec_summary: "Operational Performance Evaluation",
+                energy_scenario_comparison: "Energy Scenario Comparison",
                 title: "Solar Capacity & Financial Design Report",
                 report_date: "Report Date",
                 tech_overview: "Technical Performance Overview",
@@ -829,6 +836,9 @@ const SolarOptimizer = () => {
             pdf_config: {
                 title: "PDF Export Options",
                 desc: "Select the sections to include in your report:",
+                chart_mode: "CHART DATA",
+                mode_avg: "Yearly Average",
+                mode_peak: "Peak Load",
                 overview: "Overview & Monthly Yield",
                 system_config: "System Config & Scenarios",
                 daily_charts: "Daily & Weekly Charts",
@@ -1961,6 +1971,29 @@ const SolarOptimizer = () => {
 
 
 
+    // --- EXECUTIVE SUMMARY FOR PDF ---
+    const executiveSummaryData = useMemo(() => {
+        if (!monthlyDetails || monthlyDetails.length === 0 || !customStats) return null;
+
+        // Find max solar month
+        const maxSolarMonth = monthlyDetails.reduce((max, current) => (current.solar > max.solar) ? current : max, monthlyDetails[0]);
+
+        // Find max curtailed month
+        const maxCurtailedMonth = monthlyDetails.reduce((max, current) => (current.curtailed > max.curtailed) ? current : max, monthlyDetails[0]);
+
+        // Averages
+        const avgSelfUsePct = customStats.totalLoad > 0 ? ((customStats.totalUsed / customStats.totalLoad) * 100).toFixed(1) : 0;
+        const totalYearlySolar = monthlyDetails.reduce((s, m) => s + (m.solar || 0), 0);
+        const avgPvCoveragePct = customStats.totalLoad > 0 ? ((totalYearlySolar / customStats.totalLoad) * 100).toFixed(1) : 0;
+
+        return {
+            maxSolarMonth: { month: maxSolarMonth.month, value: formatNumber(maxSolarMonth.solar / 1000) },
+            maxCurtailedMonth: { month: maxCurtailedMonth.month, value: formatNumber(maxCurtailedMonth.curtailed / 1000) },
+            avgSelfUsePct,
+            avgPvCoveragePct
+        };
+    }, [monthlyDetails, customStats]);
+
     // --- UPDATE SOLAR METADATA ON LAYER CHANGE ---
     useEffect(() => {
         if (currentSolarLayer) {
@@ -2258,7 +2291,14 @@ const SolarOptimizer = () => {
                                         </tr>
                                         <tr className="bg-blue-50/30">
                                             <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.inverters}</td>
-                                            <td className="px-4 py-2 font-medium text-slate-700">{inv1Qty}x {inv1Id ? INVERTER_DB.find(i => i.id === inv1Id)?.name : "Inverter"} ({inv1Qty > 0 ? formatNumber(inv1Qty * (INVERTER_DB.find(i => i.id === inv1Id)?.power || 0)) : 0} kW)</td>
+                                            <td className="px-4 py-2 font-medium text-slate-700">
+                                                <div>{inv1Qty}x {inv1Id ? INVERTER_DB.find(i => i.id === inv1Id)?.name : "Inverter"} ({inv1Qty > 0 ? formatNumber(inv1Qty * (INVERTER_DB.find(i => i.id === inv1Id)?.acPower || 0)) : 0} kW)</div>
+                                                {inv2Qty > 0 && inv2Id && (
+                                                    <div className="mt-1 text-slate-600">
+                                                        {inv2Qty}x {INVERTER_DB.find(i => i.id === inv2Id)?.name || "Inverter"} ({formatNumber(inv2Qty * (INVERTER_DB.find(i => i.id === inv2Id)?.acPower || 0))} kW)
+                                                    </div>
+                                                )}
+                                            </td>
                                         </tr>
                                         <tr>
                                             <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.bess}</td>
@@ -2396,18 +2436,18 @@ const SolarOptimizer = () => {
                         </div>
                     </div>
 
-                    <div id="report-page-2" className="pt-4 px-10 pb-10 min-h-[1650px] bg-white flex flex-col items-stretch gap-0">
-                        {/* Premium Header Mini */}
-                        <div className="flex justify-between items-end border-b border-blue-900 pb-1 mb-1">
-                            <div className="flex items-center gap-2">
-                                <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
+                    <div id="report-page-2" className="pt-4 px-10 pb-10 min-h-[1650px] bg-white flex flex-col items-stretch gap-4">
+                        {/* Premium Header */}
+                        <div className="flex justify-between items-end border-b-2 border-blue-900 pb-4 mb-4">
+                            <div className="flex items-center gap-4">
+                                <img src={casLogoReport} className="h-16 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_operation || "CHI TIẾT VẬN HÀNH"}</h1>
-                                    <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
+                                    <h1 className="text-2xl font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_operation || "CHI TIẾT VẬN HÀNH"}</h1>
+                                    <h2 className="text-xl font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
+                                <p className="text-xs text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
 
@@ -2500,91 +2540,171 @@ const SolarOptimizer = () => {
                                 </table>
                             </div>
                         </div>
+
+                        {/* 9. EXECUTIVE SUMMARY */}
+                        {executiveSummaryData && (
+                            <div>
+                                <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
+                                    <div className="p-1.5 bg-blue-50 rounded text-blue-600"><TrendingUp size={18} /></div>
+                                    8. {t.pdf.exec_summary || "Đánh giá Hiệu quả Vận hành"}
+                                </h3>
+                                <div className="grid grid-cols-4 gap-3">
+                                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
+                                        <div className="p-1.5 bg-amber-100 rounded-full text-amber-600 mb-1"><Sun size={16} /></div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.max_solar_month || "Tháng Nắng Nhiều Nhất"}</div>
+                                        <div className="text-lg font-black text-amber-600 mt-1">{executiveSummaryData.maxSolarMonth.month}</div>
+                                        <div className="text-[9px] font-medium text-slate-400">{executiveSummaryData.maxSolarMonth.value} MWh</div>
+                                    </div>
+
+                                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
+                                        <div className="p-1.5 bg-red-100 rounded-full text-red-600 mb-1"><Activity size={16} /></div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.max_curtailed_month || "Tháng Dư Thừa Nhiều Nhất"}</div>
+                                        <div className="text-lg font-black text-red-600 mt-1">{executiveSummaryData.maxCurtailedMonth.month}</div>
+                                        <div className="text-[9px] font-medium text-slate-400">{executiveSummaryData.maxCurtailedMonth.value} MWh {t.pdf.curtailed || "Cắt giảm"}</div>
+                                    </div>
+
+                                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
+                                        <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 mb-1"><Zap size={16} /></div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.avg_self_use || "Tỷ Lệ Tự Dùng Năng Lượng"}</div>
+                                        <div className="text-xl font-black text-emerald-600 mt-1">{executiveSummaryData.avgSelfUsePct}%</div>
+                                        <div className="text-[9px] font-medium text-slate-400">{t.pdf.yearly_avg || "Bình quân năm"}</div>
+                                    </div>
+
+                                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
+                                        <div className="p-1.5 bg-indigo-100 rounded-full text-indigo-600 mb-1"><ShieldCheck size={16} /></div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.grid_independence || "Tỷ lệ Tự chủ Năng lượng"}</div>
+                                        <div className="text-xl font-black text-indigo-600 mt-1">{executiveSummaryData.avgPvCoveragePct}%</div>
+                                        <div className="text-[9px] font-medium text-slate-400">{t.pdf.pv_coverage || "Tải được đáp ứng bởi Solar"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 9. ENVIRONMENTAL IMPACT */}
+                        <div>
+                            <h3 className="text-blue-700 font-bold text-lg mb-2 flex items-center gap-2">
+                                <div className="p-1.5 bg-emerald-50 rounded text-emerald-600"><Leaf size={18} /></div>
+                                9. {t.pdf_config.env_impact || "Hiệu quả Môi trường"}
+                            </h3>
+                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                                <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <Leaf size={120} className="text-emerald-500 transform rotate-12" />
+                                    </div>
+                                    <p className="text-[10px] text-emerald-600 mb-3 max-w-[80%] relative z-10 font-medium">{t.pdf_config.env_desc}</p>
+
+                                    <div className="grid grid-cols-4 gap-3 relative z-10">
+                                        {/* CO2 Saved */}
+                                        <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
+                                            <div className="p-2 bg-emerald-100 rounded-full mb-1 text-emerald-600">
+                                                <CloudSun size={18} />
+                                            </div>
+                                            <span className="text-lg font-black text-slate-700">
+                                                {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH / 1000)}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t.pdf_config.ton_year}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.co2_saved}</span>
+                                        </div>
+
+                                        {/* Trees Planted */}
+                                        <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
+                                            <div className="p-2 bg-green-100 rounded-full mb-1 text-green-600">
+                                                <Trees size={18} />
+                                            </div>
+                                            <span className="text-lg font-black text-slate-700">
+                                                {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH * TREES_PER_CO2_KG)}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">{t.pdf_config.trees}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.trees_planted}</span>
+                                        </div>
+
+                                        {/* Coal Saved */}
+                                        <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
+                                            <div className="p-2 bg-slate-100 rounded-full mb-1 text-slate-600">
+                                                <Factory size={18} />
+                                            </div>
+                                            <span className="text-lg font-black text-slate-700">
+                                                {formatNumber((customStats?.totalSolarGen || 0) * COAL_KG_PER_KWH / 1000)}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf_config.ton_coal}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.coal_saved}</span>
+                                        </div>
+
+                                        {/* Oil Saved */}
+                                        <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
+                                            <div className="p-2 bg-blue-100 rounded-full mb-1 text-blue-600">
+                                                <Fuel size={18} />
+                                            </div>
+                                            <span className="text-lg font-black text-slate-700">
+                                                {formatNumber((customStats?.totalSolarGen || 0) * OIL_LITERS_PER_KWH)}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{t.pdf_config.liters}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.oil_saved}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* PAGE 3: FINANCIAL ANALYSIS */}
                     <div id="report-page-3" className="pt-4 px-10 pb-10 min-h-[1650px] bg-white flex flex-col items-stretch gap-2">
-                        {/* Premium Header Mini */}
-                        <div className="flex justify-between items-end border-b border-blue-900 pb-1 mb-1">
-                            <div className="flex items-center gap-2">
-                                <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
+                        {/* Premium Header */}
+                        <div className="flex justify-between items-end border-b-2 border-blue-900 pb-4 mb-4">
+                            <div className="flex items-center gap-4">
+                                <img src={casLogoReport} className="h-16 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_finance || "PHÂN TÍCH TÀI CHÍNH"}</h1>
-                                    <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
+                                    <h1 className="text-2xl font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_finance || "PHÂN TÍCH TÀI CHÍNH"}</h1>
+                                    <h2 className="text-xl font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
+                                <p className="text-xs text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
+                        {/* 10. SCENARIO COMPARISON TABLE */}
+                        <h3 className="text-blue-700 font-bold text-lg mb-2 flex items-center gap-2">
+                            <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><BarChart2 size={18} /></div>
+                            10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản)"}
+                        </h3>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                            <div className="rounded-lg border border-slate-200 overflow-hidden">
+                                <table className="w-full text-[9px] text-left">
+                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
+                                        <tr>
+                                            <th className="p-2 border-r border-slate-100">{t.pdf.col_scenario || "Kịch bản"}</th>
+                                            <th className="p-2 text-center border-r border-slate-100">{t.pdf.col_capacity || "Công suất"}</th>
+                                            <th className="p-2 text-right border-r border-slate-100">{t.pdf.col_capex || "Vốn (CAPEX) (VND)"}</th>
+                                            <th className="p-2 text-right border-r border-slate-100">{t.pdf.col_saving || "Tiết kiệm (N1) (VND)"}</th>
+                                            <th className="p-2 text-right text-purple-600 border-r border-slate-100">{t.pdf.col_lcoe || "LCOE (VNĐ/kWh)"}</th>
+                                            <th className="p-2 text-right text-emerald-600 border-r border-slate-100">{t.pdf.col_npv || "NPV (VND)"}</th>
+                                            <th className="p-2 text-right text-blue-600 border-r border-slate-100">{t.pdf.col_irr || "IRR"}</th>
+                                            <th className="p-2 text-right">{t.pdf.col_payback || "Hoàn vốn"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {scenarios.map((s, i) => (
+                                            <tr key={i} className={targetKwp === s.kwp ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}>
+                                                <td className="p-2 font-medium text-slate-700 border-r border-slate-100">{s.label}</td>
+                                                <td className="p-2 text-center font-bold border-r border-slate-100">{s.kwp} <small className="font-normal text-slate-400">kWp</small></td>
+                                                <td className="p-2 text-right text-slate-600 border-r border-slate-100">{formatMoney(s.capex)}</td>
+                                                <td className="p-2 text-right text-slate-600 border-r border-slate-100">{formatMoney(s.annualSaving)}</td>
+                                                <td className="p-2 text-right font-bold text-purple-600 border-r border-slate-100">{formatMoney(s.lcoe)}</td>
+                                                <td className="p-2 text-right font-bold text-emerald-600 border-r border-slate-100">{formatMoney(s.npv)}</td>
+                                                <td className="p-2 text-right font-bold text-blue-600 border-r border-slate-100">{s.irr.toFixed(1)}<small className="font-normal">%</small></td>
+                                                <td className="p-2 text-right font-bold text-slate-800">{s.paybackYears.toFixed(1)} <small className="font-normal text-slate-500">{lang === 'en' ? 'Years' : 'Năm'}</small></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* 11. CASH FLOW & ROI */}
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-blue-50 rounded text-blue-600"><TrendingUp size={18} /></div>
-                            8. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
+                            11. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
                         </h3>
-
-                        {/* FRAME 1: ENVIRONMENTAL IMPACT */}
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <div className="mb-4 p-3 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-10">
-                                    <Leaf size={120} className="text-emerald-500 transform rotate-12" />
-                                </div>
-                                <h3 className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2 relative z-10">
-                                    <Leaf size={14} className="text-emerald-600" />
-                                    {t.pdf_config.env_impact || "Hiệu quả Môi trường"}
-                                </h3>
-                                <p className="text-[10px] text-emerald-600 mb-3 max-w-[80%] relative z-10 font-medium">{t.pdf_config.env_desc}</p>
-
-                                <div className="grid grid-cols-4 gap-3 relative z-10">
-                                    {/* CO2 Saved */}
-                                    <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
-                                        <div className="p-2 bg-emerald-100 rounded-full mb-1 text-emerald-600">
-                                            <CloudSun size={18} />
-                                        </div>
-                                        <span className="text-lg font-black text-slate-700">
-                                            {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH / 1000)}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t.pdf_config.ton_year}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.co2_saved}</span>
-                                    </div>
-
-                                    {/* Trees Planted */}
-                                    <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
-                                        <div className="p-2 bg-green-100 rounded-full mb-1 text-green-600">
-                                            <Trees size={18} />
-                                        </div>
-                                        <span className="text-lg font-black text-slate-700">
-                                            {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH * TREES_PER_CO2_KG)}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">{t.pdf_config.trees}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.trees_planted}</span>
-                                    </div>
-
-                                    {/* Coal Saved */}
-                                    <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
-                                        <div className="p-2 bg-slate-100 rounded-full mb-1 text-slate-600">
-                                            <Factory size={18} />
-                                        </div>
-                                        <span className="text-lg font-black text-slate-700">
-                                            {formatNumber((customStats?.totalSolarGen || 0) * COAL_KG_PER_KWH / 1000)}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf_config.ton_coal}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.coal_saved}</span>
-                                    </div>
-
-                                    {/* Oil Saved */}
-                                    <div className="bg-white/80 backdrop-blur-sm p-2 rounded-lg border border-emerald-100 shadow-sm flex flex-col items-center text-center">
-                                        <div className="p-2 bg-blue-100 rounded-full mb-1 text-blue-600">
-                                            <Fuel size={18} />
-                                        </div>
-                                        <span className="text-lg font-black text-slate-700">
-                                            {formatNumber((customStats?.totalSolarGen || 0) * OIL_LITERS_PER_KWH)}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{t.pdf_config.liters}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.oil_saved}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* FRAME 2: CASH FLOW CHART */}
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
@@ -2683,25 +2803,25 @@ const SolarOptimizer = () => {
                     </div>
 
                     {/* PAGE 4: TECHNICAL SPECS & INVESTMENT ANALYSIS */}
-                    <div id="report-page-4" className="pt-4 px-10 pb-10 min-h-[1400px] bg-white flex flex-col items-stretch gap-2">
-                        {/* Premium Header Mini */}
-                        <div className="flex justify-between items-end border-b border-blue-900 pb-1 mb-1">
-                            <div className="flex items-center gap-2">
-                                <img src={casLogoReport} className="h-6 w-auto object-contain" alt="CAS Logo" />
+                    <div id="report-page-4" className="pt-4 px-10 pb-10 min-h-[1400px] bg-white flex flex-col items-stretch gap-4">
+                        {/* Premium Header */}
+                        <div className="flex justify-between items-end border-b-2 border-blue-900 pb-4 mb-4">
+                            <div className="flex items-center gap-4">
+                                <img src={casLogoReport} className="h-16 w-auto object-contain" alt="CAS Logo" />
                                 <div className="flex flex-col">
-                                    <h1 className="text-base font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_specs || "THÔNG SỐ CHI TIẾT"}</h1>
-                                    <h2 className="text-[10px] font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
+                                    <h1 className="text-2xl font-black text-blue-900 uppercase leading-none text-left">{t.pdf.header_specs || "THÔNG SỐ CHI TIẾT"}</h1>
+                                    <h2 className="text-xl font-bold text-blue-800 uppercase leading-tight text-left">{projectName || "SOLAR PROJECT"}</h2>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
+                                <p className="text-xs text-slate-500 font-medium italic">{t.pdf.report_date}: {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN')}</p>
                             </div>
                         </div>
 
-                        {/* SECTION 10: DETAILED TECHNICAL SPECIFICATIONS (16 items) */}
+                        {/* SECTION 12: DETAILED TECHNICAL SPECIFICATIONS (16 items) */}
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><Settings size={18} /></div>
-                            10. {t.pdf.detailed_specs || "Thông số Kỹ thuật Chi tiết (16 Mục)"}
+                            12. {t.pdf.detailed_specs || "Thông số Kỹ thuật Chi tiết (16 Mục)"}
                         </h3>
 
                         {/* Frame 1: 16 Detailed Specs Table */}
@@ -2741,10 +2861,10 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
 
-                        {/* SECTION 11: INVESTMENT SCENARIO COMPARISON */}
+                        {/* SECTION 13: ENERGY SCENARIO COMPARISON */}
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-emerald-50 rounded text-emerald-600"><TrendingUp size={18} /></div>
-                            11. {t.pdf.scenario_comparison || "So sánh Kịch bản Đầu tư"}
+                            13. {t.pdf.energy_scenario_comparison || "Năng lượng giữa các Kịch bản"}
                         </h3>
 
                         {/* Frame 2: Scenario Comparison Table */}

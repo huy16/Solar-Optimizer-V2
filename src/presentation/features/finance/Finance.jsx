@@ -56,6 +56,7 @@ export const Finance = ({
             col_payback: "Hoàn vốn",
             btn_select: "Chọn",
             unit_year: "Năm",
+            unit_percent_year: "%/Năm",
             system_price: "SUẤT ĐẦU TƯ SOLAR (VNĐ/kWp)",
             bess_price: "SUẤT ĐẦU TƯ BESS (VNĐ/kWh)",
             co2_factor: "HỆ SỐ CO2",
@@ -110,6 +111,7 @@ export const Finance = ({
             col_payback: "Payback",
             btn_select: "Select",
             unit_year: "Years",
+            unit_percent_year: "%/Year",
             system_price: "SOLAR CAPEX (VND/kWp)",
             bess_price: "BESS CAPEX (VND/kWh)",
             co2_factor: "CO2 FACTOR",
@@ -158,7 +160,7 @@ export const Finance = ({
 
                         {/* 2. FINANCIAL PARAMS */}
                         <div className="grid grid-cols-3 gap-2 mb-2">
-                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: '%/Năm', v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: '%/Năm', v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: '%/Năm', v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1 },].map((p, i) => (
+                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1 },].map((p, i) => (
                                 <div key={i}>
                                     <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
                                         {p.l} {p.tip && <HelpCircle size={8} />}

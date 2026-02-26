@@ -99,7 +99,11 @@ export const Design = ({
             tip_expert: "Tính toán theo tải thực tế thấp nhất (tháng thấp nhất, giờ nắng đỉnh 11-13h) để đảm bảo hệ thống không bị thừa điện, ngay cả khi không có Pin.",
             tip_opt_no_bess: "Tự động quét và chọn quy mô lắp đặt mặt trời mang lại hiệu quả kinh tế (NPV/IRR) cao nhất mà không cần lắp Pin lưu trữ.",
             tip_opt_bess_fixed: "Giữ nguyên công suất mặt trời hiện tại, chỉ tìm quy mô Pin lưu trữ (kWh) tối ưu nhất về mặt tài chính.",
-            tip_opt_all: "Tự động tìm kiếm sự kết hợp hoàn hảo giữa công suất mặt trời và Pin lưu trữ để đạt lợi nhuận cao nhất."
+            tip_opt_all: "Tự động tìm kiếm sự kết hợp hoàn hảo giữa công suất mặt trời và Pin lưu trữ để đạt lợi nhuận cao nhất.",
+            dc_ac_ratio: "Tỷ lệ DC/AC (Oversizing)",
+            weather_derate: "Hệ số Thời tiết (%)",
+            bess_rt_eff: "Hiệu suất (RT) %",
+            bess_dod_limit: "DoD Giới hạn %",
         },
         en: {
             title_inverter: "Inverter Configuration",
@@ -147,7 +151,11 @@ export const Design = ({
             tip_expert: "Calculates based on lowest actual load (min month, peak sun 11-13h) to ensure zero energy waste, even without batteries.",
             tip_opt_no_bess: "Automatically scans and selects the solar capacity that yields the highest financial return (NPV/IRR) without BESS.",
             tip_opt_bess_fixed: "Keeps current solar capacity fixed, and only finds the most financially optimal BESS size (kWh).",
-            tip_opt_all: "Automatically searches for the perfect combination of solar and storage capacity for maximum profitability."
+            tip_opt_all: "Automatically searches for the perfect combination of solar and storage capacity for maximum profitability.",
+            dc_ac_ratio: "DC/AC Ratio (Oversizing)",
+            weather_derate: "Weather Derate (%)",
+            bess_rt_eff: "Round-trip Eff. (RT) %",
+            bess_dod_limit: "DoD Limit %",
         }
     }[lang];
     return (
@@ -322,7 +330,7 @@ export const Design = ({
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
                             <label className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1 group relative cursor-help">
-                                Tỷ lệ DC/AC (Oversizing) <HelpCircle size={8} />
+                                {dt.dc_ac_ratio} <HelpCircle size={8} />
                                 <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
                                     Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).
                                     <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
@@ -339,7 +347,7 @@ export const Design = ({
                             />
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
-                            <label className="text-[9px] font-bold text-blue-500 block">{t.weather_derate_label || "Hệ số Thời tiết (%)"}</label>
+                            <label className="text-[9px] font-bold text-blue-500 block">{dt.weather_derate}</label>
                             <div className="relative w-20">
                                 <input
                                     type="number"
@@ -412,7 +420,7 @@ export const Design = ({
                             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
                                 <div className="flex justify-between items-center bg-white p-1.5 px-2 rounded border border-slate-200">
                                     <label className="text-[9px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
-                                        Hiệu suất (RT) % <HelpCircle size={8} />
+                                        {dt.bess_rt_eff} <HelpCircle size={8} />
                                         <div className="absolute bottom-full mb-2 left-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
                                             {dt.tip_bess_eff}
                                             <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
@@ -427,7 +435,7 @@ export const Design = ({
                                 </div>
                                 <div className="flex justify-between items-center bg-white p-1.5 px-2 rounded border border-slate-200">
                                     <label className="text-[9px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
-                                        DoD Giới hạn % <HelpCircle size={8} />
+                                        {dt.bess_dod_limit} <HelpCircle size={8} />
                                         <div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
                                             {dt.tip_dod}
                                             <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
