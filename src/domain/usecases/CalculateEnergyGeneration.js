@@ -68,21 +68,28 @@ export const execute = (
     const DOD_LIMIT = techParams.bessDod !== undefined ? Number(techParams.bessDod) : 0.90;
     const minSocKwh = bessCapacityKwh * (1 - DOD_LIMIT);
 
-    // Helper: Determine TOU Type
+    // Helper: Determine TOU Type (EVN Vietnam)
     const getTouType = (dateOrTimestamp) => {
         const date = (dateOrTimestamp instanceof Date) ? dateOrTimestamp : new Date(dateOrTimestamp?.timestamp || dateOrTimestamp);
         if (isNaN(date.getTime())) return 'NORMAL'; // Fallback if invalid
 
         const h = date.getHours();
+        const m = date.getMinutes();
+        const totalMin = h * 60 + m;
         const d = date.getDay();
-        if (d === 0) {
-            // Sunday: No Peak hours. Normal: 04h-22h, Off-Peak: 22h-04h
-            if (h >= 22 || h < 4) return 'OFF_PEAK';
-            return 'NORMAL';
+
+        // Off-peak: 22:00 - 04:00 (all days)
+        if (totalMin >= 22 * 60 || totalMin < 4 * 60) return 'OFF_PEAK';
+
+        // Peak: 9:30-11:30 and 17:00-20:00 (Mon-Sat only, Sunday = no peak)
+        if (d !== 0) {
+            if ((totalMin >= 9 * 60 + 30 && totalMin < 11 * 60 + 30) ||
+                (totalMin >= 17 * 60 && totalMin < 20 * 60)) {
+                return 'PEAK';
+            }
         }
-        // standard VN logic
-        if ((h >= 9 && h < 11) || (h >= 17 && h < 20)) return 'PEAK';
-        if (h >= 22 || h < 4) return 'OFF_PEAK';
+
+        // Normal (Bình thường)
         return 'NORMAL';
     };
 

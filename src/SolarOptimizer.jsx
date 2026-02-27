@@ -1307,10 +1307,18 @@ const SolarOptimizer = () => {
 
             const avgWeekdayLoad = weekdayStats.map(h => h.count > 0 ? h.sum / h.count : 0);
 
-            // 2. Apply Tuning in a single pass map
+            // 2. Detect fixed time interval from first 2 data points
+            let fixedTimeStep = null;
+            if (cleanData.length > 2) {
+                const firstDiff = (cleanData[1].timestamp - cleanData[0].timestamp) / 3600000;
+                if (firstDiff > 0.4 && firstDiff < 0.6) fixedTimeStep = 0.5; // 30-min interval
+                else if (firstDiff > 0.9 && firstDiff < 1.1) fixedTimeStep = 1.0; // 1-hour interval
+            }
+
+            // Apply Tuning in a single pass map
             const processedWithStep = cleanData.map((d, i) => {
-                let timeStep = 1.0;
-                if (i < cleanData.length - 1) {
+                let timeStep = fixedTimeStep || 1.0;
+                if (!fixedTimeStep && i < cleanData.length - 1) {
                     const diff = (cleanData[i + 1].timestamp - d.timestamp) / 3600000;
                     if (diff > 0 && diff <= 24) timeStep = diff;
                 }

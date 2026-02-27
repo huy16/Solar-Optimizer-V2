@@ -1,4 +1,4 @@
-import { generateSolarProfile } from './utils';
+import { generateSolarProfile } from './utils.js';
 
 export const parseGSAMapData = (workbook) => {
     const mapSheet = workbook.Sheets['Map_data'] || workbook.Sheets['Map data'];

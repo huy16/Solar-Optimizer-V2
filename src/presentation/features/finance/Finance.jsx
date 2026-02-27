@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, Zap, RefreshCw, HelpCircle } from 'lucide-react';
+import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, HelpCircle } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 export const Finance = ({
@@ -9,13 +9,9 @@ export const Finance = ({
     formatMoney,
     scenarios,
     targetKwp, setTargetKwp,
-    pricingType, setPricingType,
-    voltageLevelId, setVoltageLevelId,
     params, setParams,
     onSelectScenario,
-    lang,
-    t,
-    EVN_TARIFFS
+    lang
 }) => {
     const dt = {
         vi: {
