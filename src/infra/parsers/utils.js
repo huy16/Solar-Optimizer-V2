@@ -118,18 +118,27 @@ export const interpolate30Min = (originalMap) => {
 export const generateInstantaneousSolar = (date, dailyPsh) => {
     const hour = date.getHours();
     const minute = date.getMinutes();
-    const time = hour + minute / 60;
+    const time = hour + (minute >= 30 ? 0.5 : 0);
 
-    // Simple model: Solar from 6am to 6pm (12 hours)
-    if (time < 6 || time > 18) return 0;
+    // Profile chuẩn phân bổ theo ngày, tổng các trọng số = 1.0 (trước khi normalize)
+    const dailyProfile = {
+        6.0: 0.010, 6.5: 0.020, 7.0: 0.040, 7.5: 0.060,
+        8.0: 0.080, 8.5: 0.095, 9.0: 0.105, 9.5: 0.118,
+        10.0: 0.117, 10.5: 0.117, 11.0: 0.118, 11.5: 0.135,
+        12.0: 0.155, 12.5: 0.145, 13.0: 0.135, 13.5: 0.125,
+        14.0: 0.090, 14.5: 0.060, 15.0: 0.030, 15.5: 0.015, 16.0: 0.005
+    };
 
-    // Sine wave centered at 12:00
-    // Integral of A * sin^3(pi * (t-6) / 12) dt from 6 to 18 = A * 16/pi
-    // We want Integral = dailyPsh
-    // So A = dailyPsh * pi / 16
+    // Chuẩn hoá để tổng weights = 1.0
+    const sumWeights = Object.values(dailyProfile).reduce((a, b) => a + b, 0);
 
-    const peak = (dailyPsh * Math.PI) / 16;
-    const val = peak * Math.pow(Math.sin((Math.PI * (time - 6)) / 12), 3);
+    if (dailyProfile[time] === undefined) return 0;
 
-    return Math.max(0, val);
+    // Năng lượng phân bổ cho slot này (cho 1 kWp): Energy(t) = dailyPsh * (weight(t) / sumWeights)
+    // Để được mốc Công suất kW ở điểm t, ta tính: Power(t) = Energy(t) / timeStep
+    // Vì timeStep ở đây là 0.5h, nên:
+    const energyThisSlot = dailyPsh * (dailyProfile[time] / sumWeights);
+    const powerKw = energyThisSlot / 0.5;
+
+    return powerKw;
 };
