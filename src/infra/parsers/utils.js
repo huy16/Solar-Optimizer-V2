@@ -102,14 +102,26 @@ export const interpolate30Min = (originalMap) => {
     entries.sort((a, b) => a.time - b.time);
 
     entries.forEach((curr, i) => {
-        newMap.set(curr.key, curr.val);
+        // GIẢI THÍCH:
+        // Do dữ liệu PVSyst/GSA thường là "Năng lượng thu được trong 1 giờ" (Wh/m² hoặc kWh).
+        // Khi chúng ta chia 1 slot 1-hour thành 2 slot 30-min (mộc phút 0 và mốc phút 30),
+        // NẾU chúng ta muốn "Công suất" (kW) giữ nguyên thì ok, nhưng thuật toán Evaluate 
+        // ở CalculateEnergyGeneration đang coi Giá trị Map là Energy/Hour. 
+        // Do đó, ta phải chia đôi giá trị gốc ra cho 2 nửa tiếng để TỔNG năng lượng không đổi.
+
+        let pwrCurrent = curr.val;
+        let pwrNext = curr.val;
+
         const next = entries[i + 1];
-        let val30 = curr.val;
         if (next && (next.time - curr.time) <= 3600000 * 1.5) {
-            val30 = (curr.val + next.val) / 2;
+            // Nội suy tuyến tính tạo độ dốc nhẹ
+            pwrNext = (curr.val + next.val) / 2;
         }
+
+        newMap.set(curr.key, pwrCurrent);
+
         const key30 = curr.key.replace(/-0$/, '-30');
-        newMap.set(key30, val30);
+        newMap.set(key30, pwrNext);
     });
     return newMap;
 };

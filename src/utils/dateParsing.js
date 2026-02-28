@@ -7,7 +7,8 @@ export const parseAnyDate = (input, isSwapMonthDay = false) => {
     if (input instanceof Date) return input;
     if (typeof input === 'number') {
         // Excel date serial number (days since 1900-01-01)
-        return new Date(Math.round((input - 25569) * 86400 * 1000));
+        const jsDate = new Date(Math.round((input - 25569) * 86400 * 1000));
+        return new Date(jsDate.getUTCFullYear(), jsDate.getUTCMonth(), jsDate.getUTCDate(), jsDate.getUTCHours(), jsDate.getUTCMinutes(), jsDate.getUTCSeconds());
     }
     if (typeof input === 'string') {
         const cleanStr = input.trim();

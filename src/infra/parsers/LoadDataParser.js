@@ -104,12 +104,12 @@ export const processExcelData = (arrayData) => {
         if (typeof rawTime === 'number') {
             // Excel Serial
             const jsDate = new Date(Math.round((rawTime - 25569) * 86400 * 1000));
-            // Format directly to ISO-like string
-            const y = jsDate.getFullYear();
-            const mon = jsDate.getMonth() + 1;
-            const date = jsDate.getDate();
-            const h = jsDate.getHours();
-            const m = jsDate.getMinutes();
+            // Lấy thời gian UTC (vì jsDate hiểu số đó là UTC, getUTCHours() sẽ trả về đúng số trên dòng Excel)
+            const y = jsDate.getUTCFullYear();
+            const mon = jsDate.getUTCMonth() + 1;
+            const date = jsDate.getUTCDate();
+            const h = jsDate.getUTCHours();
+            const m = jsDate.getUTCMinutes();
             finalTime = `${y}-${String(mon).padStart(2, '0')}-${String(date).padStart(2, '0')} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
         else if (typeof rawTime === 'string') {

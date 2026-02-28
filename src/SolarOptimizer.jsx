@@ -9,7 +9,7 @@ import { parseAnyDate } from './utils/dateParsing';
 import {
     parseGSAExcel, parseMETData, parsePDFData, parsePVSystCSV, parseStandardCSV,
     processExcelData, processCSVText, parseSmartDesignData, parseTMYData, parse8760Data, parseGSAMapData,
-    interpolate30Min, generateSolarProfile
+    interpolate30Min, generateSolarProfile, generateInstantaneousSolar
 } from './infra/parsers';
 import { generateSyntheticProfile } from './utils/loadProfileGenerator';
 import { Dashboard } from './presentation/features/dashboard/Dashboard';
@@ -71,25 +71,6 @@ const isOffPeakHour = (date) => {
 
 
 // --- INTERPOLATION HELPER (Global) ---
-
-const generateInstantaneousSolar = (date, psh) => {
-    // Simple sinusoidal model for fallback
-    const hour = date.getHours();
-    const minute = date.getMinutes();
-    const time = hour + minute / 60;
-
-    // Assume 12 hours of sun, peak at 12:00
-    if (time < 6 || time > 18) return 0;
-
-    // Amplitude based on PSH
-    // Area under sin^3(t) from 0 to pi is 4/3.
-    // We want avg daily kWh/kWp = PSH.
-    // Integral from 6 to 18 of A*sin^3(...) is A * (12/pi) * (4/3) = A * 16/pi.
-    // So A * 16/pi = PSH => A = PSH * pi / 16.
-
-    const amplitude = (psh * Math.PI) / 16;
-    return amplitude * Math.pow(Math.sin(((time - 6) * Math.PI) / 12), 3);
-};
 
 
 // --- COMPONENTS ---
