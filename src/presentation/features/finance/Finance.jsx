@@ -41,6 +41,10 @@ export const Finance = ({
             revenue: "Doanh thu (Tiết kiệm)",
             om_cost: "Chi phí O&M",
             replacement: "Thay thế Thiết bị",
+            legend_net_flow: "Dòng tiền ròng trong năm",
+            legend_acc_invest: "Vốn đầu tư ban đầu",
+            legend_acc_recover: "Đang thu hồi vốn",
+            legend_acc_profit: "Đã sinh lời",
             analysis_title: "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản) (VND)",
             analysis_desc: "So sánh các chỉ số tài chính nâng cao (NPV, ROI, IRR) dựa trên các kịch bản công suất.",
             col_scenario: "Kịch bản",
@@ -96,6 +100,10 @@ export const Finance = ({
             revenue: "Revenue (Savings)",
             om_cost: "O&M Cost",
             replacement: "Equipment Replacement",
+            legend_net_flow: "Annual Net Cash Flow",
+            legend_acc_invest: "Initial Investment",
+            legend_acc_recover: "Recovering Capital",
+            legend_acc_profit: "Profitable",
             analysis_title: "Investment Performance Analysis (Scenario Comparison) (VND)",
             analysis_desc: "Compare advanced financial metrics (NPV, ROI, IRR) across different capacity scenarios.",
             col_scenario: "Scenario",
@@ -128,6 +136,59 @@ export const Finance = ({
 
     const [showDetailTable, setShowDetailTable] = useState(false);
     const [showFinanceMap, setShowFinanceMap] = useState(false);
+
+    // Create a version of the data specifically for the chart to prevent Year 0 'net' from skewing the Y-axis
+    const chartData = React.useMemo(() => {
+        if (!currentFinance?.cumulativeData) return [];
+        return currentFinance.cumulativeData.map(d => ({
+            ...d,
+            // We set net to 0 (or null) for Year 0 so Recharts doesn't auto-expand the left Y-axis
+            chartNet: d.year === 0 ? 0 : d.net
+        }));
+    }, [currentFinance]);
+
+    const unifiedDomain = React.useMemo(() => {
+        if (!chartData || chartData.length === 0) return ['auto', 'auto'];
+
+        let min = 0, max = 0;
+
+        chartData.forEach(d => {
+            if (d.year > 0) {
+                min = Math.min(min, d.chartNet);
+                max = Math.max(max, d.chartNet);
+            }
+            min = Math.min(min, d.acc);
+            max = Math.max(max, d.acc);
+        });
+
+        if (max === 0 && min === 0) return [0, 1];
+
+        return [min * 1.05, max * 1.05];
+    }, [chartData]);
+
+    // Custom Legend to explain the different colors
+    const renderCustomLegend = () => {
+        return (
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-4 text-[11px] text-slate-600 font-medium">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                    <span>{dt.legend_net_flow}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                    <span>{dt.legend_acc_invest}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+                    <span>{dt.legend_acc_recover}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                    <span>{dt.legend_acc_profit}</span>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -256,20 +317,26 @@ export const Finance = ({
 
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={currentFinance.cumulativeData} margin={{ top: 20, right: 0, left: 0, bottom: 5 }}>
+                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                                <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={50} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}` : val} label={{ value: dt.net_flow, angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#64748b' } }} />
-                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} width={50} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}` : val} label={{ value: dt.accumulated, angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#64748b' } }} />
+                                <YAxis domain={unifiedDomain} yAxisId="left" tick={{ fontSize: 10 }} width={60} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}` : val} />
                                 <RechartsTooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} />
+                                <Legend content={renderCustomLegend} />
                                 <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
-                                <Bar yAxisId="left" dataKey="net" name={dt.net_flow} barSize={20} isAnimationActive={false}>
-                                    {currentFinance.cumulativeData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#3b82f6' : '#ef4444'} />
+                                <Bar yAxisId="left" dataKey="chartNet" name={dt.net_flow} barSize={16} isAnimationActive={false}>
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
                                     ))}
                                 </Bar>
-                                <Line yAxisId="right" type="monotone" dataKey="acc" name={dt.accumulated} stroke="#10b981" strokeWidth={3} dot={false} isAnimationActive={false} />
+                                <Bar yAxisId="left" dataKey="acc" name={dt.accumulated} barSize={16} isAnimationActive={false}>
+                                    {chartData.map((entry, index) => {
+                                        let fillColor = '#10b981'; // green for profit
+                                        if (entry.year === 0) fillColor = '#ef4444'; // red for initial capex
+                                        else if (entry.acc < 0) fillColor = '#fb923c'; // orange for recovering
+                                        return <Cell key={`acc-${index}`} fill={fillColor} />;
+                                    })}
+                                </Bar>
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -277,25 +344,25 @@ export const Finance = ({
                     {showDetailTable && (
                         <div className="mt-6 overflow-x-auto border rounded-lg border-slate-200 animate-in fade-in slide-in-from-top-4">
                             <table className="w-full text-xs text-left">
-                                <thead className="bg-slate-50 font-bold text-slate-600">
+                                <thead className="bg-slate-50 font-bold text-slate-500 text-[10px] uppercase">
                                     <tr>
-                                        <th className="p-2 border-b">{dt.year}</th>
-                                        <th className="p-2 border-b text-right">{dt.revenue}</th>
-                                        <th className="p-2 border-b text-right">{dt.om_cost}</th>
-                                        <th className="p-2 border-b text-right">{dt.replacement}</th>
-                                        <th className="p-2 border-b text-right text-blue-700">{dt.net_flow}</th>
-                                        <th className="p-2 border-b text-right text-green-700">{dt.accumulated}</th>
+                                        <th className="p-3 border-b">{dt.year}</th>
+                                        <th className="p-3 border-b text-center">{dt.revenue}</th>
+                                        <th className="p-3 border-b text-center">{dt.om_cost}</th>
+                                        <th className="p-3 border-b text-center text-red-600">{dt.replacement}</th>
+                                        <th className="p-3 border-b text-center text-blue-600">{dt.net_flow}</th>
+                                        <th className="p-3 border-b text-center text-emerald-600">{dt.accumulated}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {currentFinance.cumulativeData.map((y, i) => (
                                         <tr key={i} className={`hover:bg-slate-50 border-b border-slate-100 ${y.year === 0 ? 'bg-orange-50' : ''} ${y.isReplacement ? 'bg-red-50' : ''}`}>
-                                            <td className="p-2 font-medium">{y.year === 0 ? dt.year_0 : `${dt.year} ${y.year}`}</td>
-                                            <td className="p-2 text-right">{formatMoney(y.revenue)}</td>
-                                            <td className="p-2 text-right text-slate-500">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
-                                            <td className="p-2 text-right text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
-                                            <td className="p-2 text-right font-bold text-blue-700">{formatMoney(y.net)}</td>
-                                            <td className={`p-2 text-right font-bold ${y.acc >= 0 ? 'text-green-600' : 'text-orange-600'}`}>{formatMoney(y.acc)}</td>
+                                            <td className="p-3 font-bold text-slate-700">{y.year === 0 ? dt.year_0 : `${dt.year} ${y.year}`}</td>
+                                            <td className="p-3 text-center font-medium text-slate-700">{formatMoney(y.revenue)}</td>
+                                            <td className="p-3 text-center font-medium text-slate-500">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
+                                            <td className="p-3 text-center font-bold text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
+                                            <td className="p-3 text-center font-bold text-blue-600">{formatMoney(y.net)}</td>
+                                            <td className={`p-3 text-center font-bold ${y.acc >= 0 ? 'text-emerald-600' : 'text-orange-600'}`}>{formatMoney(y.acc)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
