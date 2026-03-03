@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Info, Image as ImageIcon, FileSpreadsheet, ClipboardList, Zap, Calendar, Coins, ChevronDown, ChevronUp } from 'lucide-react';
+import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 const LossCard = ({ label, value }) => (
     <div className="flex flex-col items-center justify-center p-2 bg-white border border-slate-200 rounded shadow-sm">
@@ -279,9 +280,8 @@ export const Report = ({
                 )}
             </div>
 
-            {/* 4. FINANCIAL DETAIL SECTION */}
             {currentFinance && currentFinance.cumulativeData && (
-                <div id="financial-detail-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div id="financial-detail-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mt-6">
                     <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center">
                         <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Coins size={18} className="text-emerald-500" /> {dt.cashflow_title}</h3>
                         <div className="flex gap-2">
@@ -293,6 +293,76 @@ export const Report = ({
                             </button>
                         </div>
                     </div>
+
+                    <div className="p-4 border-b border-slate-100">
+                        <div className="h-64 w-full">
+                            {(() => {
+                                const chartData = currentFinance.cumulativeData.map(d => ({
+                                    ...d,
+                                    chartNet: d.year === 0 ? 0 : d.net
+                                }));
+
+                                let min = 0, max = 0;
+                                chartData.forEach(d => {
+                                    if (d.year > 0) {
+                                        min = Math.min(min, d.chartNet);
+                                        max = Math.max(max, d.chartNet);
+                                    }
+                                    min = Math.min(min, d.acc);
+                                    max = Math.max(max, d.acc);
+                                });
+                                const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
+
+                                const renderCustomLegend = () => (
+                                    <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-4 text-[11px] text-slate-600 font-medium">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                                            <span>{dt.net_flow}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                                            <span>Vốn đầu tư ban đầu</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+                                            <span>Đang thu hồi vốn</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                                            <span>Đã sinh lời</span>
+                                        </div>
+                                    </div>
+                                );
+
+                                return (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
+                                            <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                                            <YAxis domain={unifiedDomain} yAxisId="left" tick={{ fontSize: 10 }} width={60} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val} />
+                                            <RechartsTooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Legend content={renderCustomLegend} />
+                                            <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+                                            <Bar yAxisId="left" dataKey="chartNet" name={dt.net_flow} barSize={16} isAnimationActive={false}>
+                                                {chartData.map((entry, index) => (
+                                                    <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
+                                                ))}
+                                            </Bar>
+                                            <Bar yAxisId="left" dataKey="acc" name={dt.accumulated} barSize={16} isAnimationActive={false}>
+                                                {chartData.map((entry, index) => {
+                                                    let fillColor = '#10b981';
+                                                    if (entry.year === 0) fillColor = '#ef4444';
+                                                    else if (entry.acc < 0) fillColor = '#fb923c';
+                                                    return <Cell key={`acc-${index}`} fill={fillColor} />;
+                                                })}
+                                            </Bar>
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs text-left">
                             <thead className="bg-slate-50 font-bold text-slate-600 border-b border-slate-200">

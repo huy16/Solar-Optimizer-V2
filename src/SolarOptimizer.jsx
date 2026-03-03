@@ -2715,41 +2715,79 @@ const SolarOptimizer = () => {
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="h-[350px] w-full">
                                 <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền (Tích lũy)"}</h4>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={currentFinance.cumulativeData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                                        <YAxis
-                                            yAxisId="left"
-                                            tick={({ x, y, payload }) => {
-                                                const val = payload.value;
-                                                const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
-                                                return <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fill="#666">{formatted}</text>;
-                                            }}
-                                            width={60}
-                                            label={{ value: t.pdf.finance_table.net_flow, angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#64748b' } }}
-                                        />
-                                        <YAxis
-                                            yAxisId="right"
-                                            orientation="right"
-                                            tick={({ x, y, payload }) => {
-                                                const val = payload.value;
-                                                const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
-                                                return <text x={x} y={y} dy={4} textAnchor="start" fontSize={10} fill="#666">{formatted}</text>;
-                                            }}
-                                            width={60}
-                                            label={{ value: t.pdf.finance_table.acc, angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#64748b' } }}
-                                        />
-                                        <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
-                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} />
-                                        <Bar yAxisId="left" dataKey="net" name={t.pdf.finance_table.net_flow} barSize={20} isAnimationActive={false}>
-                                            {currentFinance.cumulativeData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#3b82f6' : '#ef4444'} />
-                                            ))}
-                                        </Bar>
-                                        <Line yAxisId="right" type="monotone" dataKey="acc" name={t.pdf.finance_table.acc} stroke="#10b981" strokeWidth={3} dot={false} isAnimationActive={false} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                                {(() => {
+                                    const chartData = currentFinance.cumulativeData.map(d => ({
+                                        ...d,
+                                        chartNet: d.year === 0 ? 0 : d.net
+                                    }));
+
+                                    let min = 0, max = 0;
+                                    chartData.forEach(d => {
+                                        if (d.year > 0) {
+                                            min = Math.min(min, d.chartNet);
+                                            max = Math.max(max, d.chartNet);
+                                        }
+                                        min = Math.min(min, d.acc);
+                                        max = Math.max(max, d.acc);
+                                    });
+                                    const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
+
+                                    const renderCustomLegend = () => (
+                                        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-4 text-[11px] text-slate-600 font-medium">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                                                <span>{t.pdf.finance_table.net_flow || "Dòng tiền ròng"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                                                <span>Vốn đầu tư ban đầu</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+                                                <span>Đang thu hồi vốn</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                                                <span>Đã sinh lời</span>
+                                            </div>
+                                        </div>
+                                    );
+
+                                    return (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
+                                                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                                                <YAxis
+                                                    domain={unifiedDomain}
+                                                    yAxisId="left"
+                                                    tick={({ x, y, payload }) => {
+                                                        const val = payload.value;
+                                                        const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
+                                                        return <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fill="#666">{formatted}</text>;
+                                                    }}
+                                                    width={60}
+                                                />
+                                                <Tooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+                                                <Legend content={renderCustomLegend} />
+                                                <Bar yAxisId="left" dataKey="chartNet" name={t.pdf.finance_table.net_flow || "Dòng tiền ròng"} barSize={20} isAnimationActive={false}>
+                                                    {chartData.map((entry, index) => (
+                                                        <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
+                                                    ))}
+                                                </Bar>
+                                                <Bar yAxisId="left" dataKey="acc" name={t.pdf.finance_table.acc || "Tích lũy"} barSize={20} isAnimationActive={false}>
+                                                    {chartData.map((entry, index) => {
+                                                        let fillColor = '#10b981';
+                                                        if (entry.year === 0) fillColor = '#ef4444';
+                                                        else if (entry.acc < 0) fillColor = '#fb923c';
+                                                        return <Cell key={`acc-${index}`} fill={fillColor} />;
+                                                    })}
+                                                </Bar>
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    );
+                                })()}
                             </div>
                         </div>
 
