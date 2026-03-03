@@ -2733,7 +2733,7 @@ const SolarOptimizer = () => {
                                     const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
 
                                     const renderCustomLegend = () => (
-                                        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-4 text-[11px] text-slate-600 font-medium">
+                                        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-[11px] text-slate-600 font-medium">
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
                                                 <span>{t.pdf.finance_table.net_flow || "Dòng tiền ròng"}</span>
@@ -2755,7 +2755,7 @@ const SolarOptimizer = () => {
 
                                     return (
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
+                                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 25 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                                                 <YAxis
@@ -2770,7 +2770,7 @@ const SolarOptimizer = () => {
                                                 />
                                                 <Tooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                                                 <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
-                                                <Legend content={renderCustomLegend} />
+                                                <Legend content={renderCustomLegend} verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px' }} />
                                                 <Bar yAxisId="left" dataKey="chartNet" name={t.pdf.finance_table.net_flow || "Dòng tiền ròng"} barSize={20} isAnimationActive={false}>
                                                     {chartData.map((entry, index) => (
                                                         <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />

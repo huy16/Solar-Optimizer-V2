@@ -169,7 +169,7 @@ export const Finance = ({
     // Custom Legend to explain the different colors
     const renderCustomLegend = () => {
         return (
-            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-4 text-[11px] text-slate-600 font-medium">
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-[11px] text-slate-600 font-medium">
                 <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
                     <span>{dt.legend_net_flow}</span>
@@ -317,12 +317,12 @@ export const Finance = ({
 
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 25 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
                                 <XAxis dataKey="year" tick={{ fontSize: 10 }} />
                                 <YAxis domain={unifiedDomain} yAxisId="left" tick={{ fontSize: 10 }} width={60} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}` : val} />
                                 <RechartsTooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Legend content={renderCustomLegend} />
+                                <Legend content={renderCustomLegend} verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px' }} />
                                 <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
                                 <Bar yAxisId="left" dataKey="chartNet" name={dt.net_flow} barSize={16} isAnimationActive={false}>
                                     {chartData.map((entry, index) => (
