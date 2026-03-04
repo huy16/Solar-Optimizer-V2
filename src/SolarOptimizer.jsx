@@ -316,6 +316,9 @@ const SolarOptimizer = () => {
         omPercent: 1.5, // % of Capex
         batteryLife: 10,
         batteryReplaceCost: 80, // % of initial price
+        inverterLife: 10,
+        inverterReplaceCost: 10, // % of system capex (excl. battery)
+        omSchedule: [], // [{year: number, amount: number}]
         loan: {
             enable: false,
             ratio: 70, // % Loan

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, HelpCircle } from 'lucide-react';
+import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, HelpCircle, Settings, X } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 export const Finance = ({
@@ -23,7 +23,13 @@ export const Finance = ({
             om: "CHI PHÍ O&M",
             battery_life: "TUỔI THỌ PIN",
             battery_replace_pct: "PHÍ THAY PIN (% GIÁ GỐC)",
+            inverter_life: "TUỔI THỌ INVERTER",
+            inverter_replace_pct: "PHÍ THAY INV (% CAPEX HỆ THỐNG)",
             no_battery_msg: "Chưa có Pin (0 kWh). Phí thay pin sẽ không tính.",
+            om_schedule_title: "CHI PHÍ O&M BỔ SUNG (THEO NĂM)",
+            om_year: "Năm",
+            om_amount: "Số tiền (VNĐ)",
+            om_add: "+ Thêm chi phí",
             total_capex_manual: "Cấu hình Vốn đầu tư",
             auto_calc_placeholder: "Tự động tính...",
             manual_override_msg: "* Nhập số để ghi đè giá trị tính toán tự động",
@@ -82,7 +88,13 @@ export const Finance = ({
             om: "O&M COST",
             battery_life: "BATTERY LIFE",
             battery_replace_pct: "BATTERY REPLACEMENT (% OF CAPEX)",
+            inverter_life: "INVERTER LIFE",
+            inverter_replace_pct: "INVERTER REPLACEMENT (% SYS CAPEX)",
             no_battery_msg: "No Battery (0 kWh). Replacement cost not applied.",
+            om_schedule_title: "SCHEDULED O&M COSTS",
+            om_year: "Year",
+            om_amount: "Amount (VND)",
+            om_add: "+ Add Cost",
             total_capex_manual: "Investment Capital Configuration",
             auto_calc_placeholder: "Auto-calculated...",
             manual_override_msg: "* Enter amount to override automatic calculation",
@@ -217,8 +229,8 @@ export const Finance = ({
 
                         {/* 2. FINANCIAL PARAMS */}
                         <div className="grid grid-cols-3 gap-2 mb-2">
-                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1 },].map((p, i) => (
-                                <div key={i}>
+                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, dis: bessKwh === 0 }, { l: dt.battery_replace_pct, k: 'batteryReplaceCost', u: '%', v: finParams.batteryReplaceCost, step: 1, dis: bessKwh === 0 }, { l: dt.inverter_life, k: 'inverterLife', u: dt.unit_year, v: finParams.inverterLife, step: 1 }, { l: dt.inverter_replace_pct, k: 'inverterReplaceCost', u: '%', v: finParams.inverterReplaceCost, step: 1 }].map((p, i) => (
+                                <div key={i} className={p.dis ? 'opacity-40' : ''}>
                                     <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
                                         {p.l} {p.tip && <HelpCircle size={8} />}
                                         {p.tip && (
@@ -228,11 +240,74 @@ export const Finance = ({
                                             </div>
                                         )}
                                     </label>
-                                    <div className="relative"><input type="number" step={p.step} value={p.v} onChange={(e) => setFinParams(prev => ({ ...prev, [p.k]: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white pr-6 font-bold text-slate-700 focus:ring-1 focus:ring-blue-200 outline-none" /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div>
+                                    <div className="relative"><input type="number" step={p.step} value={p.v} disabled={p.dis} onChange={(e) => setFinParams(prev => ({ ...prev, [p.k]: e.target.value === '' ? '' : Number(e.target.value) }))} className={`w-full p-1.5 text-xs border rounded pr-6 font-bold focus:ring-1 focus:ring-blue-200 outline-none ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div>
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-2 text-right"><label className="text-[9px] text-slate-400 font-bold block mb-0.5">{dt.battery_replace_pct}</label><div className="relative inline-block w-full"><input type="number" step={1} value={finParams.batteryReplaceCost} onChange={(e) => setFinParams(prev => ({ ...prev, batteryReplaceCost: e.target.value === '' ? '' : Number(e.target.value) }))} className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none" /><span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">%</span></div></div>
+
+                        {/* 3. SCHEDULED O&M */}
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-[10px] text-slate-600 font-bold flex items-center gap-1">
+                                    <Settings size={12} className="text-slate-400" /> {dt.om_schedule_title}
+                                </label>
+                                <button
+                                    onClick={() => setFinParams(prev => ({ ...prev, omSchedule: [...(prev.omSchedule || []), { year: '', amount: '' }] }))}
+                                    className="text-[9px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded font-medium transition-colors cursor-pointer"
+                                >
+                                    {dt.om_add}
+                                </button>
+                            </div>
+
+                            {(finParams.omSchedule || []).length > 0 && (
+                                <div className="space-y-2">
+                                    {(finParams.omSchedule || []).map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="w-20">
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        placeholder={dt.om_year}
+                                                        value={item.year}
+                                                        onChange={(e) => {
+                                                            const newSchedule = [...finParams.omSchedule];
+                                                            newSchedule[idx].year = e.target.value;
+                                                            setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                        }}
+                                                        className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none focus:border-blue-300"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 relative">
+                                                <input
+                                                    type="number"
+                                                    placeholder={dt.om_amount}
+                                                    value={item.amount}
+                                                    onChange={(e) => {
+                                                        const newSchedule = [...finParams.omSchedule];
+                                                        newSchedule[idx].amount = e.target.value;
+                                                        setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                    }}
+                                                    className="w-full p-1.5 pr-8 text-xs border rounded bg-white font-bold text-slate-700 outline-none focus:border-blue-300"
+                                                />
+                                                <span className="absolute right-2 top-1.5 text-[9px] text-slate-400 font-medium select-none pointer-events-none">VNĐ</span>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const newSchedule = finParams.omSchedule.filter((_, i) => i !== idx);
+                                                    setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                }}
+                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                                title="Remove"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         {bessKwh === 0 && (<div className="mt-2 bg-orange-50 border border-orange-100 rounded p-2 flex items-center gap-2"><AlertCircle size={12} className="text-orange-500" /><span className="text-[10px] text-orange-700">{dt.no_battery_msg}</span></div>)}
                     </div>
                 )}

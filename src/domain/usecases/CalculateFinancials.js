@@ -31,6 +31,8 @@ export const execute = (
         batteryCapex = 0,
         inverterLife = 10,
         inverterReplaceCostPct = 10, // % of initial system capex (excluding battery)
+        inverterReplaceCost, // Alias from UI
+        omSchedule = [], // [{year, amount}] one-time maintenance
         loan = { enable: false, ratio: 70, rate: 8.0, term: 10 },
         tax = { enable: true, rate: 20, depreciationParam: 20 } // CIT 20%
     } = params || {};
@@ -95,6 +97,7 @@ export const execute = (
         const annualRevenue = firstYearOperatingIncome * degFactor * escFactor;
         const omCost = safeCapex * ((omPercent || 0) / 100) * escFactor;
         const insCost = safeCapex * ((insuranceRate || 0) / 100);
+        const scheduledOm = (omSchedule || []).filter(e => Number(e.year) === i).reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
         let replaceCost = 0;
 
@@ -103,8 +106,9 @@ export const execute = (
         if (safeBatteryCapex > 0 && i % (batteryLife || 10) === 0 && i < years) {
             replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
         }
+        const effectiveInvReplacePct = inverterReplaceCost !== undefined ? inverterReplaceCost : inverterReplaceCostPct;
         if (i % (inverterLife || 10) === 0 && i < years) {
-            replaceCost += systemCapexOnly * ((inverterReplaceCostPct || 0) / 100) * escFactor;
+            replaceCost += systemCapexOnly * ((effectiveInvReplacePct || 0) / 100) * escFactor;
         }
 
         // Loan
@@ -139,7 +143,7 @@ export const execute = (
 
         // Net Cash Flow
         const debtService = interestPaid + principalPaid;
-        const netFlow = annualRevenue - omCost - insCost - taxPaid - replaceCost - debtService;
+        const netFlow = annualRevenue - omCost - insCost - scheduledOm - taxPaid - replaceCost - debtService;
 
         cashFlows.push(netFlow);
         const prevCumulative = cumulative;
@@ -151,7 +155,7 @@ export const execute = (
             acc: cumulative,
             revenue: annualRevenue,
             opex: -(omCost + insCost),
-            om: -omCost,
+            om: -(omCost + scheduledOm),
             debt: -debtService,
             tax: -taxPaid,
             replace: -replaceCost,
@@ -207,6 +211,7 @@ export const execute = (
         // Annual Costs (O&M + Insurance + Replacement)
         const omCost = safeCapex * ((omPercent || 0) / 100) * escFactor;
         const insCost = safeCapex * ((insuranceRate || 0) / 100);
+        const scheduledOm = (omSchedule || []).filter(e => Number(e.year) === i).reduce((s, e) => s + (Number(e.amount) || 0), 0);
         let replaceCost = 0;
 
         // Replacement Logic (Duplicate from Main Loop - ideally refactor but keeping inline for safety)
@@ -214,11 +219,12 @@ export const execute = (
         if (safeBatteryCapex > 0 && i % (batteryLife || 10) === 0 && i < years) {
             replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
         }
+        const effectiveInvReplacePct2 = inverterReplaceCost !== undefined ? inverterReplaceCost : inverterReplaceCostPct;
         if (i % (inverterLife || 10) === 0 && i < years) {
-            replaceCost += systemCapexOnly * ((inverterReplaceCostPct || 0) / 100) * escFactor;
+            replaceCost += systemCapexOnly * ((effectiveInvReplacePct2 || 0) / 100) * escFactor;
         }
 
-        npvCosts += (omCost + insCost + replaceCost) / discountFactor;
+        npvCosts += (omCost + insCost + scheduledOm + replaceCost) / discountFactor;
         npvEnergy += annualGen / discountFactor;
     }
 
