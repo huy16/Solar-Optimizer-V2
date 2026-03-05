@@ -29,7 +29,7 @@ export const execute = (
         batteryReplaceCostPct = 60, // % of initial battery capex
         batteryReplaceCost, // Alias from UI
         batteryCapex = 0,
-        inverterLife = 10,
+        inverterLife = 20,
         inverterReplaceCostPct = 10, // % of initial system capex (excluding battery)
         inverterReplaceCost, // Alias from UI
         omSchedule = [], // [{year, amount}] one-time maintenance
@@ -107,7 +107,7 @@ export const execute = (
             replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
         }
         const effectiveInvReplacePct = inverterReplaceCost !== undefined ? inverterReplaceCost : inverterReplaceCostPct;
-        if (i % (inverterLife || 10) === 0 && i < years) {
+        if (i % (inverterLife || 20) === 0 && i < years) {
             replaceCost += systemCapexOnly * ((effectiveInvReplacePct || 0) / 100) * escFactor;
         }
 
@@ -220,7 +220,7 @@ export const execute = (
             replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
         }
         const effectiveInvReplacePct2 = inverterReplaceCost !== undefined ? inverterReplaceCost : inverterReplaceCostPct;
-        if (i % (inverterLife || 10) === 0 && i < years) {
+        if (i % (inverterLife || 20) === 0 && i < years) {
             replaceCost += systemCapexOnly * ((effectiveInvReplacePct2 || 0) / 100) * escFactor;
         }
 
