@@ -3010,7 +3010,20 @@ const SolarOptimizer = () => {
                                     <div className="mt-2 pt-2 border-t border-slate-100">
                                         <div className="grid grid-cols-4 gap-2">
                                             {['temp', 'soiling', 'cable', 'inverter'].map(k => (
-                                                <div key={k}><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{t.loss_labels[k]}</label><input type="number" step="0.1" value={techParams.losses[k]} className="w-full p-1 border rounded text-xs text-center bg-slate-50 border-slate-200 text-slate-600" readOnly /></div>
+                                                <div key={k}>
+                                                    <label className="text-[9px] font-bold text-slate-500 block mb-0.5 text-center">{t.loss_labels[k]}</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={techParams.losses[k]}
+                                                        onChange={(e) => setTechParams(prev => ({
+                                                            ...prev,
+                                                            losses: { ...prev.losses, [k]: e.target.value === '' ? '' : Number(e.target.value) }
+                                                        }))}
+                                                        onFocus={(e) => e.target.select()}
+                                                        className="w-full p-1 border rounded text-xs text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
+                                                    />
+                                                </div>
                                             ))}
                                         </div>
                                         <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>

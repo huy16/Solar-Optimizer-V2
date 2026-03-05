@@ -316,13 +316,31 @@ export const Design = ({
                                             </div>
                                         ))
                                     ) : (
-                                        // Force show if high ratio but no warning (sanity check)
-                                        (targetKwp / totalACPower > 1.5) && (
-                                            <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-orange-50 text-orange-600 border border-orange-100">
-                                                <ShieldCheck size={12} />
-                                                <span className="font-bold">Check: Ratio {(targetKwp / totalACPower).toFixed(2)} is High</span>
-                                            </div>
-                                        )
+                                        // Check for Ratio warnings if no strict tech warning
+                                        (() => {
+                                            const ratio = targetKwp / totalACPower;
+                                            if (ratio > 1.45) {
+                                                return (
+                                                    <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-orange-50 text-orange-600 border border-orange-100">
+                                                        <ShieldCheck size={12} />
+                                                        <span className="font-bold">
+                                                            {lang === 'vi' ? `Lưu ý: DC/AC Ratio (${ratio.toFixed(2)}) đang khá CAO (Thiếu công suất Inverter)` : `Check: DC/AC Ratio (${ratio.toFixed(2)}) is HIGH (Undersized Inverter)`}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+                                            if (ratio > 0 && ratio < 1.15) {
+                                                return (
+                                                    <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                                                        <ShieldCheck size={12} />
+                                                        <span className="font-bold">
+                                                            {lang === 'vi' ? `Lưu ý: DC/AC Ratio (${ratio.toFixed(2)}) đang khá THẤP (Thừa công suất Inverter)` : `Check: DC/AC Ratio (${ratio.toFixed(2)}) is LOW (Oversized Inverter)`}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()
                                     )}
                                 </div>
                             );

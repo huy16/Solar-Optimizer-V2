@@ -158,133 +158,135 @@ export const SmartDesignSelector = ({ onSelect, lang, setLang }) => {
                 accept=".xlsx,.xls,.csv,.met,.pdf"
             />
 
-            <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+            <div className="w-full flex justify-center items-center transform scale-90 origin-center relative z-10">
+                <div className="max-w-[1400px] w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-                {/* Left Column: Content */}
-                <div className="flex flex-col">
-                    <div className="space-y-6">
-                        {/* Logo Section - Stagger 1 */}
-                        <div className="w-48 md:w-60 group perspective-1000 animate-fade-in-up [animation-delay:0ms]">
-                            <img
-                                src={casLogo}
-                                alt="CAS Energy"
-                                className="w-full h-auto drop-shadow-sm transition-all duration-500 transform group-hover:scale-105 group-hover:drop-shadow-xl group-hover:-translate-y-1"
-                            />
+                    {/* Left Column: Content */}
+                    <div className="flex flex-col">
+                        <div className="space-y-6">
+                            {/* Logo Section - Stagger 1 */}
+                            <div className="w-48 md:w-60 group perspective-1000 animate-fade-in-up [animation-delay:0ms]">
+                                <img
+                                    src={casLogo}
+                                    alt="CAS Energy"
+                                    className="w-full h-auto drop-shadow-sm transition-all duration-500 transform group-hover:scale-105 group-hover:drop-shadow-xl group-hover:-translate-y-1"
+                                />
+                            </div>
+
+                            {/* Headline - Stagger 3 */}
+                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-[1.1] tracking-tight animate-fade-in-up [animation-delay:400ms]">
+                                {t.headline_prefix}<br />
+                                <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-500 to-blue-600 bg-[length:200%_auto] animate-gradient-x py-1">
+                                    {t.headline_highlight}
+                                    {/* Underline decoration */}
+                                    <svg className="absolute w-full h-3 -bottom-1 left-0 text-blue-200 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+                                        <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" opacity="0.4" />
+                                    </svg>
+                                </span> {t.headline_suffix}
+                            </h1>
+
+                            {/* Description - Stagger 4 */}
+                            <p className="text-base md:text-lg text-slate-600 max-w-xl leading-relaxed font-normal animate-fade-in-up [animation-delay:600ms]">
+                                {t.description}
+                            </p>
+
+                            {/* Brand Stats Section */}
+                            <div className="grid grid-cols-3 gap-8 pt-4 pb-2 animate-fade-in-up [animation-delay:700ms]">
+                                {t.stats.map((stat, i) => (
+                                    <div key={i} className="flex flex-col border-l-2 border-blue-500 pl-4 py-1">
+                                        <div className="text-2xl font-black text-slate-800 tracking-tight">{stat.value}</div>
+                                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{stat.label}</div>
+                                        {stat.unit && <div className="text-[9px] text-blue-600 font-medium italic mt-0.5">{stat.unit}</div>}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Headline - Stagger 3 */}
-                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-[1.1] tracking-tight animate-fade-in-up [animation-delay:400ms]">
-                            {t.headline_prefix}<br />
-                            <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-500 to-blue-600 bg-[length:200%_auto] animate-gradient-x py-1">
-                                {t.headline_highlight}
-                                {/* Underline decoration */}
-                                <svg className="absolute w-full h-3 -bottom-1 left-0 text-blue-200 -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-                                    <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" opacity="0.4" />
-                                </svg>
-                            </span> {t.headline_suffix}
-                        </h1>
-
-                        {/* Description - Stagger 4 */}
-                        <p className="text-base md:text-lg text-slate-600 max-w-xl leading-relaxed font-normal animate-fade-in-up [animation-delay:600ms]">
-                            {t.description}
-                        </p>
-
-                        {/* Brand Stats Section */}
-                        <div className="grid grid-cols-3 gap-8 pt-4 pb-2 animate-fade-in-up [animation-delay:700ms]">
-                            {t.stats.map((stat, i) => (
-                                <div key={i} className="flex flex-col border-l-2 border-blue-500 pl-4 py-1">
-                                    <div className="text-2xl font-black text-slate-800 tracking-tight">{stat.value}</div>
-                                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{stat.label}</div>
-                                    {stat.unit && <div className="text-[9px] text-blue-600 font-medium italic mt-0.5">{stat.unit}</div>}
+                        <div className="flex flex-col sm:flex-row gap-4 pt-2 animate-fade-in-up [animation-delay:800ms]">
+                            {/* Primary Button */}
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="group relative overflow-hidden bg-gradient-to-r from-[#004e92] to-[#000428] hover:from-[#005FA3] hover:to-[#002a5c] text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-blue-200 transition-all duration-300 transform hover:-translate-y-1"
+                            >
+                                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <span className="p-1.5 bg-white/20 rounded-lg group-hover:bg-white/30 transition-colors"><Upload size={20} /></span>
+                                    <div className="text-left">
+                                        <div className="text-xs font-normal opacity-80">{t.btn_profile_sub}</div>
+                                        <div className="text-sm md:text-base">{t.btn_profile_main}</div>
+                                    </div>
+                                    <ArrowRight className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" size={18} />
                                 </div>
-                            ))}
-                        </div>
-                    </div>
+                            </button>
 
-                    <div className="flex flex-col sm:flex-row gap-4 pt-2 animate-fade-in-up [animation-delay:800ms]">
-                        {/* Primary Button */}
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="group relative overflow-hidden bg-gradient-to-r from-[#004e92] to-[#000428] hover:from-[#005FA3] hover:to-[#002a5c] text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-blue-200 transition-all duration-300 transform hover:-translate-y-1"
-                        >
-                            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
-                            <div className="flex items-center gap-3 relative z-10">
-                                <span className="p-1.5 bg-white/20 rounded-lg group-hover:bg-white/30 transition-colors"><Upload size={20} /></span>
-                                <div className="text-left">
-                                    <div className="text-xs font-normal opacity-80">{t.btn_profile_sub}</div>
-                                    <div className="text-sm md:text-base">{t.btn_profile_main}</div>
-                                </div>
-                                <ArrowRight className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" size={18} />
-                            </div>
-                        </button>
-
-                        {/* Secondary Button */}
-                        <button
-                            onClick={() => setShowBillModal(true)}
-                            className="group bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 hover:border-blue-300 px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-50 transition-all duration-300 transform hover:-translate-y-1"
-                        >
-                            <div className="flex items-center gap-3">
-                                <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors"><FileText size={20} /></span>
-                                <div className="text-left">
-                                    <div className="text-xs font-normal text-slate-400 group-hover:text-blue-700/70">{t.btn_bill_sub}</div>
-                                    <div className="text-sm md:text-base text-slate-800 group-hover:text-blue-800">{t.btn_bill_main}</div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-
-                    {/* Trust Indicators */}
-                    <div className="pt-6 border-t border-slate-200/60 flex flex-wrap gap-x-3 gap-y-2 text-[13px] sm:text-sm font-medium text-slate-500 animate-fade-in-up [animation-delay:1000ms]">
-                        <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_1}</div>
-                        <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_2}</div>
-                        <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_3}</div>
-                    </div>
-                </div>
-
-                {/* Right Column: Automated Slideshow */}
-                <div className="hidden lg:block relative">
-                    {/* Floating Elements decoration */}
-                    <div className="absolute -top-12 -right-12 w-24 h-24 bg-gradient-to-br from-blue-400 to-sky-500 rounded-2xl shadow-2xl opacity-80 skew-y-6 animate-float-slow z-0"></div>
-                    <div className="absolute -bottom-8 -left-8 w-20 h-20 bg-gradient-to-br from-blue-400 to-sky-500 rounded-full shadow-xl opacity-80 animate-float-delayed z-20"></div>
-
-                    {/* FIX: Removed rotation here (was rotate-[-2deg]) */}
-                    <div className="relative bg-white/40 backdrop-blur-xl border border-white/50 p-2 rounded-3xl shadow-2xl shadow-blue-900/10 transform transition-transform duration-700 ease-out z-10 hover:z-20">
-                        <div className="relative rounded-[20px] overflow-hidden border border-white/60 shadow-inner group bg-slate-100 aspect-video">
-
-                            {/* Glass Sheen / Mirror Effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent z-20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none skew-x-12 opacity-80"></div>
-
-                            {/* Slides */}
-                            {slides.map((slide, index) => (
-                                <div
-                                    key={slide.id}
-                                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-                                >
-                                    <img
-                                        src={slide.img}
-                                        alt={slide.title}
-                                        className="w-full h-full object-cover object-center transform scale-100 group-hover:scale-105 transition-transform duration-[8s] ease-linear"
-                                    />
-
-                                    {/* Overlay Content */}
-                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pt-16">
-                                        <div className="transform translate-y-0 transition-all duration-700">
-                                            <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">{slide.sub}</div>
-                                            <div className="font-bold text-white text-lg md:text-xl leading-tight">{slide.title}</div>
-                                        </div>
+                            {/* Secondary Button */}
+                            <button
+                                onClick={() => setShowBillModal(true)}
+                                className="group bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 hover:border-blue-300 px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-50 transition-all duration-300 transform hover:-translate-y-1"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors"><FileText size={20} /></span>
+                                    <div className="text-left">
+                                        <div className="text-xs font-normal text-slate-400 group-hover:text-blue-700/70">{t.btn_bill_sub}</div>
+                                        <div className="text-sm md:text-base text-slate-800 group-hover:text-blue-800">{t.btn_bill_main}</div>
                                     </div>
                                 </div>
-                            ))}
+                            </button>
+                        </div>
 
-                            {/* Slide Indicators */}
-                            <div className="absolute top-4 right-4 z-20 flex gap-1.5 bg-black/30 backdrop-blur-sm p-1.5 rounded-full">
-                                {slides.map((_, idx) => (
+                        {/* Trust Indicators */}
+                        <div className="pt-6 border-t border-slate-200/60 flex flex-wrap gap-x-3 gap-y-2 text-[13px] sm:text-sm font-medium text-slate-500 animate-fade-in-up [animation-delay:1000ms]">
+                            <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_1}</div>
+                            <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_2}</div>
+                            <div className="flex items-center gap-2 whitespace-nowrap"><CheckCircle2 size={16} className="text-blue-500" /> {t.feature_3}</div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Automated Slideshow */}
+                    <div className="hidden lg:block relative">
+                        {/* Floating Elements decoration */}
+                        <div className="absolute -top-12 -right-12 w-24 h-24 bg-gradient-to-br from-blue-400 to-sky-500 rounded-2xl shadow-2xl opacity-80 skew-y-6 animate-float-slow z-0"></div>
+                        <div className="absolute -bottom-8 -left-8 w-20 h-20 bg-gradient-to-br from-blue-400 to-sky-500 rounded-full shadow-xl opacity-80 animate-float-delayed z-20"></div>
+
+                        {/* FIX: Removed rotation here (was rotate-[-2deg]) */}
+                        <div className="relative bg-white/40 backdrop-blur-xl border border-white/50 p-2 rounded-3xl shadow-2xl shadow-blue-900/10 transform transition-transform duration-700 ease-out z-10 hover:z-20">
+                            <div className="relative rounded-[20px] overflow-hidden border border-white/60 shadow-inner group bg-slate-100 aspect-video">
+
+                                {/* Glass Sheen / Mirror Effect */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent z-20 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none skew-x-12 opacity-80"></div>
+
+                                {/* Slides */}
+                                {slides.map((slide, index) => (
                                     <div
-                                        key={idx}
-                                        onClick={() => setCurrentSlide(idx)}
-                                        className={`w-2 h-2 rounded-full cursor-pointer transition-all duration-300 ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/80'}`}
-                                    ></div>
+                                        key={slide.id}
+                                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                                    >
+                                        <img
+                                            src={slide.img}
+                                            alt={slide.title}
+                                            className="w-full h-full object-cover object-center transform scale-100 group-hover:scale-105 transition-transform duration-[8s] ease-linear"
+                                        />
+
+                                        {/* Overlay Content */}
+                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pt-16">
+                                            <div className="transform translate-y-0 transition-all duration-700">
+                                                <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">{slide.sub}</div>
+                                                <div className="font-bold text-white text-lg md:text-xl leading-tight">{slide.title}</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ))}
+
+                                {/* Slide Indicators */}
+                                <div className="absolute top-4 right-4 z-20 flex gap-1.5 bg-black/30 backdrop-blur-sm p-1.5 rounded-full">
+                                    {slides.map((_, idx) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => setCurrentSlide(idx)}
+                                            className={`w-2 h-2 rounded-full cursor-pointer transition-all duration-300 ${idx === currentSlide ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/80'}`}
+                                        ></div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

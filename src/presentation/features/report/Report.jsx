@@ -5,7 +5,7 @@ import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Toolti
 const LossCard = ({ label, value }) => (
     <div className="flex flex-col items-center justify-center p-2 bg-white border border-slate-200 rounded shadow-sm">
         <span className="text-[10px] text-slate-500 font-bold uppercase">{label}</span>
-        <span className="text-sm font-bold text-slate-700">{typeof value === 'number' ? value.toFixed(1) : value}%</span>
+        <span className="text-xs font-bold text-slate-700">{typeof value === 'number' ? value.toFixed(1) : value}%</span>
     </div>
 );
 
@@ -100,7 +100,7 @@ export const Report = ({
                     <p className="text-xs text-slate-500 mt-1">{dt.analysis_desc}</p>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full text-xs text-left">
                         <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                             <tr>
                                 <th rowSpan={2} className="px-6 py-3 border-r border-slate-200">{dt.scenario}</th>
@@ -126,7 +126,7 @@ export const Report = ({
                                                 {s.label}
                                                 {targetKwp === s.kwp && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">{dt.selecting}</span>}
                                             </span>
-                                            <span className="text-slate-500 font-mono text-xs">({s.kwp} kWp)</span>
+                                            <span className="text-slate-500 font-mono text-[10px]">({s.kwp} kWp)</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-right text-blue-700 border-r border-slate-200">{formatNumber(s.stats.usedPeak)}</td>
@@ -204,7 +204,7 @@ export const Report = ({
                                             </div>
                                             <div>
                                                 <div className="text-xs text-slate-500 font-medium line-clamp-2 min-h-[32px]" title={row.label}>{row.label}</div>
-                                                <div className={`text-sm font-bold mt-0.5 flex items-baseline gap-1 ${row.highlight && row.color ? row.color : 'text-slate-800'}`}>
+                                                <div className={`text-xs font-bold mt-0.5 flex items-baseline gap-1 ${row.highlight && row.color ? row.color : 'text-slate-800'}`}>
                                                     {typeof row.value === 'number' ? formatNumber(row.value) : row.value}
                                                     <span className="text-[10px] font-normal text-slate-400">{row.unit}</span>
                                                 </div>
@@ -250,7 +250,7 @@ export const Report = ({
                 </div>
                 {showMonthlyData && (
                     <div className="overflow-x-auto animate-in fade-in slide-in-from-top-2">
-                        <table className="w-full text-sm text-left">
+                        <table className="w-full text-xs text-left">
                             <thead className="bg-indigo-50 font-bold text-indigo-900 border-b border-indigo-100">
                                 <tr>
                                     <th className="p-3 border-b border-indigo-100 text-center">{dt.col_month}</th>
@@ -268,7 +268,7 @@ export const Report = ({
                                         <td className="p-3 text-right font-medium text-blue-600">{formatNumber(row.load)}</td>
                                         <td className="p-3 text-right font-medium text-emerald-600">{formatNumber(row.used)}</td>
                                         <td className="p-3 text-center">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${row.solar > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${row.solar > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                 {row.solar > 0 ? ((row.used / row.solar) * 100).toFixed(0) : '0'}%
                                             </span>
                                         </td>

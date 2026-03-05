@@ -67,17 +67,22 @@ export const Finance = ({
             bess_price: "SUẤT ĐẦU TƯ BESS (VNĐ/kWh)",
             co2_factor: "HỆ SỐ CO2",
             col_lcoe: "LCOE (VNĐ/kWh)",
-            tip_capex: "Tổng chi phí đầu tư ban đầu (Vốn chủ + Vay)",
-            tip_saving: "Tiền điện tiết kiệm được trong năm đầu tiên",
-            tip_lcoe: "Chi phí bình quân để sản xuất 1 kWh điện trong suốt vòng đời dự án",
-            tip_npv: "Giá trị hiện tại ròng: Tổng lợi nhuận quy về giá trị tiền tệ hiện tại",
-            tip_irr: "Tỷ suất hoàn vốn nội bộ: Mức lãi suất thực tế của dự án",
-            tip_payback: "Thời gian cần thiết để thu hồi vốn đầu tư ban đầu",
-            tip_discount: "Tỷ lệ dùng để quy đổi dòng tiền tương lai về giá trị hiện tại (Thường 8-12%)",
-            tip_escalation: "Giả định mức tăng giá điện hàng năm của EVN (Thường 2-5%)",
-            tip_om: "Chi phí vận hành & bảo dưỡng hàng năm (Thường 0.5-2% vốn đầu tư)",
-            tip_cycle: "Thời gian hoạt động dự kiến của dự án (Thường 20-25 năm)",
-            tip_deg: "Mức suy giảm hiệu suất tấm pin mỗi năm (Thường 0.5-0.8%)"
+            tip_capex: "Tổng mức đầu tư ban đầu\n= {Công suất × Giá Solar} + {Dung lượng × Giá BESS}",
+            tip_saving: "Tiền tiết kiệm năm 1\n= (Sản lượng tiết kiệm × Giá điện lưới) + (Sản lượng dư thừa × Giá xuất lưới)",
+            tip_lcoe: "LCOE\n= Phân bổ ròng Tổng chi phí (Đầu tư + Vận hành + Lãi vay) / Phân bổ ròng Sản lượng điện (Suốt vòng đời)",
+            tip_npv: "Giá trị Hiện tại Ròng (NPV)\n= Tổng {Dòng tiền ròng t / (1 + Lãi chiết khấu)^t} - Vốn tự có",
+            tip_irr: "Tỷ suất Hoàn vốn Nội bộ (IRR)\n= Mức Lãi chiết khấu làm cho NPV bằng 0",
+            tip_payback: "Thời gian hoàn vốn\n= Năm(t) khi Dòng tiền tích lũy >= 0 (Tức bồi hoàn toàn bộ mức đầu tư + Lãi tài trợ)",
+            tip_discount: "Lãi chiết khấu (r)\n= Tỷ suất sinh lời kỳ vọng hoặc Lãi suất phi rủi ro + Phần bù rủi ro (thường 8-12%)",
+            tip_escalation: "Lạm phát giá điện\n= Tỷ lệ tăng doanh thu tiết kiệm kỳ vọng hằng năm (thường 2-5%)",
+            tip_om: "Chi phí O&M năm t\n= (% OM × CAPEX) × (1 + Tỷ lệ lạm phát)^t",
+            tip_cycle: "Vòng đời dự án\n= Số năm đánh giá dòng tiền tài chính (thường 20-25 năm)",
+            tip_deg: "Suy hao PV\n= Mức giảm sản lượng (Sản lượng năm t = Sản lượng năm 1 × (1 - Suy hao)^(t-1))",
+            tip_revenue_table: "Doanh thu tiết kiệm hằng năm từ việc giảm mua điện lưới hoặc xuất bán điện.",
+            tip_om_table: "Chi phí vận hành, bảo trì và bảo dưỡng định kỳ hệ thống.",
+            tip_replacement_table: "Chi phí trích lập dự phòng để thay thế Inverter hoặc Pin lưu trữ (nếu có).",
+            tip_net_flow_table: "Dòng tiền giữ lại được trong năm\n= Doanh thu - O&M - Thay thế thiết bị.",
+            tip_acc_table: "Lợi nhuận gộp tích lũy qua các năm. Khi giá trị > 0 nghĩa là dự án đã thu hồi đủ vốn."
         },
         en: {
             title_finance: "Project Financial Map",
@@ -132,17 +137,22 @@ export const Finance = ({
             bess_price: "BESS CAPEX (VND/kWh)",
             co2_factor: "CO2 FACTOR",
             col_lcoe: "LCOE (VND/kWh)",
-            tip_capex: "Total initial investment cost (Equity + Loan)",
-            tip_saving: "Electricity cost savings in the first year",
-            tip_lcoe: "Levelized Cost of Energy: Average cost to produce 1 kWh over lifetime",
-            tip_npv: "Net Present Value: Total profit discounted to present value",
-            tip_irr: "Internal Rate of Return: The actual annual return rate of the project",
-            tip_payback: "Time required to recover the initial investment",
-            tip_discount: "Rate used to discount future cash flows to present value (Typ. 8-12%)",
-            tip_escalation: "Assumed annual increase in electricity prices (Typ. 2-5%)",
-            tip_om: "Annual Operation & Maintenance cost (Typ. 0.5-2% of CAPEX)",
-            tip_cycle: "Expected project operational lifetime (Typ. 20-25 years)",
-            tip_deg: "Annual PV module performance degradation (Typ. 0.5-0.8%)"
+            tip_capex: "Initial Investment\n= {Capacity × Solar Price} + {Capacity × BESS Price}",
+            tip_saving: "Year 1 Savings\n= (Saved Energy × Grid Price) + (Exported Energy × FIT Price)",
+            tip_lcoe: "LCOE\n= Sum(Cost_t / (1+r)^t) / Sum(Energy_t / (1+r)^t)",
+            tip_npv: "Net Present Value\n= Sum(Net Cash Flow_t / (1+r)^t) - Equity",
+            tip_irr: "Internal Rate of Return (IRR)\n= Discount rate 'r' where NPV equals 0",
+            tip_payback: "Payback Time\n= Year when Cumulative Cash Flow >= 0",
+            tip_discount: "Discount Rate (r)\n= Expected return rate to discount future cash flows (Typ. 8-12%)",
+            tip_escalation: "Escalation\n= Assumed annual increase rate in electricity revenue (Typ. 2-5%)",
+            tip_om: "Annual O&M Cost(t)\n= (% O&M × CAPEX) × (1 + EscalationRate)^t",
+            tip_cycle: "Evaluation Period\n= Project operational lifetime in years (Typ. 20-25 years)",
+            tip_deg: "PV Degradation\n= Yield(t) = Yield(1) × (1 - DegRate)^(t-1)",
+            tip_revenue_table: "Annual savings revenue from reducing grid purchases or exporting excess.",
+            tip_om_table: "Routine operation and maintenance costs.",
+            tip_replacement_table: "Provision cost for replacing Inverters or BESS (if applicable).",
+            tip_net_flow_table: "Annual Net Cash Flow\n= Revenue - O&M - Replacement cost.",
+            tip_acc_table: "Cumulative net cash flow. A positive value indicates the payback point."
         }
     }[lang];
 
@@ -234,7 +244,7 @@ export const Finance = ({
                                     <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
                                         {p.l} {p.tip && <HelpCircle size={8} />}
                                         {p.tip && (
-                                            <div className="absolute bottom-full mb-2 left-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                            <div className="absolute bottom-full mb-2 left-0 w-max max-w-[320px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
                                                 {p.tip}
                                                 <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                             </div>
@@ -333,9 +343,16 @@ export const Finance = ({
                         <div className="animate-in fade-in slide-in-from-top-2 mt-auto">
                             <div className="relative">
                                 <input
-                                    type="number"
-                                    value={finParams.manualCapex}
-                                    onChange={(e) => setFinParams(prev => ({ ...prev, manualCapex: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                    type="text"
+                                    value={finParams.manualCapex ? new Intl.NumberFormat('en-US').format(finParams.manualCapex) : ''}
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value.replace(/,/g, '');
+                                        const numValue = Number(rawValue);
+                                        if (!isNaN(numValue)) {
+                                            setFinParams(prev => ({ ...prev, manualCapex: rawValue === '' ? '' : numValue }));
+                                        }
+                                    }}
+                                    onFocus={(e) => e.target.select()}
                                     placeholder={dt.auto_calc_placeholder}
                                     className="w-full p-2 text-sm border rounded bg-blue-50/50 font-bold text-blue-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-300 outline-none"
                                 />
@@ -359,12 +376,12 @@ export const Finance = ({
                     {finParams.loan.enable && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                             <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_ratio}</label><input type="number" value={finParams.loan.ratio} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, ratio: e.target.value === '' ? '' : Number(e.target.value) } }))} className="w-full p-1.5 border rounded bg-blue-50 text-blue-900 text-xs font-bold outline-none" /></div>
+                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_ratio}</label><input type="number" value={finParams.loan.ratio} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, ratio: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded bg-blue-50 text-blue-900 text-xs font-bold outline-none" /></div>
                                 <div className="pt-4 text-[10px] text-slate-400">{dt.equity}: <span className="font-bold text-slate-700">{100 - finParams.loan.ratio}%</span></div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.interest_rate}</label><input type="number" step="0.1" value={finParams.loan.rate} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, rate: e.target.value === '' ? '' : Number(e.target.value) } }))} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_term}</label><input type="number" value={finParams.loan.term} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, term: e.target.value === '' ? '' : Number(e.target.value) } }))} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
+                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.interest_rate}</label><input type="number" step="0.1" value={finParams.loan.rate} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, rate: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
+                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_term}</label><input type="number" value={finParams.loan.term} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, term: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
                             </div>
                         </div>
                     )}
@@ -422,11 +439,11 @@ export const Finance = ({
                                 <thead className="bg-slate-50 font-bold text-slate-500 text-[10px] uppercase">
                                     <tr>
                                         <th className="p-3 border-b">{dt.year}</th>
-                                        <th className="p-3 border-b text-center">{dt.revenue}</th>
-                                        <th className="p-3 border-b text-center">{dt.om_cost}</th>
-                                        <th className="p-3 border-b text-center text-red-600">{dt.replacement}</th>
-                                        <th className="p-3 border-b text-center text-blue-600">{dt.net_flow}</th>
-                                        <th className="p-3 border-b text-center text-emerald-600">{dt.accumulated}</th>
+                                        <th className="p-3 border-b group relative cursor-help"><div className="flex items-center justify-center gap-1"><span>{dt.revenue}</span><HelpCircle size={10} /></div><div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_revenue_table}<div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div></div></th>
+                                        <th className="p-3 border-b group relative cursor-help"><div className="flex items-center justify-center gap-1"><span>{dt.om_cost}</span><HelpCircle size={10} /></div><div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_om_table}<div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div></div></th>
+                                        <th className="p-3 border-b text-red-600 group relative cursor-help"><div className="flex items-center justify-center gap-1"><span>{dt.replacement}</span><HelpCircle size={10} /></div><div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_replacement_table}<div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div></div></th>
+                                        <th className="p-3 border-b text-blue-600 group relative cursor-help"><div className="flex items-center justify-center gap-1"><span>{dt.net_flow}</span><HelpCircle size={10} /></div><div className="absolute top-full mt-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_net_flow_table}<div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800"></div></div></th>
+                                        <th className="p-3 border-b text-emerald-600 group relative cursor-help"><div className="flex items-center justify-center gap-1"><span>{dt.accumulated}</span><HelpCircle size={10} /></div><div className="absolute top-full mt-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_acc_table}<div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800"></div></div></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -454,12 +471,12 @@ export const Finance = ({
                 <div className="overflow-x-visible pb-12"><table className="w-full text-xs text-left border-collapse"><thead className="bg-slate-50 text-slate-500 uppercase text-[10px]"><tr>
                     <th className="px-4 py-2 font-medium bg-slate-50 sticky top-0 z-10">{dt.col_scenario}</th>
                     <th className="px-4 py-2 font-medium text-center bg-slate-50 sticky top-0 z-10">{dt.col_capacity}</th>
-                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_capex}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_capex}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
-                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_saving}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_saving}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
-                    <th className="px-4 py-2 font-medium text-right text-purple-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_lcoe}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_lcoe}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
-                    <th className="px-4 py-2 font-medium text-right text-emerald-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_npv}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_npv}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
-                    <th className="px-4 py-2 font-medium text-right text-blue-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_irr}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_irr}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
-                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_payback}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">{dt.tip_payback}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_capex}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_capex}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_saving}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_saving}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right text-purple-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_lcoe}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_lcoe}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right text-emerald-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_npv}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_npv}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right text-blue-600 bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_irr}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_irr}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
+                    <th className="px-4 py-2 font-medium text-right bg-slate-50 sticky top-0 z-10 group relative cursor-help"><div className="flex items-center justify-end gap-1"><span>{dt.col_payback}</span><HelpCircle size={10} /></div><div className="absolute bottom-full mb-2 right-0 w-max max-w-[300px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">{dt.tip_payback}<div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div></div></th>
                     <th className="px-4 py-2 bg-slate-50 sticky top-0 z-10"></th>
                 </tr></thead><tbody className="divide-y divide-slate-100">{scenarios.map((s, i) => (<tr key={i} className={`hover:bg-slate-50 transition ${targetKwp === s.kwp ? 'bg-indigo-50/50' : ''}`}><td className="px-4 py-2.5 font-medium text-slate-700">{s.label}</td><td className="px-4 py-2.5 text-center font-bold">{s.kwp} <small className="text-[10px] font-normal text-slate-400">kWp</small></td><td className="px-4 py-2.5 text-right text-slate-600">{formatMoney(s.capex)}</td><td className="px-4 py-2.5 text-right text-slate-600">{formatMoney(s.annualSaving)}</td><td className="px-4 py-2.5 text-right font-bold text-purple-600">{formatMoney(s.lcoe)}</td><td className="px-4 py-2.5 text-right font-bold text-emerald-600">{formatMoney(s.npv)}</td><td className="px-4 py-2.5 text-right font-bold text-blue-600">{s.irr.toFixed(1)}<small className="text-[10px] font-normal">%</small></td><td className="px-4 py-2.5 text-right font-bold text-slate-800">{s.paybackYears.toFixed(1)} <small className="text-[10px] font-normal text-slate-500">{dt.unit_year}</small></td><td className="px-4 py-2.5 text-right"><button onClick={() => onSelectScenario ? onSelectScenario(s) : setTargetKwp(s.kwp)} className={`text-[10px] px-2.5 py-1 rounded-full border transition ${targetKwp === s.kwp ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:bg-white hover:border-indigo-500 text-slate-500'}`}>{dt.btn_select}</button></td></tr>))}</tbody></table></div>
             </div>
