@@ -39,8 +39,7 @@ export const generateSolarProfile = (monthlyGhi, metadata, sourceName) => {
             }
         }
     }
-    if (metadata) metadata['sourceType'] = 'MET_SYNTHETIC';
-    return [{ map: solarMap, source: `${sourceName} - Dữ liệu tháng tổng hợp`, title: sourceName, score: 2, meta: metadata }];
+    return [{ map: solarMap, source: sourceName, title: sourceName, score: 2, meta: metadata }];
 };
 
 export const interpolate30Min = (originalMap) => {

@@ -209,15 +209,15 @@ export const Finance = ({
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
-                    <span>{dt.legend_acc_invest}</span>
+                    <span>{lang === 'vi' ? 'Vốn đầu tư ban đầu' : 'Initial Investment'}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
-                    <span>{dt.legend_acc_recover}</span>
+                    <span>{lang === 'vi' ? 'Đang thu hồi vốn' : 'Recovering Capital'}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
-                    <span>{dt.legend_acc_profit}</span>
+                    <span>{lang === 'vi' ? 'Đã sinh lời' : 'Profitable'}</span>
                 </div>
                 {finParams.loan.enable && (
                     <div className="flex items-center gap-1.5">

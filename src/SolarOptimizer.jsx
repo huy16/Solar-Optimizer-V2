@@ -75,6 +75,509 @@ const isOffPeakHour = (date) => {
 
 
 // --- COMPONENTS ---
+const TRANSLATIONS = {
+    vi: {
+        dashboard: "Tổng quan",
+        design: "Thiết kế & BESS",
+        finance: "Kịch bản Đầu tư",
+        report: "Báo cáo chi tiết",
+        project_name: "Tên dự án",
+        sidebar_open: "Mở menu",
+        sidebar_close: "Đóng menu",
+        actions: "Hành động",
+        report_config: "Cấu hình Báo cáo",
+        view_formulas: "Xem Công Thức",
+        export_pdf: "Xuất PDF Báo cáo",
+        generating_pdf: "Đang tạo PDF...",
+        project_info: "Thông tin Dự án",
+        input_data: "Dữ liệu đầu vào",
+        load_profile: "Load Profile",
+        solar_data: "Dữ liệu Solar",
+        load_tuning: "Tinh chỉnh Tải",
+        simulate_sun: "Giả lập CN",
+        area_province: "Khu vực / Tỉnh thành",
+        solar_capacity: "Công suất Solar",
+        max_load: "Tải cực đại",
+        loss_percent: "Tổn thất",
+        interpolate_msg: "Làm mượt dữ liệu 30p (Interpolate)",
+        stats: {
+            pv_yield: "Sản lượng PV",
+            solar_energy: "Năng lượng Solar",
+            savings: "Tiết kiệm",
+            self_consumption: "Tự dùng",
+            efficiency: "Hiệu suất"
+        },
+        pdf: {
+            exec_summary: "Đánh giá Hiệu quả Vận hành",
+            max_solar_month: "Tháng Nắng Nhiều Nhất",
+            max_curtailed_month: "Tháng Dư Thừa Nhiều Nhất",
+            avg_self_use: "Tỷ Lệ Tự Dùng Năng Lượng",
+            grid_independence: "Tỷ lệ Tự chủ Năng lượng",
+            yearly_avg: "Bình quân năm",
+            pv_coverage: "Tải được đáp ứng bởi Solar",
+            energy_scenario_comparison: "Năng lượng giữa các Kịch bản",
+            title: "Báo Cáo Tính Toán Công Suất Lắp Đặt",
+            report_date: "Ngày báo cáo",
+            tech_overview: "Tổng quan Hiệu quả Kỹ thuật",
+            tech_config: "Cấu hình Kỹ thuật Sơ bộ",
+            energy_analysis: "Phân tích Năng lượng theo Kịch bản",
+            daily_charts: "Biểu đồ Ngày điển hình",
+            peak_load_chart: "Biểu đồ Phụ tải Đỉnh (Ngày cao nhất)",
+            legend_load_peak: "Phụ tải Đỉnh",
+            monthly_overview: "Tổng quan Năng lượng Hàng tháng",
+            energy_dispatch: "Biểu đồ Điều độ Năng lượng (BESS)",
+            correlation: "Tương quan Load - Solar",
+            power_curves: "Power Curves (12 Tháng)",
+            pv_capacity: "CÔNG SUẤT PV (DC)",
+            panels: "TẤM PIN (PANEL)",
+            inverters: "BIẾN TẦN (INVERTER)",
+            bess: "LƯU TRỮ (BESS)",
+            qty: "Số lượng",
+            capacity: "Công suất",
+            dc_ac_ratio: "Tỷ lệ DC/AC",
+            not_used: "Không sử dụng",
+            scenario: "Kịch bản",
+            self_use: "Tự dùng (Self-Use)",
+            excess: "Dư thừa (Export/Curtail)",
+            peak: "Cao điểm",
+            normal: "Bình thường",
+            solar_yield_chart: "Cân bằng Năng lượng Hàng tháng",
+            solar_energy_name: "Năng lượng Solar",
+            grid_import_name: "Mua lưới",
+            solar_yield_name: "Sản lượng Solar",
+            energy_solar_used: "Năng lượng Solar (Sử dụng)",
+            curtailed: "Cắt giảm (Dư thừa)",
+            total_load: "Tổng Tải (Load)",
+            import: "Mua lưới (Import)",
+            bess_charge_avg: "BESS Sạc",
+            bess_discharge_avg: "BESS Xả",
+            dispatch_desc: "* Biểu đồ hiển thị hoạt động Sạc/Xả của pin lưu trữ theo giờ trong ngày điển hình",
+            detailed_specs_title: "Thông số Kỹ thuật Chi tiết",
+            cash_flow_roi_title: "Phân tích Dòng tiền & ROI",
+            financial_chart_title: "Biểu đồ Dòng tiền (Tích lũy)",
+            finance_table: {
+                year: "Năm",
+                year_0: "Đầu tư (Năm 0)",
+                revenue: "Doanh thu (Tiết kiệm)",
+                om: "Chi phí O&M",
+                replacement: "Thay thế Thiết bị",
+                net_flow: "Dòng tiền ròng",
+                acc: "Tích lũy"
+            },
+            payback: "Hoàn vốn",
+            roi: "ROI",
+            mon_sat: "T2-T7",
+            sun: "CN",
+            col_month: "Tháng",
+            col_solar: "Solar (MWh)",
+            col_load: "Load (MWh)",
+            col_pv_used: "Tự dùng (MWh)",
+            col_self_use_pct: "Tỷ lệ %",
+            monthly_agg: "Dữ liệu tháng tổng hợp"
+        },
+        months: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
+        months_short: ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"],
+        tech_labels: {
+            pv_total: "Tổng sản lượng PV",
+            pv_used: "Năng lượng Solar",
+            pv_used_pct: "Tỷ lệ sử dụng Solar",
+            pv_curtailed: "Cắt giảm (Dư thừa)",
+            pv_curtailed_pct: "Tỷ lệ cắt giảm",
+            grid_import: "Điện mua lưới",
+            total_load: "Tổng Tải (Load)",
+            loss_pct: "Tổn thất hệ thống",
+            pv_used_normal: "Solar sử dụng (Giờ BT)",
+            pv_used_normal_pct: "Tỷ lệ BT",
+            pv_used_peak: "Solar sử dụng (Giờ CĐ)",
+            pv_used_peak_pct: "Tỷ lệ CĐ",
+            curtailed_normal: "Cắt giảm (Giờ BT)",
+            curtailed_normal_pct: "Tỷ lệ Cắt giảm BT",
+            curtailed_peak: "Cắt giảm (Giờ CĐ)",
+            curtailed_peak_pct: "Tỷ lệ Cắt giảm CĐ"
+        },
+        pdf_config: {
+            title: "Tùy chọn xuất PDF",
+            desc: "Chọn các phần bạn muốn đưa vào báo cáo:",
+            chart_mode: "DỮ LIỆU BIỂU ĐỒ",
+            mode_avg: "Trung bình Năm",
+            mode_peak: "Tải Cao Nhất",
+            overview: "Tổng quan & Sản lượng tháng",
+            system_config: "Cấu hình hệ thống & Kịch bản",
+            daily_charts: "Biểu đồ ngày & Tuần",
+            energy_dispatch: "Biểu đồ Điều độ Năng lượng (Mới)",
+            correlation: "Biểu đồ tương quan",
+            monthly_table: "Bảng số liệu tháng",
+            power_curves: "Power Curve 12 tháng",
+            detailed_specs: "Thông số chi tiết",
+            cashflow: "Biểu đồ dòng tiền (Cash Flow)",
+            cashflow_table: "Bảng chi tiết dòng tiền",
+            investment_analysis: "Phân tích hiệu quả đầu tư",
+            close: "Đóng",
+            env_impact: "Hiệu quả Môi trường",
+            co2_saved: "Giảm phát thải CO2",
+            trees_planted: "Cây trồng",
+            coal_saved: "Tiết kiệm than tiêu chuẩn",
+            ton_year: "Tấn/năm",
+            trees: "Cây xanh",
+            ton_coal: "Tấn than",
+            oil_saved: "Dầu tiết kiệm",
+            liters: "Lít",
+            env_desc: "Dự án đóng góp tích cực vào việc bảo vệ môi trường và giảm thiểu biến đổi khí hậu.",
+        },
+        alerts: {
+            lib_not_ready: "Thư viện chưa tải xong. Vui lòng đợi một lát.",
+            pdf_error: "Lỗi tạo PDF: ",
+            new_project: "DỰ ÁN MỚI"
+        },
+        landing: {
+            headline_1: "Tối ưu hóa hệ thống",
+            headline_2: "Điện mặt trời",
+            headline_3: "của bạn",
+            description: "Công cụ phân tích dữ liệu Load Profile tải tiêu thụ, mô phỏng năng suất PV và đề xuất cấu hình Inverter/BESS tối ưu nhất cho doanh nghiệp.",
+            btn_select: "Chọn file Load Profile",
+            loading: "Đang tải thư viện...",
+            solar: "Solar",
+            load: "Tải",
+            roi: "ROI"
+        },
+        units: {
+            m_units: "MWh/năm",
+            m_units_short: "MWh",
+            m_units_yr: "MWh/năm",
+            kw: "kW",
+            kwp: "kWp",
+            m_vnd: "Triệu VNĐ"
+        },
+        loss_labels: {
+            temp: "Nhiệt độ",
+            soiling: "Bụi bẩn",
+            cable: "Dây dẫn",
+            inverter: "Biến tần",
+            total_derate: "Tỷ lệ hiệu chỉnh"
+        },
+        export: {
+            loading_excel: "Thư viện Excel chưa tải xong. Vui lòng đợi.",
+            col_param: "Thông số",
+            col_value: "Giá trị",
+            col_unit: "Đơn vị",
+            col_month: "Tháng",
+            col_pv_yield: "Sản lượng PV (kWh)",
+            col_load: "Load (kWh)",
+            col_self_use: "Tự dùng (kWh)",
+            col_self_use_pct: "Tỷ lệ tự dùng (%)"
+        },
+        scenarios: {
+            base: "Theo tải nền (Base)",
+            curtailment: "Cắt giảm"
+        },
+        profile_types: {
+            shift_1: "🏢 1 Ca (Hành chính)",
+            shift_2: "🌅 2 Ca (Sáng/Chiều)",
+            shift_3: "🏭 3 Ca (24/7)",
+            weekend_off: "📅 Nghỉ cuối tuần",
+            fnb_retail: "🍽️ F&B/Bán lẻ",
+            none: "Chưa có"
+        },
+        status: {
+            select_layer: "CHỌN LỚP DỮ LIỆU",
+            loaded_short: "Đã tải",
+            loaded: "Đã tải: ",
+            pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
+            sun_off: "CN Nghỉ"
+        },
+        formulas: {
+            pv_total: "Σ ( Sản lượng PV hàng tháng )",
+            pv_used: "Σ Min( Solar, Tải )",
+            pv_used_pct: "( Solar Tự dùng / Tổng Solar ) * 100",
+            pv_curtailed: "Tổng Solar - Solar Tự dùng",
+            pv_curtailed_pct: "( Cắt giảm / Tổng Solar ) * 100",
+            grid_import: "Tổng tải - Solar Tự dùng",
+            total_load: "Σ ( Phụ tải hàng tháng )",
+            loss_pct: "( 1 - Tỷ lệ hiệu chỉnh tổng ) * 100",
+            pv_used_normal: "Σ Solar Tự dùng (Giờ Bình thường)",
+            pv_used_normal_pct: "( Tự dùng Bình thường / Tổng Tự dùng ) * 100",
+            pv_used_peak: "Σ Solar Tự dùng (Giờ Cao điểm)",
+            pv_used_peak_pct: "( Tự dùng Cao điểm / Tổng Tự dùng ) * 100",
+            curtailed_normal: "Σ Cắt giảm (Giờ Bình thường)",
+            curtailed_normal_pct: "( Cắt giảm Bình thường / Tổng Cắt giảm ) * 100",
+            curtailed_peak: "Σ Cắt giảm (Giờ Cao điểm)",
+            curtailed_peak_pct: "( Cắt giảm Cao điểm / Tổng Cắt giảm ) * 100"
+        }
+    },
+    en: {
+        dashboard: "Dashboard",
+        design: "Design & Config",
+        finance: "Financial Scenarios",
+        report: "Detailed Report",
+        project_name: "Project Name",
+        sidebar_open: "Open Sidebar",
+        sidebar_close: "Close Sidebar",
+        actions: "Actions",
+        report_config: "Report Configuration",
+        view_formulas: "View Formulas",
+        export_pdf: "Export PDF Report",
+        generating_pdf: "Generating PDF...",
+        project_info: "Project Information",
+        input_data: "Input Data",
+        load_profile: "Load Profile",
+        solar_data: "Solar Data",
+        load_tuning: "Load Tuning",
+        simulate_sun: "Simulate Sun",
+        area_province: "Region / Province",
+        solar_capacity: "Solar Capacity",
+        max_load: "Max Load",
+        loss_percent: "Loss",
+        interpolate_msg: "Interpolate 30m data",
+        stats: {
+            pv_yield: "PV Yield",
+            solar_energy: "Solar Energy",
+            savings: "Savings",
+            self_consumption: "Self-consumption",
+            efficiency: "Efficiency"
+        },
+        landing: {
+            headline_1: "Optimize Your",
+            headline_2: "Solar Energy",
+            headline_3: "System",
+            description: "Load profile analysis tool, PV yield simulation, and optimal Inverter/BESS configuration for businesses.",
+            btn_select: "Select Load Profile File",
+            loading: "Loading libraries...",
+            solar: "Solar",
+            load: "Load",
+            roi: "ROI"
+        },
+        units: {
+            m_units: "MWh/year",
+            m_units_short: "MWh",
+            m_units_yr: "MWh/year",
+            kw: "kW",
+            kwp: "kWp",
+            m_vnd: "M VND"
+        },
+        loss_labels: {
+            temp: "Temperature",
+            soiling: "Soiling",
+            cable: "Cabling",
+            inverter: "Inverter",
+            availability: "Availability",
+            total_derate: "Total Derate"
+        },
+        export: {
+            loading_excel: "Excel library not loaded. Please wait.",
+            col_param: "Parameter",
+            col_value: "Value",
+            col_unit: "Unit",
+            col_month: "Month",
+            col_pv_yield: "PV Yield (kWh)",
+            col_load: "Load (kWh)",
+            col_self_use: "Self-Use (kWh)",
+            col_self_use_pct: "Self-Use (%)"
+        },
+        pdf: {
+            exec_summary: "Operational Performance Evaluation",
+            max_solar_month: "Max Solar Month",
+            max_curtailed_month: "Max Curtailed Month",
+            avg_self_use: "Self-Consumption Ratio",
+            grid_independence: "Grid Independence Ratio",
+            yearly_avg: "Yearly Average",
+            pv_coverage: "Load covered by Solar",
+            energy_scenario_comparison: "Energy Scenario Comparison",
+            title: "Solar Capacity & Financial Design Report",
+            report_date: "Report Date",
+            tech_overview: "Technical Performance Overview",
+            tech_config: "Preliminary Technical Configuration",
+            energy_analysis: "Scenario-based Energy Analysis",
+            daily_charts: "Typical Daily Charts",
+            peak_load_chart: "Peak Load Chart (Max Day)",
+            legend_load_peak: "Peak Load",
+            monthly_overview: "Monthly Energy Overview",
+            energy_dispatch: "Energy Dispatch & BESS Activity",
+            correlation: "Load-Solar Correlation",
+            power_curves: "Power Curves (12 Months)",
+            scenario_comparison: "Investment Scenario Comparison",
+            invest_analysis: "Investment Scenario Comparison",
+            col_scenario: "Scenario",
+            col_capacity: "Capacity",
+            col_capex: "CAPEX (VND)",
+            col_saving: "Saving (Y1) (VND)",
+            col_lcoe: "LCOE (VND/kWh)",
+            col_npv: "NPV (VND)",
+            col_irr: "IRR",
+            col_payback: "Payback",
+            self_use: "Self-use (kWh)",
+            excess: "Excess (kWh)",
+            peak: "Peak",
+            normal: "Normal",
+            solar_yield_chart: "Monthly Energy Balance",
+            solar_energy_name: "Solar Energy",
+            grid_import_name: "Grid Import",
+            solar_yield_name: "Solar Yield",
+            energy_solar_used: "Solar Energy (Consumed)",
+            curtailed: "Curtailed (Excess)",
+            total_load: "Total Load",
+            import: "Grid Import",
+            bess_charge_avg: "BESS Charge",
+            bess_discharge_avg: "BESS Discharge",
+            dispatch_desc: "* Chart shows typical hourly BESS charging/discharging activity",
+            detailed_specs_title: "Detailed Technical Specifications",
+            cash_flow_roi_title: "Cash Flow & ROI Analysis",
+            financial_chart_title: "Cash Flow (Cumulative)",
+            finance_table: {
+                year: "Year",
+                year_0: "Investment (Year 0)",
+                revenue: "Revenue",
+                om: "O&M",
+                replacement: "Equipment Replacement",
+                net_flow: "Cashflow",
+                acc: "Cumulative"
+            },
+            payback: "Payback",
+            roi: "ROI",
+            mon_sat: "Mon-Sat",
+            sun: "Sun",
+            col_month: "Month",
+            col_solar: "Solar (MWh)",
+            col_load: "Load (MWh)",
+            col_pv_used: "Self-use (MWh)",
+            col_self_use_pct: "Self-use %",
+            monthly_agg: "Monthly Aggregated Data",
+            tech_efficiency_title: "Technical Performance Overview",
+            pv_yield_yearly: "PV YIELD",
+            solar_used_yearly: "SOLAR SELF-CONSUMPTION",
+            grid_import_yearly: "FROM GRID",
+            mwh_year: "MWh/year",
+            yearly_summary: "Yearly Energy Summary",
+            curtailment: "Curtailment (MWh)",
+            ratio_pct: "Ratio %",
+            total_year: "TOTAL YEAR",
+            investment_indicators: "Investment Performance Indicators",
+            cashflow_chart: "Cash Flow Chart (Cumulative)",
+            energy_dispatch_day: "Typical Day Profile",
+            bess_dispatch_day: "BESS Dispatch (Typical Day)",
+            header_report: "CAPACITY CALCULATION REPORT",
+            header_install: "INSTALLATION DESIGN",
+            header_operation: "OPERATION DETAILS",
+            header_finance: "FINANCIAL ANALYSIS",
+            header_specs: "DETAILED SPECIFICATIONS",
+            load_weekday: "Load (Mon-Sat)",
+            load_weekend: "Load (Weekend)",
+            legend_self_use: "Self-Consumption",
+            legend_curtail: "Grid Export/Curtail",
+            legend_load: "Load Profile",
+            legend_grid_import: "Grid Import",
+            legend_bess_charge: "BESS Charge",
+            legend_bess_discharge: "BESS Discharge",
+            legend_load_avg: "Average Load",
+            legend_load_we: "Weekend Load",
+            no_bess: "Not used",
+            not_selected: "Not selected",
+            chart_load_solar: "Load vs Solar",
+            chart_grid_import_bess: "Grid Import vs Solar (with BESS)",
+            axis_solar_kw: "Solar Generation (kW)",
+            axis_load_kw: "Load Consumption (kW)",
+            axis_grid_kw: "Grid Import (kW)",
+            detailed_specs: "Detailed Technical Specifications",
+            spec_name: "SPECIFICATION",
+            spec_value: "VALUE",
+            spec_unit: "UNIT",
+            scenario_comparison: "Investment Scenario Comparison",
+            scenario_name: "SCENARIO"
+        },
+        months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        months_short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        tech_labels: {
+            pv_total: "Total PV Yield",
+            pv_used: "Solar Energy Used",
+            pv_used_pct: "Solar Self-Use %",
+            pv_curtailed: "Curtailment (Excess)",
+            pv_curtailed_pct: "Curtailment %",
+            grid_import: "Grid Import",
+            total_load: "Total Load Consumption",
+            loss_pct: "System Loss Percent",
+            pv_used_normal: "Solar Used (Normal)",
+            pv_used_normal_pct: "Normal Use %",
+            pv_used_peak: "Solar Used (Peak)",
+            pv_used_peak_pct: "Peak Use %",
+            curtailed_normal: "Curtailment (Normal)",
+            curtailed_normal_pct: "Curtail normal %",
+            curtailed_peak: "Curtailment (Peak)",
+            curtailed_peak_pct: "Curtail peak %"
+        },
+        pdf_config: {
+            title: "PDF Export Options",
+            desc: "Select the sections to include in your report:",
+            chart_mode: "CHART DATA",
+            mode_avg: "Yearly Average",
+            mode_peak: "Peak Load",
+            overview: "Overview & Monthly Yield",
+            system_config: "System Config & Scenarios",
+            daily_charts: "Daily & Weekly Charts",
+            energy_dispatch: "Energy Dispatch & BESS",
+            correlation: "Correlation Charts",
+            monthly_table: "Monthly Data Table",
+            power_curves: "12-Month Power Curves",
+            detailed_specs: "Detailed Specifications",
+            cashflow: "Cash Flow Chart",
+            cashflow_table: "Detailed Cash Flow Table",
+            investment_analysis: "Investment Analysis",
+            close: "Close",
+            export: "Export PDF",
+            env_impact: "Environmental Impact",
+            co2_saved: "CO2 Emissions Reduced",
+            trees_planted: "Trees Planted",
+            coal_saved: "Standard Coal Saved",
+            ton_year: "Tons/year",
+            trees: "Trees",
+            ton_coal: "Tons coal",
+            oil_saved: "Standard Oil Saved",
+            liters: "Liters",
+            env_desc: "This project contributes positively to environmental protection and climate change mitigation."
+        },
+        alerts: {
+            lib_not_ready: "Libraries are not yet loaded. Please wait a moment.",
+            pdf_error: "PDF Generation Error: ",
+            new_project: "NEW PROJECT"
+        },
+        scenarios: {
+            base: "Base Load Scenario",
+            curtailment: "Curtailment"
+        },
+        profile_types: {
+            shift_1: "🏢 1 Shift (Office)",
+            shift_2: "🌅 2 Shifts (Day/Eve)",
+            shift_3: "🏭 3 Shifts (24/7)",
+            weekend_off: "📅 Weekend Off",
+            fnb_retail: "🍽️ F&B/Retail",
+            none: "None"
+        },
+        status: {
+            select_layer: "SELECT LAYER",
+            loaded_short: "Loaded",
+            loaded: "Loaded: ",
+            pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
+            sun_off: "Sun Off"
+        },
+        formulas: {
+            pv_total: "Σ ( Monthly Solar Generation )",
+            pv_used: "Σ Min( Solar, Load )",
+            pv_used_pct: "( PV Used / PV Total ) * 100",
+            pv_curtailed: "PV Total - PV Used",
+            pv_curtailed_pct: "( PV Curtailed / PV Total ) * 100",
+            grid_import: "Total Load - PV Used",
+            total_load: "Σ ( Monthly Load Consumption )",
+            loss_pct: "( 1 - Total Derate Factor ) * 100",
+            pv_used_normal: "Σ PV Used (Normal Hours)",
+            pv_used_normal_pct: "( PV Used Normal / Total PV Used ) * 100",
+            pv_used_peak: "Σ PV Used (Peak Hours)",
+            pv_used_peak_pct: "( PV Used Peak / Total PV Used ) * 100",
+            curtailed_normal: "Σ PV Curtailed (Normal Hours)",
+            curtailed_normal_pct: "( Curtailed Normal / Total Curtailed ) * 100",
+            curtailed_peak: "Σ PV Curtailed (Peak Hours)",
+            curtailed_peak_pct: "( Curtailed Peak / Total Curtailed ) * 100"
+        }
+    }
+};
+
 const StatCard = ({ icon: Icon, label, value, unit, colorClass = "text-slate-800" }) => (
     <div className="p-3 bg-slate-50 border border-slate-300 rounded flex flex-col items-center justify-center text-center">
         <Icon size={20} className={`mb-1 ${colorClass}`} />
@@ -264,6 +767,12 @@ const getProvinceStyle = (id) => {
 
 // --- COMPONENT CHINH ---
 const SolarOptimizer = () => {
+    const [lang, setLang] = useState('vi'); // Default language
+    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'ho_chi_minh') || PROVINCES[0]);
+
+
+    const t = TRANSLATIONS[lang];
+
     // 1. DATA HOOK
     const {
         rawData, setRawData,
@@ -357,7 +866,6 @@ const SolarOptimizer = () => {
     const [isSimulating, setIsSimulating] = useState(false);
 
     // Province State for Solar Generation
-    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'ho_chi_minh') || PROVINCES[0]);
     const [loadedGsaProfile, setLoadedGsaProfile] = useState(null);
 
     // Fetch the detailed 8760 hourly data for the selected province
@@ -398,23 +906,28 @@ const SolarOptimizer = () => {
         const monthlyGhi = selectedProvince.monthly_distribution || Array(12).fill(selectedProvince.peakSunHours * 30);
 
         // Generate Synthetic Profile (still used for basic dashboard metadata layer mapping)
-        const newLayer = generateSolarProfile(monthlyGhi, {
+        let newLayer;
+        const prefix = lang === 'vi' ? 'Tiêu chuẩn' : 'Standard';
+        const suffix = t.pdf.monthly_agg || (lang === 'vi' ? 'Dữ liệu tháng tổng hợp' : 'Monthly Aggregated Data');
+        const pName = (lang === 'en' && selectedProvince.id === 'viet_nam') ? 'Viet Nam' : selectedProvince.name;
+
+        newLayer = generateSolarProfile(monthlyGhi, {
             siteName: selectedProvince.name,
             lat: 0, lon: 0, // Placeholder
             yield_yearly: selectedProvince.yield_yearly
-        }, `Standard: ${selectedProvince.name}`)[0];
+        }, `${prefix}: ${pName} - ${suffix}`)[0];
 
         setSolarLayers(prev => {
             // Check if this province layer already exists to avoid dupes?
             const exists = prev.find(l => l.title === newLayer.title);
             if (exists) return prev;
             // Add to top
-            return [newLayer, ...prev.filter(l => !l.title.startsWith('Standard: '))];
+            return [newLayer, ...prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '))];
         });
         // Auto-select
         setSelectedLayerIndex(0);
 
-    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex]);
+    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex, lang, t]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -445,510 +958,9 @@ const SolarOptimizer = () => {
     const [designMode, setDesignMode] = useState(null); // 'profile' or 'manual'
     const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
     const provinceDropdownRef = useRef(null);
-    const [lang, setLang] = useState('vi'); // Default language
 
-    const TRANSLATIONS = {
-        vi: {
-            dashboard: "Tổng quan",
-            design: "Thiết kế & BESS",
-            finance: "Kịch bản Đầu tư",
-            report: "Báo cáo chi tiết",
-            project_name: "Tên dự án",
-            sidebar_open: "Mở menu",
-            sidebar_close: "Đóng menu",
-            actions: "Hành động",
-            report_config: "Cấu hình Báo cáo",
-            view_formulas: "Xem Công Thức",
-            export_pdf: "Xuất PDF Báo cáo",
-            generating_pdf: "Đang tạo PDF...",
-            project_info: "Thông tin Dự án",
-            input_data: "Dữ liệu đầu vào",
-            load_profile: "Load Profile",
-            solar_data: "Dữ liệu Solar",
-            load_tuning: "Tinh chỉnh Tải",
-            simulate_sun: "Giả lập CN",
-            area_province: "Khu vực / Tỉnh thành",
-            solar_capacity: "Công suất Solar",
-            max_load: "Tải cực đại",
-            loss_percent: "Tổn thất",
-            interpolate_msg: "Làm mượt dữ liệu 30p (Interpolate)",
-            stats: {
-                pv_yield: "Sản lượng PV",
-                solar_energy: "Năng lượng Solar",
-                savings: "Tiết kiệm",
-                self_consumption: "Tự dùng",
-                efficiency: "Hiệu suất"
-            },
-            pdf: {
-                exec_summary: "Đánh giá Hiệu quả Vận hành",
-                max_solar_month: "Tháng Nắng Nhiều Nhất",
-                max_curtailed_month: "Tháng Dư Thừa Nhiều Nhất",
-                avg_self_use: "Tỷ Lệ Tự Dùng Năng Lượng",
-                grid_independence: "Tỷ lệ Tự chủ Năng lượng",
-                yearly_avg: "Bình quân năm",
-                pv_coverage: "Tải được đáp ứng bởi Solar",
-                energy_scenario_comparison: "Năng lượng giữa các Kịch bản",
-                title: "Báo Cáo Tính Toán Công Suất Lắp Đặt",
-                report_date: "Ngày báo cáo",
-                tech_overview: "Tổng quan Hiệu quả Kỹ thuật",
-                tech_config: "Cấu hình Kỹ thuật Sơ bộ",
-                energy_analysis: "Phân tích Năng lượng theo Kịch bản",
-                daily_charts: "Biểu đồ Ngày điển hình",
-                peak_load_chart: "Biểu đồ Phụ tải Đỉnh (Ngày cao nhất)",
-                legend_load_peak: "Phụ tải Đỉnh",
-                monthly_overview: "Tổng quan Năng lượng Hàng tháng",
-                energy_dispatch: "Biểu đồ Điều độ Năng lượng (BESS)",
-                correlation: "Tương quan Load - Solar",
-                power_curves: "Power Curves (12 Tháng)",
-                pv_capacity: "CÔNG SUẤT PV (DC)",
-                panels: "TẤM PIN (PANEL)",
-                inverters: "BIẾN TẦN (INVERTER)",
-                bess: "LƯU TRỮ (BESS)",
-                qty: "Số lượng",
-                capacity: "Công suất",
-                dc_ac_ratio: "Tỷ lệ DC/AC",
-                not_used: "Không sử dụng",
-                scenario: "Kịch bản",
-                self_use: "Tự dùng (Self-Use)",
-                excess: "Dư thừa (Export/Curtail)",
-                peak: "Cao điểm",
-                normal: "Bình thường",
-                solar_yield_chart: "Cân bằng Năng lượng Hàng tháng",
-                solar_energy_name: "Năng lượng Solar",
-                grid_import_name: "Mua lưới",
-                solar_yield_name: "Sản lượng Solar",
-                energy_solar_used: "Năng lượng Solar (Sử dụng)",
-                curtailed: "Cắt giảm (Dư thừa)",
-                total_load: "Tổng Tải (Load)",
-                import: "Mua lưới (Import)",
-                bess_charge_avg: "BESS Sạc",
-                bess_discharge_avg: "BESS Xả",
-                dispatch_desc: "* Biểu đồ hiển thị hoạt động Sạc/Xả của pin lưu trữ theo giờ trong ngày điển hình",
-                detailed_specs_title: "Thông số Kỹ thuật Chi tiết",
-                cash_flow_roi_title: "Phân tích Dòng tiền & ROI",
-                financial_chart_title: "Biểu đồ Dòng tiền (Tích lũy)",
-                finance_table: {
-                    year: "Năm",
-                    year_0: "Đầu tư (Năm 0)",
-                    revenue: "Doanh thu (Tiết kiệm)",
-                    om: "Chi phí O&M",
-                    replacement: "Thay thế Thiết bị",
-                    net_flow: "Dòng tiền ròng",
-                    acc: "Tích lũy"
-                },
-                payback: "Hoàn vốn",
-                roi: "ROI",
-                mon_sat: "T2-T7",
-                sun: "CN",
-                col_month: "Tháng",
-                col_solar: "Solar (MWh)",
-                col_load: "Load (MWh)",
-                col_pv_used: "Tự dùng (MWh)",
-                col_self_use_pct: "Tỷ lệ %"
-            },
-            months: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-            months_short: ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"],
-            tech_labels: {
-                pv_total: "Tổng sản lượng PV",
-                pv_used: "Năng lượng Solar",
-                pv_used_pct: "Tỷ lệ sử dụng Solar",
-                pv_curtailed: "Cắt giảm (Dư thừa)",
-                pv_curtailed_pct: "Tỷ lệ cắt giảm",
-                grid_import: "Điện mua lưới",
-                total_load: "Tổng Tải (Load)",
-                loss_pct: "Tổn thất hệ thống",
-                pv_used_normal: "Solar sử dụng (Giờ BT)",
-                pv_used_normal_pct: "Tỷ lệ BT",
-                pv_used_peak: "Solar sử dụng (Giờ CĐ)",
-                pv_used_peak_pct: "Tỷ lệ CĐ",
-                curtailed_normal: "Cắt giảm (Giờ BT)",
-                curtailed_normal_pct: "Tỷ lệ Cắt giảm BT",
-                curtailed_peak: "Cắt giảm (Giờ CĐ)",
-                curtailed_peak_pct: "Tỷ lệ Cắt giảm CĐ"
-            },
-            pdf_config: {
-                title: "Tùy chọn xuất PDF",
-                desc: "Chọn các phần bạn muốn đưa vào báo cáo:",
-                chart_mode: "DỮ LIỆU BIỂU ĐỒ",
-                mode_avg: "Trung bình Năm",
-                mode_peak: "Tải Cao Nhất",
-                overview: "Tổng quan & Sản lượng tháng",
-                system_config: "Cấu hình hệ thống & Kịch bản",
-                daily_charts: "Biểu đồ ngày & Tuần",
-                energy_dispatch: "Biểu đồ Điều độ Năng lượng (Mới)",
-                correlation: "Biểu đồ tương quan",
-                monthly_table: "Bảng số liệu tháng",
-                power_curves: "Power Curve 12 tháng",
-                detailed_specs: "Thông số chi tiết",
-                cashflow: "Biểu đồ dòng tiền (Cash Flow)",
-                cashflow_table: "Bảng chi tiết dòng tiền",
-                investment_analysis: "Phân tích hiệu quả đầu tư",
-                close: "Đóng",
-                env_impact: "Hiệu quả Môi trường",
-                co2_saved: "Giảm phát thải CO2",
-                trees_planted: "Cây trồng",
-                coal_saved: "Tiết kiệm than tiêu chuẩn",
-                ton_year: "Tấn/năm",
-                trees: "Cây xanh",
-                ton_coal: "Tấn than",
-                oil_saved: "Dầu tiết kiệm",
-                liters: "Lít",
-                env_desc: "Dự án đóng góp tích cực vào việc bảo vệ môi trường và giảm thiểu biến đổi khí hậu.",
-            },
-            alerts: {
-                lib_not_ready: "Thư viện chưa tải xong. Vui lòng đợi một lát.",
-                pdf_error: "Lỗi tạo PDF: ",
-                new_project: "DỰ ÁN MỚI"
-            },
-            landing: {
-                headline_1: "Tối ưu hóa hệ thống",
-                headline_2: "Điện mặt trời",
-                headline_3: "của bạn",
-                description: "Công cụ phân tích dữ liệu Load Profile tải tiêu thụ, mô phỏng năng suất PV và đề xuất cấu hình Inverter/BESS tối ưu nhất cho doanh nghiệp.",
-                btn_select: "Chọn file Load Profile",
-                loading: "Đang tải thư viện...",
-                solar: "Solar",
-                load: "Tải",
-                roi: "ROI"
-            },
-            units: {
-                m_units: "MWh/năm",
-                m_units_short: "MWh",
-                m_units_yr: "MWh/năm",
-                kw: "kW",
-                kwp: "kWp",
-                m_vnd: "Triệu VNĐ"
-            },
-            loss_labels: {
-                temp: "Nhiệt độ",
-                soiling: "Bụi bẩn",
-                cable: "Dây dẫn",
-                inverter: "Biến tần",
 
-                total_derate: "Tỷ lệ hiệu chỉnh"
-            },
-            export: {
-                loading_excel: "Thư viện Excel chưa tải xong. Vui lòng đợi.",
-                col_param: "Thông số",
-                col_value: "Giá trị",
-                col_unit: "Đơn vị",
-                col_month: "Tháng",
-                col_pv_yield: "Sản lượng PV (kWh)",
-                col_load: "Load (kWh)",
-                col_self_use: "Tự dùng (kWh)",
-                col_self_use_pct: "Tỷ lệ tự dùng (%)"
-            },
-            scenarios: {
-                base: "Theo tải nền (Base)",
-                curtailment: "Cắt giảm"
-            },
-            profile_types: {
-                shift_1: "🏢 1 Ca (Hành chính)",
-                shift_2: "🌅 2 Ca (Sáng/Chiều)",
-                shift_3: "🏭 3 Ca (24/7)",
-                weekend_off: "📅 Nghỉ cuối tuần",
-                fnb_retail: "🍽️ F&B/Bán lẻ",
-                none: "Chưa có"
-            },
-            status: {
-                select_layer: "CHỌN LỚP DỮ LIỆU",
-                loaded_short: "Đã tải",
-                loaded: "Đã tải: ",
-                pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
-                sun_off: "CN Nghỉ"
-            },
-            formulas: {
-                pv_total: "Σ ( Sản lượng PV hàng tháng )",
-                pv_used: "Σ Min( Solar, Tải )",
-                pv_used_pct: "( Solar Tự dùng / Tổng Solar ) * 100",
-                pv_curtailed: "Tổng Solar - Solar Tự dùng",
-                pv_curtailed_pct: "( Cắt giảm / Tổng Solar ) * 100",
-                grid_import: "Tổng tải - Solar Tự dùng",
-                total_load: "Σ ( Phụ tải hàng tháng )",
-                loss_pct: "( 1 - Tỷ lệ hiệu chỉnh tổng ) * 100",
-                pv_used_normal: "Σ Solar Tự dùng (Giờ Bình thường)",
-                pv_used_normal_pct: "( Tự dùng Bình thường / Tổng Tự dùng ) * 100",
-                pv_used_peak: "Σ Solar Tự dùng (Giờ Cao điểm)",
-                pv_used_peak_pct: "( Tự dùng Cao điểm / Tổng Tự dùng ) * 100",
-                curtailed_normal: "Σ Cắt giảm (Giờ Bình thường)",
-                curtailed_normal_pct: "( Cắt giảm Bình thường / Tổng Cắt giảm ) * 100",
-                curtailed_peak: "Σ Cắt giảm (Giờ Cao điểm)",
-                curtailed_peak_pct: "( Cắt giảm Cao điểm / Tổng Cắt giảm ) * 100"
-            }
-        },
-        en: {
-            dashboard: "Dashboard",
-            design: "Design & Config",
-            finance: "Financial Scenarios",
-            report: "Detailed Report",
-            project_name: "Project Name",
-            sidebar_open: "Open Sidebar",
-            sidebar_close: "Close Sidebar",
-            actions: "Actions",
-            report_config: "Report Configuration",
-            view_formulas: "View Formulas",
-            export_pdf: "Export PDF Report",
-            generating_pdf: "Generating PDF...",
-            project_info: "Project Information",
-            input_data: "Input Data",
-            load_profile: "Load Profile",
-            solar_data: "Solar Data",
-            load_tuning: "Load Tuning",
-            simulate_sun: "Simulate Sun",
-            area_province: "Region / Province",
-            solar_capacity: "Solar Capacity",
-            max_load: "Max Load",
-            loss_percent: "Loss",
-            interpolate_msg: "Interpolate 30m data",
-            stats: {
-                pv_yield: "PV Yield",
-                solar_energy: "Solar Energy",
-                savings: "Savings",
-                self_consumption: "Self-consumption",
-                efficiency: "Efficiency"
-            },
-            landing: {
-                headline_1: "Optimize Your",
-                headline_2: "Solar Energy",
-                headline_3: "System",
-                description: "Load profile analysis tool, PV yield simulation, and optimal Inverter/BESS configuration for businesses.",
-                btn_select: "Select Load Profile File",
-                loading: "Loading libraries...",
-                solar: "Solar",
-                load: "Load",
-                roi: "ROI"
-            },
-            units: {
-                m_units: "MWh/year",
-                m_units_short: "MWh",
-                m_units_yr: "MWh/year",
-                kw: "kW",
-                kwp: "kWp",
-                m_vnd: "M VND"
-            },
-            loss_labels: {
-                temp: "Temperature",
-                soiling: "Soiling",
-                cable: "Cabling",
-                inverter: "Inverter",
-                availability: "Availability",
-                total_derate: "Total Derate"
-            },
-            export: {
-                loading_excel: "Excel library not loaded. Please wait.",
-                col_param: "Parameter",
-                col_value: "Value",
-                col_unit: "Unit",
-                col_month: "Month",
-                col_pv_yield: "PV Yield (kWh)",
-                col_load: "Load (kWh)",
-                col_self_use: "Self-Use (kWh)",
-                col_self_use_pct: "Self-Use (%)"
-            },
-            pdf: {
-                exec_summary: "Operational Performance Evaluation",
-                max_solar_month: "Max Solar Month",
-                max_curtailed_month: "Max Curtailed Month",
-                avg_self_use: "Self-Consumption Ratio",
-                grid_independence: "Grid Independence Ratio",
-                yearly_avg: "Yearly Average",
-                pv_coverage: "Load covered by Solar",
-                energy_scenario_comparison: "Energy Scenario Comparison",
-                title: "Solar Capacity & Financial Design Report",
-                report_date: "Report Date",
-                tech_overview: "Technical Performance Overview",
-                tech_config: "Preliminary Technical Configuration",
-                energy_analysis: "Scenario-based Energy Analysis",
-                daily_charts: "Typical Daily Charts",
-                peak_load_chart: "Peak Load Chart (Max Day)",
-                legend_load_peak: "Peak Load",
-                monthly_overview: "Monthly Energy Overview",
-                energy_dispatch: "Energy Dispatch & BESS Activity",
-                correlation: "Load-Solar Correlation",
-                power_curves: "Power Curves (12 Months)",
-                pv_capacity: "PV CAPACITY (DC)",
-                panels: "PV PANELS",
-                inverters: "INVERTERS",
-                bess: "STORAGE (BESS)",
-                qty: "Quantity",
-                capacity: "Capacity",
-                dc_ac_ratio: "DC/AC Ratio",
-                not_used: "Not used",
-                scenario: "Scenario",
-                self_use: "Self-Consumption",
-                excess: "Excess (Export/Curtail)",
-                peak: "Peak",
-                normal: "Normal",
-                solar_yield_chart: "Monthly Energy Balance",
-                solar_energy_name: "Solar Energy",
-                grid_import_name: "Grid Import",
-                solar_yield_name: "Solar Yield",
-                energy_solar_used: "Solar Energy (Consumed)",
-                curtailed: "Curtailed (Excess)",
-                total_load: "Total Load",
-                import: "Grid Import",
-                bess_charge_avg: "BESS Charge",
-                bess_discharge_avg: "BESS Discharge",
-                dispatch_desc: "* Chart shows typical hourly BESS charging/discharging activity",
-                detailed_specs_title: "Detailed Technical Specifications",
-                cash_flow_roi_title: "Cash Flow & ROI Analysis",
-                financial_chart_title: "Cash Flow (Cumulative)",
-                finance_table: {
-                    year: "Year",
-                    year_0: "Investment (Year 0)",
-                    revenue: "Revenue",
-                    om: "O&M",
-                    replacement: "Equipment Replacement",
-                    net_flow: "Cashflow",
-                    acc: "Cumulative"
-                },
-                payback: "Payback",
-                roi: "ROI",
-                mon_sat: "Mon-Sat",
-                sun: "Sun",
-                col_month: "Month",
-                col_solar: "Solar (MWh)",
-                col_load: "Load (MWh)",
-                col_pv_used: "Self-use (MWh)",
-                col_self_use_pct: "Self-use %",
-                tech_efficiency_title: "Technical Performance Overview",
-                pv_yield_yearly: "PV YIELD",
-                solar_used_yearly: "SOLAR SELF-CONSUMPTION",
-                grid_import_yearly: "FROM GRID",
-                mwh_year: "MWh/year",
-                yearly_summary: "Yearly Energy Summary",
-                curtailment: "Curtailment (MWh)",
-                ratio_pct: "Ratio %",
-                total_year: "TOTAL YEAR",
-                investment_indicators: "Investment Performance Indicators",
-                cashflow_chart: "Cash Flow Chart (Cumulative)",
-                energy_dispatch_day: "Typical Day Profile",
-                bess_dispatch_day: "BESS Dispatch (Typical Day)",
-                header_report: "CAPACITY CALCULATION REPORT",
-                header_install: "INSTALLATION DESIGN",
-                header_operation: "OPERATION DETAILS",
-                header_finance: "FINANCIAL ANALYSIS",
-                header_specs: "DETAILED SPECIFICATIONS",
-                load_weekday: "Load (Mon-Sat)",
-                load_weekend: "Load (Weekend)",
-                legend_self_use: "Self-Consumption",
-                legend_curtail: "Grid Export/Curtail",
-                legend_load: "Load Profile",
-                legend_grid_import: "Grid Import",
-                legend_bess_charge: "BESS Charge",
-                legend_bess_discharge: "BESS Discharge",
-                legend_load_avg: "Average Load",
-                legend_load_we: "Weekend Load",
-                no_bess: "Not used",
-                not_selected: "Not selected",
-                chart_load_solar: "Load vs Solar",
-                chart_grid_import_bess: "Grid Import vs Solar (with BESS)",
-                axis_solar_kw: "Solar Generation (kW)",
-                axis_load_kw: "Load Consumption (kW)",
-                axis_grid_kw: "Grid Import (kW)",
-                detailed_specs: "Detailed Technical Specifications (16 Items)",
-                spec_name: "SPECIFICATION",
-                spec_value: "VALUE",
-                spec_unit: "UNIT",
-                scenario_comparison: "Investment Scenario Comparison",
-                scenario_name: "SCENARIO"
-            },
-            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-            months_short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-            tech_labels: {
-                pv_total: "Total PV Yield",
-                pv_used: "Solar Energy Used",
-                pv_used_pct: "Solar Self-Use %",
-                pv_curtailed: "Curtailment (Excess)",
-                pv_curtailed_pct: "Curtailment %",
-                grid_import: "Grid Import",
-                total_load: "Total Load Consumption",
-                loss_pct: "System Loss Percent",
-                pv_used_normal: "Solar Used (Normal)",
-                pv_used_normal_pct: "Normal Use %",
-                pv_used_peak: "Solar Used (Peak)",
-                pv_used_peak_pct: "Peak Use %",
-                curtailed_normal: "Curtailment (Normal)",
-                curtailed_normal_pct: "Curtail normal %",
-                curtailed_peak: "Curtailment (Peak)",
-                curtailed_peak_pct: "Curtail peak %"
-            },
-            pdf_config: {
-                title: "PDF Export Options",
-                desc: "Select the sections to include in your report:",
-                chart_mode: "CHART DATA",
-                mode_avg: "Yearly Average",
-                mode_peak: "Peak Load",
-                overview: "Overview & Monthly Yield",
-                system_config: "System Config & Scenarios",
-                daily_charts: "Daily & Weekly Charts",
-                energy_dispatch: "Energy Dispatch & BESS",
-                correlation: "Correlation Charts",
-                monthly_table: "Monthly Data Table",
-                power_curves: "12-Month Power Curves",
-                detailed_specs: "Detailed Specifications",
-                cashflow: "Cash Flow Chart",
-                cashflow_table: "Detailed Cash Flow Table",
-                investment_analysis: "Investment Analysis",
-                close: "Close",
-                export: "Export PDF",
-                env_impact: "Environmental Impact",
-                co2_saved: "CO2 Emissions Reduced",
-                trees_planted: "Trees Planted",
-                coal_saved: "Standard Coal Saved",
-                ton_year: "Tons/year",
-                trees: "Trees",
-                ton_coal: "Tons coal",
-                oil_saved: "Standard Oil Saved",
-                liters: "Liters",
-                env_desc: "This project contributes positively to environmental protection and climate change mitigation."
-            },
-            alerts: {
-                lib_not_ready: "Libraries are not yet loaded. Please wait a moment.",
-                pdf_error: "PDF Generation Error: ",
-                new_project: "NEW PROJECT"
-            },
-            scenarios: {
-                base: "Base Load Scenario",
-                curtailment: "Curtailment"
-            },
-            profile_types: {
-                shift_1: "🏢 1 Shift (Office)",
-                shift_2: "🌅 2 Shifts (Day/Eve)",
-                shift_3: "🏭 3 Shifts (24/7)",
-                weekend_off: "📅 Weekend Off",
-                fnb_retail: "🍽️ F&B/Retail",
-                none: "None"
-            },
-            status: {
-                select_layer: "SELECT LAYER",
-                loaded_short: "Loaded",
-                loaded: "Loaded: ",
-                pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
-                sun_off: "Sun Off"
-            },
-            formulas: {
-                pv_total: "Σ ( Monthly Solar Generation )",
-                pv_used: "Σ Min( Solar, Load )",
-                pv_used_pct: "( PV Used / PV Total ) * 100",
-                pv_curtailed: "PV Total - PV Used",
-                pv_curtailed_pct: "( PV Curtailed / PV Total ) * 100",
-                grid_import: "Total Load - PV Used",
-                total_load: "Σ ( Monthly Load Consumption )",
-                loss_pct: "( 1 - Total Derate Factor ) * 100",
-                pv_used_normal: "Σ PV Used (Normal Hours)",
-                pv_used_normal_pct: "( PV Used Normal / Total PV Used ) * 100",
-                pv_used_peak: "Σ PV Used (Peak Hours)",
-                pv_used_peak_pct: "( PV Used Peak / Total PV Used ) * 100",
-                curtailed_normal: "Σ PV Curtailed (Normal Hours)",
-                curtailed_normal_pct: "( Curtailed Normal / Total Curtailed ) * 100",
-                curtailed_peak: "Σ PV Curtailed (Peak Hours)",
-                curtailed_peak_pct: "( Curtailed Peak / Total Curtailed ) * 100"
-            }
-        }
-    };
 
-    const t = TRANSLATIONS[lang];
 
     const handleDesignModeSelect = (mode, data = null, profileType = 'commercial_day', options = {}) => {
         setDesignMode(mode);
@@ -2851,19 +2863,19 @@ const SolarOptimizer = () => {
                                         <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-xs text-slate-600 font-medium">
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
-                                                <span>{t.pdf.finance_table.net_flow || "Dòng tiền ròng"}</span>
+                                                <span>{t.pdf.finance_table.net_flow || (lang === 'vi' ? "Dòng tiền ròng" : "Net Cash Flow")}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
-                                                <span>Vốn đầu tư ban đầu</span>
+                                                <span>{lang === 'vi' ? "Vốn đầu tư ban đầu" : "Initial Investment"}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
-                                                <span>Đang thu hồi vốn</span>
+                                                <span>{lang === 'vi' ? "Đang thu hồi vốn" : "Recovering Capital"}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
-                                                <span>Đã sinh lời</span>
+                                                <span>{lang === 'vi' ? "Đã sinh lời" : "Profitable"}</span>
                                             </div>
                                         </div>
                                     );
@@ -2878,7 +2890,11 @@ const SolarOptimizer = () => {
                                                     yAxisId="left"
                                                     tick={({ x, y, payload }) => {
                                                         const val = payload.value;
-                                                        const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
+                                                        const formatted = Math.abs(val) >= 1e9
+                                                            ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}`
+                                                            : Math.abs(val) >= 1e6
+                                                                ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}`
+                                                                : val;
                                                         return <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fill="#666">{formatted}</text>;
                                                     }}
                                                     width={60}
@@ -2976,7 +2992,7 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
 
-                        {/* SECTION 12: DETAILED TECHNICAL SPECIFICATIONS (16 items) */}
+                        {/* SECTION 12: DETAILED TECHNICAL SPECIFICATIONS */}
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><Settings size={18} /></div>
                             12. {t.pdf.detailed_specs || "Thông số Kỹ thuật Chi tiết"}
