@@ -377,7 +377,7 @@ export const Design = ({
                             <label className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1 group relative cursor-help">
                                 {dt.dc_ac_ratio} <HelpCircle size={8} />
                                 <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
-                                    Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).
+                                    {lang === 'vi' ? 'Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).' : 'Ratio between panel DC power and inverter AC power. Default 1.25 (25% oversizing). Increase to optimize investment, decrease to avoid clipping.'}
                                     <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
                             </label>
@@ -586,8 +586,8 @@ export const Design = ({
                                         {/* Validation check for manufacturing tariff */}
                                         {(!TWO_PART_TARIFF || !voltageLevel || !TWO_PART_TARIFF[voltageLevel]) ? (
                                             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                                                <p className="text-[10px] font-bold text-red-600 flex items-center justify-center gap-1.5"><ShieldCheck size={14} /> Giá 2 thành phần chỉ hỗ trợ Biểu giá Sản xuất</p>
-                                                <p className="text-[9px] text-red-500 mt-1">Vui lòng xuống mục "{dt.title_finance}" chọn loại biểu giá "Sản xuất" để sử dụng.</p>
+                                                <p className="text-[10px] font-bold text-red-600 flex items-center justify-center gap-1.5"><ShieldCheck size={14} /> {lang === 'vi' ? 'Giá 2 thành phần chỉ hỗ trợ Biểu giá Sản xuất' : '2-Part Tariff only supports Manufacturing tariff'}</p>
+                                                <p className="text-[9px] text-red-500 mt-1">{lang === 'vi' ? `Vui lòng xuống mục "${dt.title_finance}" chọn loại biểu giá "Sản xuất" để sử dụng.` : `Please go to "${dt.title_finance}" section and select a Manufacturing tariff.`}</p>
                                             </div>
                                         ) : (
                                             <>
@@ -607,7 +607,7 @@ export const Design = ({
                                                             {lang === 'vi' ? 'Giá công suất hàng tháng, tính theo kW đỉnh đo được' : 'Monthly demand charge based on measured peak kW'}
                                                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                                                         </div>
-                                                        <p className="text-[8px] text-amber-600 font-bold uppercase tracking-wider mt-1">CÔNG SUẤT (Cp)</p>
+                                                        <p className="text-[8px] text-amber-600 font-bold uppercase tracking-wider mt-1">{lang === 'vi' ? 'CÔNG SUẤT (Cp)' : 'DEMAND (Cp)'}</p>
                                                         <p className="text-xs font-black text-amber-900 mt-0.5">{new Intl.NumberFormat().format(TWO_PART_TARIFF[voltageLevel].cp)}</p>
                                                         <p className="text-[7px] text-amber-500/80 font-medium">đ/kW/{lang === 'vi' ? 'tháng' : 'mo'}</p>
                                                     </div>

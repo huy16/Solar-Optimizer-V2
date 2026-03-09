@@ -2480,7 +2480,7 @@ const SolarOptimizer = () => {
                                             <YAxis tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
 
-                                            <Area type="linear" dataKey="solarProfile" stroke="#f59e0b" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
+                                            <Area type="monotone" dataKey="solarProfile" stroke="#f59e0b" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
                                             <Bar dataKey="avgBessCharge" name={t.pdf.legend_bess_charge || "Pin sạc"} fill="#10b981" barSize={12} stackId="bess" isAnimationActive={false} />
                                             <Bar dataKey="avgBessDischarge" name={t.pdf.legend_bess_discharge || "Pin xả"} fill="#f43f5e" barSize={12} stackId="bess" isAnimationActive={false} />
                                             <Area type="monotone" dataKey="avgLoad" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={chartViewMode === 'peak' ? (t.pdf.legend_load_peak || "Load (Peak)") : (t.pdf.legend_load_avg || "Load (TB)")} isAnimationActive={false} />
@@ -2508,7 +2508,7 @@ const SolarOptimizer = () => {
                                             <XAxis dataKey="hour" tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <YAxis tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                            <Area type="linear" dataKey="solarProfile" stroke="#22c55e" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
+                                            <Area type="monotone" dataKey="solarProfile" stroke="#22c55e" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
                                             {/* Only show weekend area for average view mode */}
                                             {/* Show weekend area for both modes */}
                                             <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeDasharray="4 2" fill="url(#pdfColorWeekend)" fillOpacity={1} name={t.pdf.load_weekend || "Tải cuối tuần"} strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -2543,7 +2543,7 @@ const SolarOptimizer = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {scenarios.map((s, i) => (
                                             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}>
-                                                <td className="px-4 py-2 border-r border-slate-100 font-medium text-slate-700">{s.label} ({s.kwp} kWp)</td>
+                                                <td className="px-4 py-2 border-r border-slate-100 font-medium text-slate-700">{s.label} ({formatNumber(s.kwp)} kWp)</td>
                                                 <td className="px-4 py-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats?.usedPeak || 0)}</td>
                                                 <td className="px-4 py-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats?.usedNormal || 0)}</td>
                                                 <td className="px-4 py-2 text-right text-amber-700 border-r border-slate-100">{formatNumber((s.stats?.curtailedPeak || 0) + (s.stats?.exportedPeak || 0))}</td>
@@ -2605,7 +2605,7 @@ const SolarOptimizer = () => {
                                                     <YAxis tick={{ fontSize: 6, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={22} />
                                                     <Area type="monotone" dataKey="weekday" stroke="#3b82f6" strokeWidth={1.5} fill={`url(#pdfColorWeekday-${idx})`} dot={false} isAnimationActive={false} />
                                                     <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" fill={`url(#pdfColorWeekend-${idx})`} dot={false} isAnimationActive={false} />
-                                                    <Area type="linear" dataKey="solar" stroke="#eab308" strokeWidth={1.5} fill={`url(#pdfColorSolar-${idx})`} dot={false} isAnimationActive={false} />
+                                                    <Area type="monotone" dataKey="solar" stroke="#eab308" strokeWidth={1.5} fill={`url(#pdfColorSolar-${idx})`} dot={false} isAnimationActive={false} />
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -2783,11 +2783,11 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
                         {/* 10. SCENARIO COMPARISON TABLE */}
-                        <h3 className="text-blue-700 font-bold text-lg mb-2 flex items-center gap-2">
+                        <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><BarChart2 size={18} /></div>
                             10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản)"}
                         </h3>
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
                                 <table className="w-full text-xs text-left">
                                     <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
@@ -2821,14 +2821,14 @@ const SolarOptimizer = () => {
                         </div>
 
                         {/* 11. CASH FLOW & ROI */}
-                        <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
+                        <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                             <div className="p-1.5 bg-blue-50 rounded text-blue-600"><TrendingUp size={18} /></div>
                             11. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
                         </h3>
 
                         {/* FRAME 2: CASH FLOW CHART */}
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <div className="h-[350px] w-full">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
+                            <div className="h-[280px] w-full">
                                 <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền (Tích lũy)"}</h4>
                                 {(() => {
                                     const chartData = currentFinance.cumulativeData.map(d => ({
@@ -2907,7 +2907,7 @@ const SolarOptimizer = () => {
                         </div>
 
                         {/* FRAME 3: CASH FLOW TABLE */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
                                 <table className="w-full text-xs text-left">
                                     <thead className="bg-slate-50 font-black text-slate-500 uppercase">
@@ -2937,24 +2937,24 @@ const SolarOptimizer = () => {
                         </div>
 
                         {/* FRAME 4: INVESTMENT INDICATORS */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
                             <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.investment_indicators || "Chỉ số Hiệu quả Đầu tư"}</h4>
                             <div className="grid grid-cols-4 gap-2">
-                                <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
-                                    <p className="text-xs font-black text-emerald-600 uppercase">NPV</p>
-                                    <p className="text-base font-black text-emerald-700">{formatMoney(currentFinance.npv)}</p>
+                                <div className="p-1.5 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase">NPV</p>
+                                    <p className="text-sm font-black text-emerald-700">{formatMoney(currentFinance.npv)}</p>
                                 </div>
-                                <div className="p-2 bg-blue-50 rounded-lg border border-blue-100 text-center">
-                                    <p className="text-xs font-black text-blue-600 uppercase">IRR</p>
-                                    <p className="text-base font-black text-blue-700">{currentFinance.irr.toFixed(1)}%</p>
+                                <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                                    <p className="text-[10px] font-black text-blue-600 uppercase">IRR</p>
+                                    <p className="text-sm font-black text-blue-700">{currentFinance.irr.toFixed(1)}%</p>
                                 </div>
-                                <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-center">
-                                    <p className="text-xs font-black text-indigo-600 uppercase">{t.pdf.payback}</p>
-                                    <p className="text-base font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-xs font-normal">{lang === 'en' ? 'years' : 'Năm'}</small></p>
+                                <div className="p-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-center">
+                                    <p className="text-[10px] font-black text-indigo-600 uppercase">{t.pdf.payback}</p>
+                                    <p className="text-sm font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-[10px] font-normal">{lang === 'en' ? 'years' : 'Năm'}</small></p>
                                 </div>
-                                <div className="p-2 bg-purple-50 rounded-lg border border-purple-100 text-center">
-                                    <p className="text-xs font-black text-purple-600 uppercase">ROI</p>
-                                    <p className="text-base font-black text-purple-700">{currentFinance.roi.toFixed(0)}%</p>
+                                <div className="p-1.5 bg-purple-50 rounded-lg border border-purple-100 text-center">
+                                    <p className="text-[10px] font-black text-purple-600 uppercase">ROI</p>
+                                    <p className="text-sm font-black text-purple-700">{currentFinance.roi.toFixed(0)}%</p>
                                 </div>
                             </div>
                         </div>
@@ -3046,7 +3046,7 @@ const SolarOptimizer = () => {
                                         {scenarios.map((s, i) => (
                                             <tr key={i} className={`hover:bg-slate-50 ${targetKwp === s.kwp ? 'bg-indigo-50/50 font-bold' : ''}`}>
                                                 <td className="px-2 py-1.5 text-slate-700 font-medium border-r border-slate-100">
-                                                    {s.label} <span className="text-xs text-slate-500 font-normal">({s.kwp} kWp)</span>
+                                                    {s.label} <span className="text-xs text-slate-500 font-normal">({formatNumber(s.kwp)} kWp)</span>
                                                     {targetKwp === s.kwp && <span className="ml-1 text-[10px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded">✓</span>}
                                                 </td>
                                                 <td className="px-2 py-1.5 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats.usedPeak)}</td>
