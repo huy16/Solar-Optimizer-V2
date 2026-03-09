@@ -21,7 +21,8 @@ import { useSolarConfiguration, WEATHER_SCENARIOS } from './presentation/hooks/u
 import PROVINCES from './data/provinces.json';
 import { useFinancialModel } from './presentation/hooks/useFinancialModel';
 import { FormulaModal } from './presentation/components/FormulaModal';
-import { EVN_TARIFFS } from './data/evn_tariffs';
+import { EVN_TARIFFS, TWO_PART_TARIFF, getTwoPartTariff } from './data/evn_tariffs';
+import { simulatePeakShaving, calculateDemandChargeSavings } from './domain/usecases/CalculatePeakShaving';
 
 import { Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
 import { SmartDesignSelector } from './presentation/components/SmartDesignSelector';
@@ -83,10 +84,10 @@ const StatCard = ({ icon: Icon, label, value, unit, colorClass = "text-slate-800
 );
 
 // --- CUSTOM ICONS ---
-const VietnamFlagIcon = ({ size = 24, className, ...props }) => (
+const VietnamFlagIcon = ({ size = 18, className, ...props }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
-        <rect width="24" height="24" rx="4" fill="#DA251D" />
-        <path d="M12 5.5L14.2 9.8L19 10.5L15.5 13.9L16.4 18.5L12 16.2L7.6 18.5L8.5 13.9L5 10.5L9.8 9.8L12 5.5Z" fill="#FFFF00" />
+        <rect width="18" height="18" x="3" y="3" rx="4" fill="#DA251D" />
+        <path d="M12 7.5L13.1 10.1L15.9 10.4L13.8 12.2L14.4 15L12 13.6L9.6 15L10.2 12.2L8.1 10.4L10.9 10.1L12 7.5Z" fill="#FFFF00" />
     </svg>
 );
 
@@ -164,14 +165,14 @@ const IslandIcon = ({ size = 24, className, ...props }) => (
 // --- PROVINCE STYLING ---
 // Helper to wrap Emoji as a component compatible with Lucide Icon interface
 const EmojiIcon = ({ emoji, size = 18, className }) => (
-    <span style={{ fontSize: size, lineHeight: '1em' }} className={className} role="img" aria-label="icon">
+    <span style={{ fontSize: size, lineHeight: '1em' }} className={`inline-block whitespace-nowrap shrink-0 ${className}`} role="img" aria-label="icon">
         {emoji}
     </span>
 );
 
 const PROVINCE_STYLES = {
     // SPECIAL
-    vietnam_average: { icon: VietnamFlagIcon, color: "text-red-600", bg: "bg-red-50" },
+    viet_nam: { icon: VietnamFlagIcon, color: "text-red-600", bg: "bg-red-50" },
 
     // NORTH
     ha_noi: { icon: (props) => <EmojiIcon emoji="🏛️" {...props} />, color: "text-red-700", bg: "bg-fuchsia-50" }, // Biểu tượng Khuê Văn Các
@@ -246,6 +247,15 @@ const PROVINCE_STYLES = {
 
 const getProvinceStyle = (id) => {
     if (!id) return { icon: MapPin, color: "text-slate-500", bg: "bg-slate-100" };
+    // Try to use the emoji icon from PROVINCES data first
+    const provinceData = PROVINCES.find(p => p.id === id);
+    if (provinceData?.icon && id !== 'viet_nam') {
+        return {
+            icon: (props) => <EmojiIcon emoji={provinceData.icon} {...props} />,
+            color: "text-slate-700",
+            bg: "bg-slate-50"
+        };
+    }
     const style = PROVINCE_STYLES[id] || { icon: MapPin, color: "text-slate-500", bg: "bg-slate-100" };
     return style;
 };
@@ -342,10 +352,40 @@ const SolarOptimizer = () => {
     const [isSwappedDate, setIsSwappedDate] = useState(false);
     const [calibrationFactor, setCalibrationFactor] = useState(100);
     const [customStats, setCustomStats] = useState(null);
+    const [enableTwoPartTariff, setEnableTwoPartTariff] = useState(false);
+    const [peakShavingResult, setPeakShavingResult] = useState(null);
     const [isSimulating, setIsSimulating] = useState(false);
 
     // Province State for Solar Generation
     const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'ho_chi_minh') || PROVINCES[0]);
+    const [loadedGsaProfile, setLoadedGsaProfile] = useState(null);
+
+    // Fetch the detailed 8760 hourly data for the selected province
+    useEffect(() => {
+        if (!selectedProvince) return;
+        if (selectedProvince.id === 'vietnam_average') {
+            setLoadedGsaProfile(null); // Fallback to math curve
+            return;
+        }
+
+        // Fetch the statically hosted JSON array with a cache-buster to ensure jagged data is loaded
+        fetch(`/data/gsa/${selectedProvince.id}.json?v=${Date.now()}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data) && data.length === 8760) {
+                    setLoadedGsaProfile(data);
+                } else {
+                    setLoadedGsaProfile(null);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load GSA profile for province", selectedProvince.name, err);
+                setLoadedGsaProfile(null);
+            });
+    }, [selectedProvince]);
 
     // Update Solar Layer when Province changes (If in Manual Mode or Empty)
     useEffect(() => {
@@ -357,7 +397,7 @@ const SolarOptimizer = () => {
 
         const monthlyGhi = selectedProvince.monthly_distribution || Array(12).fill(selectedProvince.peakSunHours * 30);
 
-        // Generate Synthetic Profile
+        // Generate Synthetic Profile (still used for basic dashboard metadata layer mapping)
         const newLayer = generateSolarProfile(monthlyGhi, {
             siteName: selectedProvince.name,
             lat: 0, lon: 0, // Placeholder
@@ -1059,7 +1099,7 @@ const SolarOptimizer = () => {
         // PVOUT, GSA Monthly, or Synthetic profiles represent actual AC/DC yield
         return t.includes('PVOUT') || n.includes('PVOUT') || t.includes('SẢN LƯỢNG ĐIỆN') ||
             s.includes('GSA MONTHLY') || s.includes('GSA TRANSPOSED') ||
-            type === 'MET_SYNTHETIC' || s.includes('EXCEL (PVOUT');
+            s.includes('EXCEL (PVOUT');
     }, [currentSolarLayer, solarMetadata]);
 
     useEffect(() => {
@@ -1205,6 +1245,20 @@ const SolarOptimizer = () => {
                     { ...deferredTechParams, inverterMaxAcKw: totalACPower, isActualYield } // Removed hardcoded weatherDerate override
                 );
                 setCustomStats(results);
+
+                // Peak Shaving calculation for 2-component tariff
+                if (deferredBessKwh > 0 && results && results.hourlyBatteryData) {
+                    const psResult = simulatePeakShaving(
+                        results.hourlyBatteryData,
+                        deferredBessKwh,
+                        bessMaxPower,
+                        deferredTechParams.bessEffRoundTrip || 0.90,
+                        deferredTechParams.bessDod || 0.90
+                    );
+                    setPeakShavingResult(psResult);
+                } else {
+                    setPeakShavingResult(null);
+                }
             } catch (err) {
                 console.error("Simulation error:", err);
             } finally {
@@ -1237,21 +1291,40 @@ const SolarOptimizer = () => {
             ? Number(finParams.manualCapex)
             : (systemCapex + batteryCapex);
 
-        // Prices obj
-        const prices = {
-            peak: params.pricePeak,
-            normal: params.priceNormal,
-            offPeak: params.priceOffPeak,
-            gridInjection: techParams.gridInjectionPrice
-        };
+        // Prices obj — use 2-part tariff Ca prices when enabled
+        let prices;
+        if (enableTwoPartTariff) {
+            const twoPartRate = getTwoPartTariff(voltageLevelId);
+            prices = {
+                peak: twoPartRate.peak,
+                normal: twoPartRate.normal,
+                offPeak: twoPartRate.offPeak,
+                gridInjection: techParams.gridInjectionPrice
+            };
+        } else {
+            prices = {
+                peak: params.pricePeak,
+                normal: params.priceNormal,
+                offPeak: params.priceOffPeak,
+                gridInjection: techParams.gridInjectionPrice
+            };
+        }
 
         const finParamsFull = {
             ...finParams,
             batteryCapex // Pass explicit battery capex for replacement calculation
         };
 
-        return calculateAdvancedFinancials(totalCapex, customStats, prices, finParamsFull);
-    }, [customStats, realSystemSize, params, bessKwh, techParams, finParams]);
+        // Calculate demand charge saving if 2-part tariff is enabled
+        let demandSaving = 0;
+        if (enableTwoPartTariff && peakShavingResult) {
+            const twoPartRate = getTwoPartTariff(voltageLevelId);
+            const dsResult = calculateDemandChargeSavings(peakShavingResult, twoPartRate.cp);
+            demandSaving = dsResult.annualDemandSaving || 0;
+        }
+
+        return calculateAdvancedFinancials(totalCapex, customStats, prices, finParamsFull, demandSaving);
+    }, [customStats, realSystemSize, params, bessKwh, techParams, finParams, enableTwoPartTariff, peakShavingResult, voltageLevelId]);
 
     // --- DATA PROCESSING ---
     useEffect(() => {
@@ -1263,13 +1336,32 @@ const SolarOptimizer = () => {
                 const date = parseAnyDate(d.rawTime, isSwappedDate);
                 if (!date || isNaN(date.getTime())) { failCount++; return null; }
                 let solarUnit = 0;
-                if (realSolarProfile) {
+                // Priority:
+                // 1. If it's a specific user-uploaded file (not 'Standard' province default)
+                // 2. If it's the jagged 8760 GSA data
+                // 3. Fallback to math curve
+                const isStandardProvinceLayer = solarSourceName && (solarSourceName.includes('Standard') || solarSourceName.includes('tổng hợp'));
+
+                if (realSolarProfile && (!loadedGsaProfile || !isStandardProvinceLayer)) {
                     const keyExact = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
                     const keyHour = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-0`;
                     const keyMonthly = `MONTHLY-${date.getMonth()}-${date.getHours()}`;
                     const realVal = realSolarProfile.get(keyExact) ?? realSolarProfile.get(keyHour) ?? realSolarProfile.get(keyMonthly);
                     solarUnit = (realVal !== undefined) ? realVal : 0;
-                } else { solarUnit = generateInstantaneousSolar(date, params.psh); }
+                } else if (loadedGsaProfile) {
+                    const startOfYear = new Date(date.getFullYear(), 0, 1);
+                    const diffTime = (date.getTime() - startOfYear.getTime()) / 3600000;
+                    const hourOfYear = Math.max(0, Math.floor(diffTime)) % 8760;
+                    solarUnit = loadedGsaProfile[hourOfYear] || 0;
+                } else {
+                    let currentPsh = params.psh;
+                    if (selectedProvince && selectedProvince.monthly_distribution) {
+                        const m = date.getMonth();
+                        const daysInMonth = new Date(date.getFullYear(), m + 1, 0).getDate();
+                        currentPsh = selectedProvince.monthly_distribution[m] / daysInMonth;
+                    }
+                    solarUnit = generateInstantaneousSolar(date, currentPsh);
+                }
 
                 // Ensure numeric values to prevent NaN propagation
                 const safeLoad = isNaN(Number(d.loadKw)) ? 0 : Number(d.loadKw);
@@ -1386,12 +1478,12 @@ const SolarOptimizer = () => {
             setProcessedData(processedWithStep);
 
             setDetectedMaxLoad(maxLoad);
-            const autoMaxKwp = Math.max(Math.ceil(maxLoad * 5), 5000);
+            const autoMaxKwp = Math.max(Math.ceil(maxLoad * 5), 2000);
             setMaxKwpRef(autoMaxKwp);
             if (isNewFileLoad.current) { setTargetKwp(detectedKwp || Math.round(maxLoad)); isNewFileLoad.current = false; }
             setIsProcessing(false);
         }, 50); // Reduced delay
-    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp]);
+    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp, selectedProvince, loadedGsaProfile]);
 
 
 
@@ -1462,7 +1554,7 @@ const SolarOptimizer = () => {
                     const estimatedAcKw = mid / 1.25;
                     const optParams = { ...techParams, inverterMaxAcKw: estimatedAcKw, gridInjectionPrice: 0, isActualYield };
 
-                    const stats = calculateSystemStats(mid, simData, 0, 0, false, false, { ...params, calibrationFactor }, optParams);
+                    const stats = calculateSystemStats(mid, simData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, optParams);
                     const diff = stats.curtailmentRate - targetVal;
                     if (Math.abs(diff) < minDiff) {
                         minDiff = Math.abs(diff);
@@ -1479,12 +1571,13 @@ const SolarOptimizer = () => {
                 // Final Stats Calc (reuse simData from above)
                 const { totalAcKw: finalAcKw, selectedInverters: finalInverters } = selectOptimalInverters(finalKwp, INVERTER_DB, 1.25);
                 const scenarioTechParams = { ...techParams, inverterMaxAcKw: finalAcKw, gridInjectionPrice: 0, isActualYield };
-                const stats = calculateSystemStats(finalKwp, simData, 0, 0, useTouMode, false, { ...params, calibrationFactor }, scenarioTechParams);
-                const capex = finalKwp * params.systemPrice;
+                const stats = calculateSystemStats(finalKwp, simData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, scenarioTechParams);
+                const bessCapexScenario = bessKwh * params.bessPrice;
+                const capex = finalKwp * params.systemPrice + bessCapexScenario;
                 const scenarioPrices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: 0 };
-                const fin = calculateAdvancedFinancials(capex, stats, scenarioPrices, { ...finParams, batteryCapex: 0 });
+                const fin = calculateAdvancedFinancials(capex, stats, scenarioPrices, { ...finParams, batteryCapex: bessCapexScenario });
 
-                return { ...tScenario, kwp: finalKwp, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, lcoe: fin.lcoe, config: finalInverters };
+                return { ...tScenario, kwp: finalKwp, bessKwh, bessMaxPower, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, lcoe: fin.lcoe, config: finalInverters };
             });
 
             // Base Scenario
@@ -1494,18 +1587,23 @@ const SolarOptimizer = () => {
             const prices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: techParams.gridInjectionPrice };
             const blFin = calculateAdvancedFinancials(blCapex, blStats, prices, { ...finParams, batteryCapex: bessKwh * params.bessPrice });
 
-            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, lcoe: blFin.lcoe, config: blInverters }, ...computedScenarios]);
+            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, bessKwh, bessMaxPower, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, lcoe: blFin.lcoe, config: blInverters }, ...computedScenarios]);
 
         }, 100); // 100ms Delay to unblock UI
 
         return () => clearTimeout(timer);
 
-    }, [processedData, maxKwpRef, calculateSystemStats, params, bessKwh, bessMaxPower, bessStrategy, isGridCharge, calculateAdvancedFinancials, finParams, dcAcRatio, lang, t]);
+    }, [processedData, maxKwpRef, calculateSystemStats, params, techParams, bessKwh, bessMaxPower, bessStrategy, isGridCharge, calculateAdvancedFinancials, finParams, dcAcRatio, lang, t]);
 
 
     // --- HANDLER: SELECT SCENARIO ---
     const handleSelectScenario = (scenario) => {
         setTargetKwp(scenario.kwp);
+        // Apply BESS config from the selected scenario
+        if (scenario.bessKwh !== undefined) {
+            setBessKwh(scenario.bessKwh);
+            setBessMaxPower(scenario.bessMaxPower || 0);
+        }
         // Auto-configure Inverters from the optimized result
         if (scenario.config && scenario.config.length > 0) {
             // Apply first inverter type
@@ -1589,18 +1687,24 @@ const SolarOptimizer = () => {
             });
         }
 
-        return hourly.map((h, i) => ({
-            hour: `${i}:00`,
-            avgLoad: Number(h.load / (h.count || 1)) || 0,
-            solarProfile: Number(h.solar / (h.count || 1)) || 0,
-            avgBessCharge: Number(h.charge / (h.count || 1)) || 0,
-            avgGridCharge: Number(h.gridCharge / (h.count || 1)) || 0,
-            avgBessDischarge: Number(h.discharge / (h.count || 1)) || 0,
-            avgSoc: Number(h.soc / (h.count || 1)) || 0,
-            avgSelfConsumption: Number(h.selfConsumption / (h.count || 1)) || 0,
-            weekday: Number(h.wdCount ? h.wdSum / h.wdCount : 0) || 0,
-            weekend: Number(h.weCount ? h.weSum / h.weCount : 0) || 0
-        }));
+        return hourly.map((h, i) => {
+            const avgLoad = Number(h.load / (h.count || 1)) || 0;
+            const solarProfile = Number(h.solar / (h.count || 1)) || 0;
+            const avgSelfConsumption = Number(h.selfConsumption / (h.count || 1)) || 0;
+            return {
+                hour: `${i}:00`,
+                avgLoad,
+                solarProfile,
+                avgBessCharge: Number(h.charge / (h.count || 1)) || 0,
+                avgGridCharge: Number(h.gridCharge / (h.count || 1)) || 0,
+                avgBessDischarge: Number(h.discharge / (h.count || 1)) || 0,
+                avgSoc: Number(h.soc / (h.count || 1)) || 0,
+                avgSelfConsumption,
+                netGridLoad: Math.max(0, avgLoad - avgSelfConsumption),
+                weekday: Number(h.wdCount ? h.wdSum / h.wdCount : 0) || 0,
+                weekend: Number(h.weCount ? h.weSum / h.weCount : 0) || 0
+            };
+        });
     }, [customStats, processedData, realSystemSize, bessKwh, bessMaxPower, params, techParams, useTouMode, isGridCharge, calibrationFactor]);
 
     // Peak Load Day Profile: actual 24h profile of the day with highest peak load
@@ -1909,7 +2013,11 @@ const SolarOptimizer = () => {
 
         const safeCalibration = isNaN(Number(calibrationFactor)) ? 100 : Number(calibrationFactor);
         const scale = safeCalibration / 100.0;
-        const safeSize = isNaN(Number(realSystemSize)) ? 0 : Number(realSystemSize);
+
+        // Use customStats.systemSize if available (when a scenario is selected in Report), 
+        // otherwise fallback to realSystemSize (main UI)
+        const activeSystemSize = customStats?.systemSize || realSystemSize;
+        const safeSize = isNaN(Number(activeSystemSize)) ? 0 : Number(activeSystemSize);
 
         processedData.forEach(d => {
             if (!d.date) return;
@@ -1932,7 +2040,7 @@ const SolarOptimizer = () => {
                 solar: Number(h.solarCount ? h.solarSum / h.solarCount : 0) || 0
             }))
         }));
-    }, [processedData, realSystemSize, calibrationFactor, t]);
+    }, [processedData, realSystemSize, calibrationFactor, t, customStats]);
 
     // Base correlation data (without BESS) for comparison
     const baseCorrelationData = useMemo(() => {
@@ -2372,7 +2480,7 @@ const SolarOptimizer = () => {
                                             <YAxis tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
 
-                                            <Area type="monotone" dataKey="solarProfile" stroke="#f59e0b" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
+                                            <Area type="linear" dataKey="solarProfile" stroke="#f59e0b" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
                                             <Bar dataKey="avgBessCharge" name={t.pdf.legend_bess_charge || "Pin sạc"} fill="#10b981" barSize={12} stackId="bess" isAnimationActive={false} />
                                             <Bar dataKey="avgBessDischarge" name={t.pdf.legend_bess_discharge || "Pin xả"} fill="#f43f5e" barSize={12} stackId="bess" isAnimationActive={false} />
                                             <Area type="monotone" dataKey="avgLoad" stroke="#3b82f6" fill="url(#pdfColorLoad)" fillOpacity={1} strokeWidth={1.5} dot={false} name={chartViewMode === 'peak' ? (t.pdf.legend_load_peak || "Load (Peak)") : (t.pdf.legend_load_avg || "Load (TB)")} isAnimationActive={false} />
@@ -2400,7 +2508,7 @@ const SolarOptimizer = () => {
                                             <XAxis dataKey="hour" tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <YAxis tick={{ fontSize: 9 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={{ stroke: '#cbd5e1' }} />
                                             <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                                            <Area type="monotone" dataKey="solarProfile" stroke="#22c55e" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
+                                            <Area type="linear" dataKey="solarProfile" stroke="#22c55e" fill="url(#pdfColorSolar)" strokeWidth={2} fillOpacity={1} dot={false} name="Solar" isAnimationActive={false} />
                                             {/* Only show weekend area for average view mode */}
                                             {/* Show weekend area for both modes */}
                                             <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeDasharray="4 2" fill="url(#pdfColorWeekend)" fillOpacity={1} name={t.pdf.load_weekend || "Tải cuối tuần"} strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -2497,7 +2605,7 @@ const SolarOptimizer = () => {
                                                     <YAxis tick={{ fontSize: 6, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={22} />
                                                     <Area type="monotone" dataKey="weekday" stroke="#3b82f6" strokeWidth={1.5} fill={`url(#pdfColorWeekday-${idx})`} dot={false} isAnimationActive={false} />
                                                     <Area type="monotone" dataKey="weekend" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" fill={`url(#pdfColorWeekend-${idx})`} dot={false} isAnimationActive={false} />
-                                                    <Area type="monotone" dataKey="solar" stroke="#eab308" strokeWidth={1.5} fill={`url(#pdfColorSolar-${idx})`} dot={false} isAnimationActive={false} />
+                                                    <Area type="linear" dataKey="solar" stroke="#eab308" strokeWidth={1.5} fill={`url(#pdfColorSolar-${idx})`} dot={false} isAnimationActive={false} />
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -3007,73 +3115,55 @@ const SolarOptimizer = () => {
 
 
                             <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
-                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span><button onClick={() => solarFileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><Upload size={10} /></button></div>
-                                <div className="text-[10px] text-slate-500 truncate" title={solarSourceName}>{solarLayers.length > 0 ? `${solarLayers.length} ${t.status.layers || 'Layers'}` : (realSolarProfile ? t.status.loaded_short : 'Default (Sine)')}</div>
+                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span></div>
 
-                                {solarLayers.length > 0 ? (
-                                    <div className="mt-2 pt-2 border-t border-slate-100">
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {['temp', 'soiling', 'cable', 'inverter'].map(k => (
-                                                <div key={k}>
-                                                    <label className="text-[9px] font-bold text-slate-500 block mb-0.5 text-center">{t.loss_labels[k]}</label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        value={techParams.losses[k]}
-                                                        onChange={(e) => setTechParams(prev => ({
-                                                            ...prev,
-                                                            losses: { ...prev.losses, [k]: e.target.value === '' ? '' : Number(e.target.value) }
-                                                        }))}
-                                                        onFocus={(e) => e.target.select()}
-                                                        className="w-full p-1 border rounded text-xs text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>
-
-                                        {solarLayers[selectedLayerIndex]?.title.toLowerCase().includes('pvout') && (
-                                            <div className="mt-1 p-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-blue-600 leading-tight italic">
-                                                {t.status.pvout_explanation}
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {['temp', 'soiling', 'cable', 'inverter'].map(k => (
+                                            <div key={k}>
+                                                <label className="text-[9px] font-bold text-slate-500 block mb-0.5 text-center">{t.loss_labels[k]}</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={techParams.losses[k]}
+                                                    onChange={(e) => setTechParams(prev => ({
+                                                        ...prev,
+                                                        losses: { ...prev.losses, [k]: e.target.value === '' ? '' : Number(e.target.value) }
+                                                    }))}
+                                                    onFocus={(e) => e.target.select()}
+                                                    className="w-full p-1 border rounded text-xs text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
+                                                />
                                             </div>
-                                        )}
-                                        {solarLayers.length > 1 ? (
-                                            <>
-                                                <label className="text-[10px] text-blue-500 font-bold block mb-1 flex items-center gap-1"><Layers size={10} /> {t.status.select_layer}</label>
-                                                <select
-                                                    className="w-full text-[10px] p-1 border rounded bg-white text-blue-700 font-medium border-blue-200"
-                                                    value={selectedLayerIndex}
-                                                    onChange={(e) => handleLayerChange(Number(e.target.value))}
-                                                >
-                                                    {solarLayers.map((layer, idx) => (
-                                                        <option key={idx} value={idx}>{layer.title} (Sc: {layer.score})</option>
-                                                    ))}
-                                                </select>
-                                            </>
-                                        ) : null}
+                                        ))}
                                     </div>
-                                ) : null}
+                                    <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>
+
+                                    {solarLayers.length > 0 && solarLayers[selectedLayerIndex]?.title.toLowerCase().includes('pvout') && (
+                                        <div className="mt-1 p-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-blue-600 leading-tight italic">
+                                            {t.status.pvout_explanation}
+                                        </div>
+                                    )}
+                                </div>
                                 {solarMetadata && !!solarMetadata.lat && (<div className="text-[9px] text-blue-400 mt-1 flex gap-1 pt-1 border-t border-slate-100"><MapPin size={10} className="mt-0.5" /> {solarMetadata.siteName ? solarMetadata.siteName.substring(0, 10) : ''} ({solarMetadata.lat.toFixed(2)}, {solarMetadata.lon.toFixed(2)})</div>)}
 
                             </div>
-                            <input type="file" ref={solarFileInputRef} accept=".csv,.txt,.xlsx,.xls,.met,.pdf" className="hidden" onChange={handleSolarUpload} onClick={(e) => e.target.value = null} />
 
                             {/* Weather Scenario - Separate Box */}
-                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-green-50 border-green-200' :
-                                weatherScenario === 'rainy' ? 'bg-blue-50 border-blue-200' :
+                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-blue-50 border-blue-200' :
+                                weatherScenario === 'rainy' ? 'bg-green-50 border-green-200' :
                                     weatherScenario === 'bad' ? 'bg-amber-50 border-amber-200' :
                                         'bg-red-50 border-red-200'
                                 }`}>
                                 <div className="flex justify-between items-center">
-                                    <span className={`font-medium flex items-center gap-1 ${weatherScenario === 'normal' ? 'text-green-700' :
-                                        weatherScenario === 'rainy' ? 'text-blue-700' :
+                                    <span className={`font-medium flex items-center gap-1 ${weatherScenario === 'normal' ? 'text-blue-700' :
+                                        weatherScenario === 'rainy' ? 'text-green-700' :
                                             weatherScenario === 'bad' ? 'text-amber-700' :
                                                 'text-red-700'
                                         }`}><CloudSun size={12} /> {lang === 'vi' ? 'Thời tiết' : 'Weather'}</span>
                                 </div>
                                 <select
-                                    className={`w-full text-xs p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-green-700 border-green-300' :
-                                        weatherScenario === 'rainy' ? 'bg-white text-blue-700 border-blue-300' :
+                                    className={`w-full text-xs p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-blue-700 border-blue-300' :
+                                        weatherScenario === 'rainy' ? 'bg-white text-green-700 border-green-300' :
                                             weatherScenario === 'bad' ? 'bg-white text-amber-700 border-amber-300' :
                                                 'bg-white text-red-700 border-red-300'
                                         }`}
@@ -3087,7 +3177,7 @@ const SolarOptimizer = () => {
                                     ))}
                                 </select>
                                 {weatherScenario !== 'normal' && (
-                                    <div className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${weatherScenario === 'rainy' ? 'text-blue-600 bg-blue-100' :
+                                    <div className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${weatherScenario === 'rainy' ? 'text-green-600 bg-green-100' :
                                         weatherScenario === 'bad' ? 'text-amber-600 bg-amber-100' :
                                             'text-red-600 bg-red-100'
                                         }`}>
@@ -3120,66 +3210,68 @@ const SolarOptimizer = () => {
                     </div>
 
                     {/* Province Selector for Solar Yield */}
-                    <div className="relative border-l border-slate-200 pl-4" ref={provinceDropdownRef}>
+                    <div className="border-l border-slate-200 pl-4" ref={provinceDropdownRef}>
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block leading-none">{t.area_province}</span>
-                        <div
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition min-w-[180px] shadow-sm select-none"
-                            onClick={() => setShowProvinceDropdown(!showProvinceDropdown)}
-                        >
-                            {(() => {
-                                const style = getProvinceStyle(selectedProvince?.id);
-                                const SelectedIcon = style.icon;
-                                return <SelectedIcon size={14} className={style.color} />;
-                            })()}
-                            <div className="flex-1 overflow-hidden">
-                                <span className="text-sm font-bold text-slate-700 block truncate leading-tight">
-                                    {selectedProvince?.name}
-                                </span>
-                                <span className="text-[10px] text-slate-500 font-medium leading-none block pb-0.5">
-                                    {selectedProvince?.peakSunHours?.toFixed(2)}h/ngày
-                                </span>
-                            </div>
-                            <ChevronRight size={14} className={`text-slate-400 transition-transform ${showProvinceDropdown ? 'rotate-90' : ''}`} />
-                        </div>
-
-                        {showProvinceDropdown && (
-                            <div className="absolute top-full mt-2 left-4 w-60 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in duration-200">
-                                <div className="grid grid-cols-1 gap-1">
-                                    {PROVINCES.map(p => {
-                                        const style = getProvinceStyle(p.id);
-                                        const Icon = style.icon;
-                                        return (
-                                            <div
-                                                key={p.id}
-                                                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${selectedProvince?.id === p.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-slate-50 text-slate-600'}`}
-                                                onClick={() => {
-                                                    handleProvinceChange(p.id);
-                                                    setShowProvinceDropdown(false);
-                                                }}
-                                            >
-                                                <div className="flex items-center">
-                                                    <div className={`mr-3 p-1.5 rounded-full transition-colors ${selectedProvince?.id === p.id ? 'bg-white' : style.bg} ${style.color}`}>
-                                                        <Icon size={16} strokeWidth={2} />
-                                                    </div>
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="text-sm font-semibold">{p.name}</span>
-                                                        {p.id === 'vietnam_average' && <span className="text-[10px] opacity-70">Vietnam Default</span>}
-                                                    </div>
-                                                </div>
-                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${selectedProvince?.id === p.id ? 'bg-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
-                                                    {p.peakSunHours.toFixed(2)}h
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                        <div className="relative w-[250px]">
+                            <div
+                                className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition w-full shadow-sm select-none"
+                                onClick={() => setShowProvinceDropdown(!showProvinceDropdown)}
+                            >
+                                {(() => {
+                                    const style = getProvinceStyle(selectedProvince?.id);
+                                    const SelectedIcon = style.icon;
+                                    return <SelectedIcon size={12} className={style.color} />;
+                                })()}
+                                <div className="flex-1 overflow-hidden">
+                                    <span className="text-[12px] font-bold text-slate-700 block truncate leading-tight">
+                                        {selectedProvince?.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-medium leading-none block pb-0.5">
+                                        {selectedProvince?.peakSunHours?.toFixed(2)}h/ngày
+                                    </span>
                                 </div>
+                                <ChevronRight size={14} className={`text-slate-400 transition-transform ${showProvinceDropdown ? 'rotate-90' : ''}`} />
                             </div>
-                        )}
+
+                            {showProvinceDropdown && (
+                                <div className="absolute top-full mt-2 left-0 right-0 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in duration-200">
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {PROVINCES.map(p => {
+                                            const style = getProvinceStyle(p.id);
+                                            const Icon = style.icon;
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    className={`flex items-center justify-between gap-2 px-2 py-1 rounded-lg cursor-pointer transition min-h-[40px] ${selectedProvince?.id === p.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-slate-50 text-slate-600'}`}
+                                                    onClick={() => {
+                                                        handleProvinceChange(p.id);
+                                                        setShowProvinceDropdown(false);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center min-w-0 flex-1">
+                                                        <div className={`mr-2 w-6 h-6 rounded-full transition-colors shrink-0 flex items-center justify-center ${selectedProvince?.id === p.id ? 'bg-white' : style.bg} ${style.color}`}>
+                                                            <Icon size={12} strokeWidth={2} />
+                                                        </div>
+                                                        <div className="flex flex-col text-left overflow-hidden min-w-0 justify-center">
+                                                            <span className="text-[12px] font-semibold truncate leading-tight">{p.name}</span>
+                                                            {p.id === 'viet_nam' && <span className="text-[9px] opacity-70 leading-none mt-0.5">Vietnam Default</span>}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${selectedProvince?.id === p.id ? 'bg-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
+                                                        {p.peakSunHours.toFixed(2)}h
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
 
                     {/* Dynamic Solar Slider (Debounced) */}
-                    <div className="hidden md:flex flex-1 max-w-md mx-4 items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+                    <div className="hidden md:flex flex-1 max-w-[450px] mx-4 items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
                         <span className="text-xs font-bold text-slate-600 whitespace-nowrap">{t.solar_capacity}:</span>
                         <DebouncedSlider targetKwp={targetKwp} setTargetKwp={setTargetKwp} maxKwp={maxKwpRef || 1000} />
                     </div>
@@ -3210,6 +3302,8 @@ const SolarOptimizer = () => {
                                 params={params}
                                 bessKwh={bessKwh}
                                 averageDayData={averageDayData}
+                                peakShavingResult={peakShavingResult}
+                                enableTwoPartTariff={enableTwoPartTariff}
                                 peakDayProfiles={peakDayProfiles}
                                 dailyStats={dailyStats}
                                 solarMetadata={solarMetadata}
@@ -3252,6 +3346,10 @@ const SolarOptimizer = () => {
                                 voltageLevel={voltageLevelId} setVoltageLevel={setVoltageLevelId}
                                 lang={lang}
                                 t={t}
+                                enableTwoPartTariff={enableTwoPartTariff}
+                                setEnableTwoPartTariff={setEnableTwoPartTariff}
+                                peakShavingResult={peakShavingResult}
+                                formatMoney={formatMoney}
                             />
                         )}
 
@@ -3336,7 +3434,7 @@ const DebouncedSlider = ({ targetKwp, setTargetKwp, maxKwp }) => {
                     type="number"
                     value={localKwp || 0}
                     onChange={(e) => setLocalKwp(Number(e.target.value))}
-                    className="w-16 text-center text-sm font-bold text-blue-700 bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 px-1 py-0.5"
+                    className="w-[72px] text-center text-xs font-bold text-blue-700 bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 px-1 py-0.5"
                 />
                 <span className="text-xs text-slate-500 font-bold">kWp</span>
             </div>

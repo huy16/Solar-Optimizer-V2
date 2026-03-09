@@ -164,6 +164,25 @@ export const EVN_TARIFFS = {
     }
 };
 
+/**
+ * Giá điện 2 thành phần (Two-Part Tariff)
+ * Thử nghiệm từ 10/2025 theo TCBC EVN
+ * TC = Cp × Pmax + Ca × Ap
+ * - Cp: Giá công suất (VNĐ/kW/tháng)
+ * - Ca: Giá điện năng theo TOU (VNĐ/kWh)
+ * - Pmax: Công suất trung bình 30 phút lớn nhất trong tháng (kW)
+ */
+export const TWO_PART_TARIFF = {
+    '110kv_plus': { id: '110kv_plus', label_vi: 'Cao áp (≥ 110kV)', label_en: 'High Voltage (≥ 110kV)', cp: 209459, normal: 1253, peak: 2162, offPeak: 843 },
+    '22kv_110kv': { id: '22kv_110kv', label_vi: 'Trung áp (22kV - 110kV)', label_en: 'Medium Voltage (22-110kV)', cp: 235414, normal: 1275, peak: 2182, offPeak: 859 },
+    '6kv_22kv': { id: '6kv_22kv', label_vi: 'Trung áp (6kV - 22kV)', label_en: 'Medium Voltage (6-22kV)', cp: 240050, normal: 1280, peak: 2189, offPeak: 871 },
+    'under_6kv': { id: 'under_6kv', label_vi: 'Hạ áp (< 6kV)', label_en: 'Low Voltage (< 6kV)', cp: 286153, normal: 1332, peak: 2251, offPeak: 904 },
+};
+
+export const getTwoPartTariff = (voltageLevelId) => {
+    return TWO_PART_TARIFF[voltageLevelId] || TWO_PART_TARIFF['22kv_110kv'];
+};
+
 // Legacy mapping for backward compatibility
 export const LEGACY_TARIFF_MAP = {
     "manufacturing": "retail_manufacturing",

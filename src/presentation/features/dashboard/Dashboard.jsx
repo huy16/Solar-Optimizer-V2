@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart, ReferenceLine } from 'recharts';
 import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw, Leaf, Factory, Fuel, Trees, Globe } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 
@@ -31,6 +31,8 @@ export const Dashboard = ({
     params,
     bessKwh,
     averageDayData,
+    peakShavingResult,
+    enableTwoPartTariff,
     peakDayProfiles,
     solarMetadata,
     correlationData,
@@ -42,6 +44,7 @@ export const Dashboard = ({
 }) => {
     const [energyViewMode, setEnergyViewMode] = useState('day');
     const [chartViewMode, setChartViewMode] = useState('avg'); // 'avg' | 'peakLoad' | 'peakSun'
+    const [bessChartMode, setBessChartMode] = useState('total'); // 'total' | 'net'
     const [selectedMonth, setSelectedMonth] = useState(() => {
         if (dailyStats && dailyStats.length > 0) return dailyStats[0].fullDate.getMonth();
         return new Date().getMonth();
@@ -297,23 +300,48 @@ export const Dashboard = ({
             {/* BESS Overview Chart */}
             {bessKwh > 0 && (
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-slate-50/30">
-                    <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-                            <BatteryCharging size={20} />
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-3">
+                            <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                                <BatteryCharging size={20} />
+                            </div>
+                            {dt.bess_chart_title}
+                        </h3>
+                        <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+                            <button
+                                onClick={() => setBessChartMode('total')}
+                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${bessChartMode === 'total' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {lang === 'vi' ? '⚡ Tổng phụ tải' : '⚡ Total Load'}
+                            </button>
+                            <button
+                                onClick={() => setBessChartMode('net')}
+                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${bessChartMode === 'net' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {lang === 'vi' ? '🔌 Lưới thực tế' : '🔌 Net Grid'}
+                            </button>
                         </div>
-                        {dt.bess_chart_title}
-                    </h3>
+                    </div>
+
                     <div className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={averageDayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorSolarBess" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorLoadDispatch" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                                    </linearGradient>
+                                    <linearGradient id="colorWeekendLoad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorNetGrid" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
@@ -322,11 +350,28 @@ export const Dashboard = ({
                                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} formatter={formatKw} />
                                 <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} iconSize={10} />
 
-                                <Area type="monotone" dataKey="solarProfile" name="Solar" fill="url(#colorSolarBess)" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false} />
-                                <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
-                                <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
-                                <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} fill="url(#colorLoadDispatch)" dot={false} isAnimationActive={false} />
-                                <Line type="monotone" dataKey="weekend" name={`${dt.load} (${dt.weekend})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" dot={false} isAnimationActive={false} />
+                                {bessChartMode === 'total' ? (
+                                    <>
+                                        <Area type="monotone" dataKey="solarProfile" name="Solar" fill="url(#colorSolarBess)" stroke="#22c55e" strokeWidth={2} isAnimationActive={false} />
+                                        <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} fill="url(#colorLoadDispatch)" dot={false} isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="weekend" name={`${dt.load} (${dt.weekend})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" fill="url(#colorWeekendLoad)" dot={false} isAnimationActive={false} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <Area type="monotone" dataKey="netGridLoad" name={lang === 'vi' ? 'Phụ tải lưới (Net)' : 'Net Grid Load'} stroke="#8b5cf6" strokeWidth={2} fill="url(#colorNetGrid)" dot={false} isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" fill="url(#colorLoadDispatch)" fillOpacity={0.5} dot={false} isAnimationActive={false} />
+                                        <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        {enableTwoPartTariff && peakShavingResult && peakShavingResult.pmaxBefore > 0 && (
+                                            <ReferenceLine y={peakShavingResult.pmaxBefore} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="6 3" label={{ value: `Pmax gốc: ${peakShavingResult.pmaxBefore} kW`, position: 'insideTopRight', fill: '#a855f7', fontSize: 9, fontWeight: 'bold', dy: -15 }} />
+                                        )}
+                                        {enableTwoPartTariff && peakShavingResult && peakShavingResult.pmaxAfter > 0 && (
+                                            <ReferenceLine y={peakShavingResult.pmaxAfter} stroke="#10b981" strokeWidth={1.5} strokeDasharray="6 3" label={{ value: `Pmax sau BESS: ${peakShavingResult.pmaxAfter} kW`, position: 'insideBottomRight', fill: '#10b981', fontSize: 9, fontWeight: 'bold', dy: 15 }} />
+                                        )}
+                                    </>
+                                )}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -399,9 +444,6 @@ export const Dashboard = ({
             )}
 
             <div className="space-y-6">
-                {solarMetadata && (solarMetadata.sourceType === 'MET_SYNTHETIC' || (solarMetadata.sourceType && solarMetadata.sourceType.includes('PDF'))) && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3"><Info className="text-amber-600 shrink-0 mt-0.5" size={18} /><div><h4 className="font-bold text-amber-800 text-sm">{dt.synthetic_msg}</h4><p className="text-xs text-amber-700 mt-1">{dt.synthetic_desc}</p></div></div>
-                )}
 
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-sky-50/20">
                     {/* ENERGY MANAGEMENT HEADER */}

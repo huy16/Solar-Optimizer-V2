@@ -81,8 +81,8 @@ export const Finance = ({
             tip_revenue_table: "Doanh thu tiết kiệm hằng năm từ việc giảm mua điện lưới hoặc xuất bán điện.",
             tip_om_table: "Chi phí vận hành, bảo trì và bảo dưỡng định kỳ hệ thống.",
             tip_replacement_table: "Chi phí trích lập dự phòng để thay thế Inverter hoặc Pin lưu trữ (nếu có).",
-            tip_net_flow_table: "Dòng tiền giữ lại được trong năm\n= Doanh thu - O&M - Thay thế thiết bị.",
-            tip_acc_table: "Lợi nhuận gộp tích lũy qua các năm. Khi giá trị > 0 nghĩa là dự án đã thu hồi đủ vốn."
+            tip_net_flow_table: "Dòng tiền giữ lại được trong năm\n= Doanh thu - O&M - Thay thế thiết bị - Lãi & Gốc vay (nếu có).\n\nHệ thống vay 100% nhưng vẫn có dòng tiền DƯƠNG nghĩa là tiền thu về thừa sức trả nợ ngân hàng hằng năm.",
+            tip_acc_table: "Lợi nhuận gộp tích lũy qua các năm. Khi giá trị > 0 nghĩa là túi tiền của bạn đã thực sự có lãi."
         },
         en: {
             title_finance: "Project Financial Map",
@@ -162,10 +162,14 @@ export const Finance = ({
     // Create a version of the data specifically for the chart to prevent Year 0 'net' from skewing the Y-axis
     const chartData = React.useMemo(() => {
         if (!currentFinance?.cumulativeData) return [];
+        const loanAmount = currentFinance.loanAmount || 0;
+
         return currentFinance.cumulativeData.map(d => ({
             ...d,
             // We set net to 0 (or null) for Year 0 so Recharts doesn't auto-expand the left Y-axis
-            chartNet: d.year === 0 ? 0 : d.net
+            chartNet: d.year === 0 ? 0 : d.net,
+            // Explicitly map Debt/Loan for visual breakdown
+            chartDebt: d.year === 0 ? -loanAmount : (d.debt || 0)
         }));
     }, [currentFinance]);
 
@@ -175,17 +179,24 @@ export const Finance = ({
         let min = 0, max = 0;
 
         chartData.forEach(d => {
-            if (d.year > 0) {
-                min = Math.min(min, d.chartNet);
-                max = Math.max(max, d.chartNet);
-            }
+            // We consider all chartNet values, including Year 0 if it's negative
+            // chartNet at Year 0 is basically -equity. If equity is 0, chartNet is 0.
+            min = Math.min(min, d.chartNet);
+            max = Math.max(max, d.chartNet);
+
+            // also consider accumulated flow
             min = Math.min(min, d.acc);
             max = Math.max(max, d.acc);
+
+            // also consider debt columns
+            if (d.chartDebt) min = Math.min(min, d.chartDebt);
+            if (d.chartDebt) max = Math.max(max, d.chartDebt);
         });
 
         if (max === 0 && min === 0) return [0, 1];
 
-        return [min * 1.05, max * 1.05];
+        // Ensure we provide some padding below the minimum value so bottom bars aren't cut off
+        return [min < 0 ? min * 1.05 : 0, max * 1.05];
     }, [chartData]);
 
     // Custom Legend to explain the different colors
@@ -208,6 +219,12 @@ export const Finance = ({
                     <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
                     <span>{dt.legend_acc_profit}</span>
                 </div>
+                {finParams.loan.enable && (
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 bg-amber-400 rounded-sm"></div>
+                        <span>{lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'}</span>
+                    </div>
+                )}
             </div>
         );
     };
@@ -325,8 +342,8 @@ export const Finance = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* NEW: Investment Capital (Capex) */}
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col">
-                    <div className={`flex justify-between items-center ${(finParams.manualCapex !== '' && finParams.manualCapex !== null && finParams.manualCapex !== undefined) ? 'mb-3' : ''}`}>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex justify-between items-center mb-3">
                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><DollarSign size={16} className="text-blue-600" /> {dt.total_capex_manual}</h3>
                         <label className="inline-flex items-center cursor-pointer">
                             <input
@@ -340,25 +357,28 @@ export const Finance = ({
                     </div>
 
                     {(finParams.manualCapex !== '' && finParams.manualCapex !== null && finParams.manualCapex !== undefined) && (
-                        <div className="animate-in fade-in slide-in-from-top-2 mt-auto">
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={finParams.manualCapex ? new Intl.NumberFormat('en-US').format(finParams.manualCapex) : ''}
-                                    onChange={(e) => {
-                                        const rawValue = e.target.value.replace(/,/g, '');
-                                        const numValue = Number(rawValue);
-                                        if (!isNaN(numValue)) {
-                                            setFinParams(prev => ({ ...prev, manualCapex: rawValue === '' ? '' : numValue }));
-                                        }
-                                    }}
-                                    onFocus={(e) => e.target.select()}
-                                    placeholder={dt.auto_calc_placeholder}
-                                    className="w-full p-2 text-sm border rounded bg-blue-50/50 font-bold text-blue-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-300 outline-none"
-                                />
-                                <span className="absolute right-2 top-2 text-[10px] text-blue-400 select-none font-bold">VND</span>
+                        <div className="animate-in fade-in slide-in-from-top-2">
+                            <div>
+                                <label className="text-[9px] font-bold text-slate-400 block mb-0.5 uppercase">{lang === 'vi' ? 'Số tiền' : 'Amount'}</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={finParams.manualCapex ? new Intl.NumberFormat('en-US').format(finParams.manualCapex) : ''}
+                                        onChange={(e) => {
+                                            const rawValue = e.target.value.replace(/,/g, '');
+                                            const numValue = Number(rawValue);
+                                            if (!isNaN(numValue)) {
+                                                setFinParams(prev => ({ ...prev, manualCapex: rawValue === '' ? '' : numValue }));
+                                            }
+                                        }}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder={dt.auto_calc_placeholder}
+                                        className="w-full p-1.5 text-xs border rounded bg-blue-50/50 font-bold text-blue-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-300 outline-none"
+                                    />
+                                    <span className="absolute right-2 top-1.5 text-[10px] text-blue-400 select-none font-bold">VND</span>
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-1 italic">{dt.manual_override_msg}</p>
                             </div>
-                            <p className="text-[9px] text-slate-400 mt-1 italic">{dt.manual_override_msg}</p>
                         </div>
                     )}
                 </div>
@@ -421,6 +441,13 @@ export const Finance = ({
                                         <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
                                     ))}
                                 </Bar>
+                                {finParams.loan.enable && (
+                                    <Bar yAxisId="left" dataKey="chartDebt" name={lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'} barSize={16} isAnimationActive={false}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`debt-${index}`} fill={'#fbbf24'} />
+                                        ))}
+                                    </Bar>
+                                )}
                                 <Bar yAxisId="left" dataKey="acc" name={dt.accumulated} barSize={16} isAnimationActive={false}>
                                     {chartData.map((entry, index) => {
                                         let fillColor = '#10b981'; // green for profit

@@ -74,7 +74,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             back: "Quay lại",
             generate: "Tạo Profile",
             view_year: "Năm",
-            view_day: "Ngày (Mẫu)",
+            view_day: "Ngày",
             distribute: `Phân bổ\nmùa`,
             hourly_weights: "Tỷ trọng tiêu thụ theo giờ",
             months: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
@@ -144,7 +144,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             back: "Back",
             generate: "Generate Profile",
             view_year: "Year",
-            view_day: "Day (Pattern)",
+            view_day: "Day",
             hourly_weights: "Hourly consumption weights",
             months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             price_escalation: "Annual Price Escalation",
@@ -454,8 +454,13 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     onClick={() => setShowProvinceList(!showProvinceList)}
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-[11px] font-bold cursor-pointer hover:border-blue-400 transition-all shadow-sm flex items-center justify-between group"
                                 >
-                                    <span className={province ? 'text-slate-800' : 'text-slate-400'}>
-                                        {province || t.select_province}
+                                    <span className={province ? 'text-slate-800 flex items-center gap-2' : 'text-slate-400'}>
+                                        {province ? (
+                                            <>
+                                                <span className="text-sm">{ALL_PROVINCES.find(p => p.name === province)?.icon || "📍"}</span>
+                                                <span>{province}</span>
+                                            </>
+                                        ) : t.select_province}
                                     </span>
                                     <MapPin size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                                 </div>
@@ -476,9 +481,10 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                 <div
                                                     key={p.id}
                                                     onClick={() => { setProvince(p.name); setShowProvinceList(false); setSearchTerm(''); }}
-                                                    className="px-5 py-3 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors border-b border-slate-50/50 last:border-0 font-medium"
+                                                    className="px-5 py-3 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors border-b border-slate-50/50 last:border-0 font-medium flex items-center gap-2"
                                                 >
-                                                    {p.name}
+                                                    <span className="text-sm">{p.icon || "📍"}</span>
+                                                    <span>{p.name}</span>
                                                 </div>
                                             ))}
                                         </div>

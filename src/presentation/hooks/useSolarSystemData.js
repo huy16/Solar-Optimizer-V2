@@ -166,7 +166,15 @@ export const useSolarSystemData = () => {
                     if (!baseAnnualSum || baseAnnualSum === 0) {
                         baseAnnualSum = 0;
                         // Fallback logic for raw maps without metadata
-                        baseProfile.map.forEach(v => baseAnnualSum += v);
+                        baseProfile.map.forEach((val, key) => {
+                            const [prefix, m, h] = String(key).split('-');
+                            if (prefix === 'MONTHLY' && !isNaN(parseInt(m))) {
+                                const daysInMonth = new Date(new Date().getFullYear(), parseInt(m) + 1, 0).getDate();
+                                baseAnnualSum += val * daysInMonth;
+                            } else {
+                                baseAnnualSum += val;
+                            }
+                        });
                     }
 
                     // Create a layer for each data type
