@@ -57,7 +57,7 @@ export const Finance = ({
             legend_acc_invest: "Vốn đầu tư ban đầu",
             legend_acc_recover: "Đang thu hồi vốn",
             legend_acc_profit: "Đã sinh lời",
-            analysis_title: "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản) (VND)",
+            analysis_title: "Phân tích Hiệu quả Đầu tư",
             analysis_desc: "So sánh các chỉ số tài chính nâng cao (NPV, ROI, IRR) dựa trên các kịch bản công suất.",
             col_scenario: "Kịch bản",
             col_capacity: "Công suất",
@@ -69,9 +69,15 @@ export const Finance = ({
             btn_select: "Chọn",
             unit_year: "Năm",
             unit_percent_year: "%/Năm",
+            unit_vnd_kwp: "đ/kWp",
+            unit_vnd_kwh: "đ/kWh",
+            unit_exchange: "đ/$",
+            unit_vnd: "VNĐ",
             system_price: "SUẤT ĐẦU TƯ SOLAR",
             bess_price: "SUẤT ĐẦU TƯ BESS",
             co2_factor: "HỆ SỐ CO2",
+            inverter_life: "TUỔI THỌ INVERTER",
+            inverter_replace_cost: "CHI PHÍ THAY THẾ INVERTER",
             col_lcoe: "LCOE (VNĐ/kWh)",
             tip_capex: "Tổng mức đầu tư ban đầu\n= {Công suất × Giá Solar} + {Dung lượng × Giá BESS}",
             tip_saving: "Tiền tiết kiệm năm 1\n= (Sản lượng tiết kiệm × Giá điện lưới) + (Sản lượng dư thừa × Giá xuất lưới)",
@@ -142,28 +148,40 @@ export const Finance = ({
             col_irr: "IRR",
             col_payback: "Payback",
             btn_select: "Select",
-            unit_year: "Years",
+            unit_year: "Year",
             unit_percent_year: "%/Year",
-            system_price: "SOLAR CAPEX",
-            bess_price: "BESS CAPEX",
-            co2_factor: "CO2 FACTOR",
+            unit_vnd_kwp: "VND/kWp",
+            unit_vnd_kwh: "VND/kWh",
+            unit_exchange: "VND/$",
+            unit_vnd: "VND",
+            system_price: "SOLAR INVESTMENT",
+            bess_price: "BESS INVESTMENT",
+            co2_factor: "CO2 EMISSION FACTOR",
+            inverter_life: "INVERTER LIFE",
+            inverter_replace_cost: "INVERTER REPLACEMENT COST",
             col_lcoe: "LCOE (VND/kWh)",
-            tip_capex: "Initial Investment\n= {Capacity × Solar Price} + {Capacity × BESS Price}",
-            tip_saving: "Year 1 Savings\n= (Saved Energy × Grid Price) + (Exported Energy × FIT Price)",
-            tip_lcoe: "LCOE\n= Sum(Cost_t / (1+r)^t) / Sum(Energy_t / (1+r)^t)",
-            tip_npv: "Net Present Value\n= Sum(Net Cash Flow_t / (1+r)^t) - Equity",
-            tip_irr: "Internal Rate of Return (IRR)\n= Discount rate 'r' where NPV equals 0",
-            tip_payback: "Payback Time\n= Year when Cumulative Cash Flow >= 0",
-            tip_discount: "Discount Rate (r)\n= Expected return rate to discount future cash flows (Typ. 8-12%)",
-            tip_escalation: "Escalation\n= Assumed annual increase rate in electricity revenue (Typ. 2-5%)",
-            tip_om: "Annual O&M Cost(t)\n= (% O&M × CAPEX) × (1 + EscalationRate)^t",
-            tip_cycle: "Evaluation Period\n= Project operational lifetime in years (Typ. 20-25 years)",
-            tip_deg: "PV Degradation\n= Yield(t) = Yield(1) × (1 - DegRate)^(t-1)",
-            tip_revenue_table: "Annual savings revenue from reducing grid purchases or exporting excess.",
-            tip_om_table: "Routine operation and maintenance costs.",
-            tip_replacement_table: "Provision cost for replacing Inverters or BESS (if applicable).",
-            tip_net_flow_table: "Annual Net Cash Flow\n= Revenue - O&M - Replacement cost.",
-            tip_acc_table: "Cumulative net cash flow. A positive value indicates the payback point."
+            tip_capex: "Initial Capital Expenditure (CAPEX)\n= (Solar Capacity × Solar Price) + (BESS Capacity × BESS Price)",
+            tip_saving: "Year 1 Savings\n= (Self-consumption × Grid Price) + (Grid Export × FIT Price)",
+            tip_lcoe: "Levelized Cost of Energy (LCOE)\nThe average minimum electricity price at which the project breaks even over its lifetime.",
+            tip_npv: "Net Present Value (NPV)\nThe sum of future cash flows discounted back to the present, minus the initial investment.",
+            tip_irr: "Internal Rate of Return (IRR)\nThe discount rate at which the NPV of the project equals zero. Higher IRR indicates a more profitable project.",
+            tip_payback: "Payback Period\nThe point in time when the cumulative cash flow becomes positive (initial investment recovered).",
+            tip_discount: "Discount Rate (r)\nThe rate used to convert future cash flows to present value (Typically 8-12%).",
+            tip_escalation: "Electricity Price Escalation\nAssumed annual increase in grid electricity prices (Typically 2-5%).",
+            tip_om: "Annual Operation & Maintenance (O&M) Cost\n= (% O&M × CAPEX) × (1 + Inflation Rate)^t",
+            tip_cycle: "Project Life\nThe expected operational lifespan of the solar system (Typically 20-25 years).",
+            tip_deg: "PV Degradation\nAnnual reduction in solar panel efficiency (Typically 0.5-0.8%/year).",
+            tip_exchange: "USD/VND Exchange Rate used to convert prices entered in USD (e.g., Carbon Credits).",
+            tip_carbon: "Expected Carbon Credit price per ton of CO2 emission reduction.",
+            tip_battery_life: "Expected operational lifespan of the Battery Energy Storage System (BESS) before replacement.",
+            tip_inverter_life: "Average operational lifespan of the Inverter before replacement (Typically 10-12 years).",
+            tip_inverter_replace_cost: "Cost of replacing with a new Inverter (calculated as a % of the initial Solar capacity unit price).",
+            tip_equity: "The owner's portion of the project investment (equity).",
+            tip_revenue_table: "Annual savings generated from reduced grid purchases or excess energy sales.",
+            tip_om_table: "Cost of annual operation, maintenance, and periodic cleaning of the system.",
+            tip_replacement_table: "Provisions for the cost of replacing major equipment like Inverters or Batteries.",
+            tip_net_flow_table: "Annual Net Cash Flow\n= Revenue - O&M - Replacement Costs - Debt Service (if any).",
+            tip_acc_table: "Cumulative net cash flow. When this value becomes positive, it indicates the payback year."
         }
     }[lang];
 
@@ -260,25 +278,80 @@ export const Finance = ({
                     <div className="animate-in fade-in slide-in-from-top-2">
                         {/* 1. UNIT PRICES & CO2 */}
                         <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-slate-100">
-                            <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.system_price}</label><div className="relative"><input type="number" step={100000} value={params.systemPrice} onChange={(e) => setParams(prev => ({ ...prev, systemPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-12 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">đ/kWp</span></div></div>
                             <div>
-                                <label className="text-[9px] text-amber-500 font-bold block mb-0.5 group relative cursor-help w-fit">
-                                    {dt.carbon_credit} <HelpCircle size={8} />
-                                    <div className="absolute bottom-full mb-2 left-0 w-max max-w-[200px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
-                                        {dt.tip_carbon}
+                                <label className="text-[9px] text-blue-500 font-bold block mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
+                                    {dt.system_price} <HelpCircle size={12} className="text-slate-300" />
+                                    <div className="absolute bottom-full mb-2 left-0 w-max max-w-[200px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal normal-case leading-tight">
+                                        {dt.tip_capex}
+                                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                     </div>
                                 </label>
                                 <div className="relative">
-                                    <input type="number" step={1} value={finParams.carbonPrice} onChange={(e) => setFinParams(prev => ({ ...prev, carbonPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-amber-200 rounded bg-amber-50/50 pr-20 font-bold text-amber-700 focus:ring-1 focus:ring-amber-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                    <input 
+                                        type="text" 
+                                        value={params.systemPrice === '' ? '' : Number(params.systemPrice).toLocaleString('vi-VN')} 
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\./g, '');
+                                            if (val === '' || /^\d+$/.test(val)) setParams(prev => ({ ...prev, systemPrice: val === '' ? '' : Number(val) }));
+                                        }} 
+                                        onFocus={(e) => { if (params.systemPrice === 0 || params.systemPrice === '0') setParams(prev => ({ ...prev, systemPrice: '' })); e.target.select(); }} 
+                                        className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-12 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" 
+                                    />
+                                     <span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">{dt.unit_vnd_kwp}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[9px] text-amber-500 font-bold block mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
+                                    {dt.carbon_credit} <HelpCircle size={12} className="text-slate-300" />
+                                    <div className="absolute bottom-full mb-2 left-0 w-max max-w-[200px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal normal-case leading-tight">
+                                        {dt.tip_carbon}
+                                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                    </div>
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={finParams.carbonPrice === '' ? '' : Number(finParams.carbonPrice).toLocaleString('vi-VN')} 
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\./g, '');
+                                            if (val === '' || /^\d+$/.test(val)) setFinParams(prev => ({ ...prev, carbonPrice: val === '' ? '' : Number(val) }));
+                                        }} 
+                                        onFocus={(e) => { if (finParams.carbonPrice === 0 || finParams.carbonPrice === '0') setFinParams(prev => ({ ...prev, carbonPrice: '' })); e.target.select(); }} 
+                                        className="w-full p-1.5 text-xs border border-amber-200 rounded bg-amber-50/50 pr-20 font-bold text-amber-700 focus:ring-1 focus:ring-amber-300 outline-none" 
+                                    />
                                     <span className="absolute right-2 top-1.5 text-[9px] text-amber-400 select-none">$/tCO2</span>
                                 </div>
                             </div>
-                            <div><label className="text-[9px] text-emerald-500 font-bold block mb-0.5">{dt.co2_factor}</label><div className="relative"><input type="number" step={0.001} value={params.co2Factor} onChange={(e) => setParams(prev => ({ ...prev, co2Factor: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-emerald-200 rounded bg-emerald-50/50 pr-20 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-emerald-400 select-none">kg/kWh</span></div></div>
+                            <div>
+                                <label className="text-[9px] text-emerald-500 font-bold block mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
+                                    {dt.co2_factor} <HelpCircle size={12} className="text-slate-300" />
+                                    <div className="absolute bottom-full mb-2 left-0 w-max max-w-[200px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal normal-case leading-tight text-left">
+                                        {lang === 'vi' ? 'Hệ số phát thải khí nhà kính của lưới điện Việt Nam.' : 'Greenhouse gas emission factor of the Vietnam national grid.'}
+                                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                    </div>
+                                </label>
+                                <div className="relative"><input type="number" step={0.001} value={params.co2Factor} onChange={(e) => setParams(prev => ({ ...prev, co2Factor: Number(e.target.value) }))} onFocus={(e) => { if (e.target.value === '0') setParams(prev => ({ ...prev, co2Factor: '' })); e.target.select(); }} className="w-full p-1.5 text-xs border border-emerald-200 rounded bg-emerald-50/50 pr-20 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-emerald-400 select-none">kg/kWh</span></div>
+                            </div>
                         </div>
 
                         {bessKwh > 0 && (
                              <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-slate-100">
-                                <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label><div className="relative"><input type="number" step={100000} value={params.bessPrice} onChange={(e) => setParams(prev => ({ ...prev, bessPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-16 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">đ/kWh</span></div></div>
+                                <div>
+                                    <label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={params.bessPrice === '' ? '' : Number(params.bessPrice).toLocaleString('vi-VN')} 
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\./g, '');
+                                                if (val === '' || /^\d+$/.test(val)) setParams(prev => ({ ...prev, bessPrice: val === '' ? '' : Number(val) }));
+                                            }} 
+                                            onFocus={(e) => { if (params.bessPrice === 0 || params.bessPrice === '0') setParams(prev => ({ ...prev, bessPrice: '' })); e.target.select(); }} 
+                                            className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-16 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" 
+                                        />
+                                         <span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">{dt.unit_vnd_kwh}</span>
+                                    </div>
+                                </div>
                                 <div className="col-span-2"></div>
                             </div>
                         )}
@@ -291,14 +364,16 @@ export const Finance = ({
                                 { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg },
                                 { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount },
                                 { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om },
-                                { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, hide: bessKwh === 0 },
-                                { l: dt.exchange_rate, k: 'usdExchangeRate', u: 'đ/$', v: finParams.usdExchangeRate, step: 100, tip: dt.tip_exchange }
+                                { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, tip: dt.tip_battery_life, hide: bessKwh === 0 },
+                                { l: dt.inverter_life, k: 'inverterLife', u: dt.unit_year, v: finParams.inverterLife, step: 1, tip: dt.tip_inverter_life },
+                                { l: dt.inverter_replace_cost, k: 'inverterReplaceCost', u: '%', v: finParams.inverterReplaceCost, step: 1, tip: dt.tip_inverter_replace_cost },
+                                 { l: dt.exchange_rate, k: 'usdExchangeRate', u: dt.unit_exchange, v: finParams.usdExchangeRate, step: 100, tip: dt.tip_exchange, isMoney: true }
                             ].filter(p => !p.hide).map((p, i) => (
                                 <div key={i} className={p.dis ? 'opacity-40' : ''}>
-                                    <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
-                                        {p.l} {p.tip && <HelpCircle size={8} />}
+                                    <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group/tip relative cursor-help w-fit">
+                                        {p.l} {p.tip && <HelpCircle size={12} className="text-slate-300" />}
                                         {p.tip && (
-                                            <div className="absolute bottom-full mb-2 left-0 w-max max-w-[320px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                            <div className="absolute bottom-full left-0 mb-2 w-max max-w-[320px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-xl opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all z-[100] font-normal normal-case leading-tight">
                                                 {p.tip}
                                                 <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                             </div>
@@ -306,10 +381,20 @@ export const Finance = ({
                                     </label>
                                     <div className="relative">
                                         <input 
-                                            type="number" 
+                                            type={p.isMoney ? "text" : "number"}
                                             step={p.step} 
-                                            value={p.v} 
+                                            value={p.isMoney ? (p.v === '' ? '' : Number(p.v).toLocaleString('vi-VN')) : p.v} 
                                             disabled={p.dis} 
+                                            onChange={(e) => {
+                                                const val = p.isMoney ? e.target.value.replace(/\./g, '') : e.target.value;
+                                                if (!p.isMoney || val === '' || /^\d+$/.test(val)) {
+                                                    setFinParams(prev => ({ ...prev, [p.k]: val === '' ? '' : Number(val) }));
+                                                }
+                                            }}
+                                            onFocus={(e) => { 
+                                                if (p.v === 0 || p.v === '0') setFinParams(prev => ({ ...prev, [p.k]: '' })); 
+                                                e.target.select(); 
+                                            }}
                                             className={`w-full p-1.5 text-xs border rounded font-bold focus:ring-1 focus:ring-blue-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${p.u.length > 3 ? 'pr-20' : 'pr-12'} ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} 
                                         />
                                         <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span>
@@ -436,17 +521,28 @@ export const Finance = ({
                                                 <label className="text-[9px] text-slate-400 font-bold ml-1 mb-1 block">{dt.om_amount}</label>
                                                 <div className="relative">
                                                     <input
-                                                        type="number"
-                                                        value={item.amount}
+                                                        type="text"
+                                                        value={item.amount === '' ? '' : Number(item.amount).toLocaleString('vi-VN')}
                                                         placeholder="0"
                                                         onChange={(e) => {
-                                                            const newSchedule = [...finParams.omSchedule];
-                                                            newSchedule[idx].amount = e.target.value;
-                                                            setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                            const rawValue = e.target.value.replace(/\./g, '');
+                                                            if (rawValue === '' || /^\d+$/.test(rawValue)) {
+                                                                const newSchedule = [...finParams.omSchedule];
+                                                                newSchedule[idx].amount = rawValue === '' ? '' : Number(rawValue);
+                                                                setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                            }
                                                         }}
-                                                        className="w-full p-2 text-xs border border-slate-200 rounded-md pr-16 font-bold bg-white text-blue-700 outline-none focus:ring-1 focus:ring-blue-300 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        onFocus={(e) => { 
+                                                            if (item.amount === 0 || item.amount === '0') {
+                                                                const newSchedule = [...finParams.omSchedule];
+                                                                newSchedule[idx].amount = '';
+                                                                setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                            }
+                                                            e.target.select(); 
+                                                        }}
+                                                        className="w-full p-2 text-xs border border-slate-200 rounded-md pr-16 font-bold bg-white text-blue-700 outline-none focus:ring-1 focus:ring-blue-300 transition-all shadow-sm"
                                                     />
-                                                    <span className="absolute right-2 top-2.5 text-[9px] text-slate-400 font-medium">VNĐ</span>
+                                                    <span className="absolute right-2 top-2.5 text-[9px] text-slate-400 font-medium">{dt.unit_vnd}</span>
                                                 </div>
                                             </div>
                                             <div className="col-span-2 flex justify-end">
@@ -492,15 +588,12 @@ export const Finance = ({
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        value={finParams.manualCapex ? new Intl.NumberFormat('en-US').format(finParams.manualCapex) : ''}
+                                        value={finParams.manualCapex === '' || finParams.manualCapex === null ? '' : Number(finParams.manualCapex).toLocaleString('vi-VN')}
                                         onChange={(e) => {
-                                            const rawValue = e.target.value.replace(/,/g, '');
-                                            const numValue = Number(rawValue);
-                                            if (!isNaN(numValue)) {
-                                                setFinParams(prev => ({ ...prev, manualCapex: rawValue === '' ? '' : numValue }));
-                                            }
+                                            const val = e.target.value.replace(/\./g, '');
+                                            if (val === '' || /^\d+$/.test(val)) setFinParams(prev => ({ ...prev, manualCapex: val === '' ? '' : Number(val) }));
                                         }}
-                                        onFocus={(e) => e.target.select()}
+                                        onFocus={(e) => { if (finParams.manualCapex === 0 || finParams.manualCapex === '0') setFinParams(prev => ({ ...prev, manualCapex: '' })); e.target.select(); }}
                                         placeholder={dt.auto_calc_placeholder}
                                         className="w-full p-1.5 text-xs border rounded bg-blue-50/50 font-bold text-blue-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-300 outline-none"
                                     />
@@ -513,7 +606,7 @@ export const Finance = ({
                 </div>
 
                 {/* LOAN CONFIG */}
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 relative z-20">
                     <div className={`flex justify-between items-center ${finParams.loan.enable ? 'mb-3' : ''}`}>
                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Wallet size={16} className="text-blue-600" /> {dt.title_loan}</h3>
                         <label className="inline-flex items-center cursor-pointer">
@@ -523,10 +616,12 @@ export const Finance = ({
                     </div>
 
                     {finParams.loan.enable && (
-                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 relative z-30">
                              <div className="grid grid-cols-2 gap-3">
                                  <div>
-                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_ratio}</label>
+                                     <label className="text-[9px] font-bold text-slate-400 mb-0.5 block uppercase">
+                                         {dt.loan_ratio}
+                                     </label>
                                      <div className="relative">
                                          <input type="number" value={finParams.loan.ratio} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, ratio: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded bg-blue-50 text-blue-900 text-xs font-bold outline-none pr-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                          <span className="absolute right-2 top-1.5 text-[10px] text-blue-400 select-none font-bold">%</span>
@@ -536,14 +631,18 @@ export const Finance = ({
                              </div>
                              <div className="grid grid-cols-2 gap-3">
                                  <div>
-                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.interest_rate}</label>
+                                     <label className="text-[9px] font-bold text-slate-400 mb-0.5 block uppercase">
+                                         {dt.interest_rate}
+                                     </label>
                                      <div className="relative">
                                          <input type="number" step="0.1" value={finParams.loan.rate} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, rate: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none pr-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                          <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none font-bold">{dt.unit_percent_year}</span>
                                      </div>
                                  </div>
                                  <div>
-                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_term}</label>
+                                     <label className="text-[9px] font-bold text-slate-400 mb-0.5 block uppercase">
+                                         {dt.loan_term}
+                                     </label>
                                      <div className="relative">
                                          <input type="number" value={finParams.loan.term} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, term: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none pr-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                                          <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none font-bold">{dt.unit_year}</span>

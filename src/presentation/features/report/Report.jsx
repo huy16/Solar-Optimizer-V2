@@ -21,6 +21,7 @@ export const Report = ({
     onSelectScenario,
     onShowFormulas,
     currentFinance,
+    finParams,
     estimatedLosses,
     formatMoney,
     lang,
@@ -29,20 +30,20 @@ export const Report = ({
     const dt = {
         vi: {
             analysis_title: "Phân tích Năng lượng theo Khung giờ & Kịch bản",
-            analysis_desc: "Chi tiết sản lượng tự dùng và cắt giảm phân theo giờ Cao điểm (Peak) và Bình thường (Normal).",
+            analysis_desc: "Chi tiết sản lượng tự dùng và cắt giảm phân theo giờ Cao điểm và Bình thường.",
             scenario: "Kịch bản",
-            self_use: "Tự dùng (Self-Use)",
-            excess: "Dư thừa (Export / Curtail)",
-            peak: "Cao điểm (Peak)",
+            self_use: "Tự dùng",
+            excess: "Dư thừa",
+            peak: "Cao điểm",
             normal: "Bình thường",
             selecting: "Đang chọn",
-            tech_specs_title: "Thông số Kỹ thuật chi tiết (Kịch bản hiện tại)",
-            losses_title: "Chi tiết Tổn thất (System Losses Breakdown)",
-            monthly_table_title: "Bảng dữ liệu Sản lượng Solar & Tải (12 Tháng) (kWh)",
-            cashflow_title: "Phân tích Dòng tiền Chi tiết (VND)",
+            tech_specs_title: "Thông số Kỹ thuật chi tiết",
+            losses_title: "Chi tiết các thành phần suy hao hiệu suất (%)",
+            monthly_table_title: "Bảng dữ liệu Sản lượng Solar & Tải",
+            cashflow_title: "Phân tích Dòng tiền Chi tiết",
             year: "Năm",
             year_0: "Năm 0",
-            capex_tooltip: "Vốn đầu tư ban đầu (CAPEX)",
+            capex_tooltip: "Vốn đầu tư ban đầu",
             revenue: "Doanh thu (Tiết kiệm)",
             om_cost: "Chi phí O&M",
             replacement: "Thay thế (Pin/Inv)",
@@ -51,10 +52,19 @@ export const Report = ({
             net_flow: "Dòng tiền ròng",
             accumulated: "Tích lũy",
             col_month: "Tháng",
-            col_pv_yield: "Sản lượng PV (kWh)",
-            col_load: "Tổng Tải (kWh)",
-            col_self_consumption: "Tự dùng (kWh)",
-            col_self_consumption_rate: "Tỷ lệ Tự dùng %"
+            col_pv_yield: "Sản lượng PV",
+            col_load: "Tổng Tải",
+            col_self_consumption: "Tự dùng",
+            col_self_consumption_rate: "Tỷ lệ Tự dùng",
+            tip_pv_total: "Tổng sản lượng điện dự kiến mà hệ thống Solar tạo ra trong 1 năm.",
+            tip_pv_used: "Lượng điện Solar được tiêuhtu trực tiếp bởi phụ tải (hoặc sạc vào BESS) mà không bị cắt giảm hoặc phát lưới.",
+            tip_pv_used_pct: "Tỷ lệ phần trăm điện Solar được sử dụng tại chỗ trên tổng sản lượng tạo ra. Tỷ lệ này càng cao thì hiệu quả đầu tư tự dùng càng tốt.",
+            tip_pv_curtailed: "Lượng điện Solar dư thừa không thể tiêu thụ hết và không có pin lưu trữ để giữ lại (hoặc lượng điện phát ngược lên lưới).",
+            tip_grid_import: "Lượng điện thiếu hụt mà hộ tiêu thụ vẫn phải mua từ lưới điện quốc gia sau khi đã có Solar.",
+            tip_total_load: "Tổng nhu cầu tiêu thụ điện năng của hộ tiêu dùng trong 1 năm.",
+            tip_debt_table: "Số tiền trả nợ ngân hàng hàng năm (bao gồm cả gốc và lãi) nếu dự án có sử dụng đòn bẩy tài chính.",
+            公式_label: "Công thức: ",
+            concept_label: "Ý nghĩa: "
         },
         en: {
             analysis_title: "Energy Analysis by Time-of-Use & Scenario",
@@ -149,8 +159,6 @@ export const Report = ({
                 )}
             </div>
 
-
-
             <div id="detailed-specs-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center transition-colors hover:bg-slate-100 cursor-pointer" onClick={() => setShowDetailedSpecs(!showDetailedSpecs)}>
                     <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -176,13 +184,13 @@ export const Report = ({
                         {(() => {
                             const activeStats = customStats;
                             const displayList = [
-                                { id: 1, label: t.tech_labels.pv_total, value: activeStats.totalSolarGen, unit: 'kWh', formula: 'Σ ( Monthly Solar Generation )' },
-                                { id: 2, label: t.tech_labels.pv_used, value: activeStats.totalUsed, unit: 'kWh', highlight: true, color: 'text-green-600', formula: 'Σ Min( Solar, Load )' },
-                                { id: 3, label: t.tech_labels.pv_used_pct, value: activeStats.totalSolarGen > 0 ? (activeStats.totalUsed / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-green-600', formula: '( PV Used / PV Total ) * 100' },
-                                { id: 4, label: t.tech_labels.pv_curtailed, value: activeStats.totalCurtailed + (activeStats.totalExported || 0), unit: 'kWh', highlight: true, color: 'text-red-500', formula: 'PV Total - PV Used' },
-                                { id: 5, label: t.tech_labels.pv_curtailed_pct, value: activeStats.totalSolarGen > 0 ? ((activeStats.totalCurtailed + (activeStats.totalExported || 0)) / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-red-500', formula: '( PV Curtailed / PV Total ) * 100' },
-                                { id: 6, label: t.tech_labels.grid_import, value: (activeStats.totalLoad + (activeStats.totalGridCharge || 0)) - activeStats.totalUsed, unit: 'kWh', formula: 'Total Load - PV Used' },
-                                { id: 7, label: t.tech_labels.total_load, value: activeStats.totalLoad, unit: 'kWh', formula: 'Σ ( Monthly Load Consumption )' },
+                                { id: 1, label: t.tech_labels.pv_total, value: activeStats.totalSolarGen, unit: 'kWh', formula: 'Σ ( Monthly Solar Generation )', tip: dt.tip_pv_total },
+                                { id: 2, label: t.tech_labels.pv_used, value: activeStats.totalUsed, unit: 'kWh', highlight: true, color: 'text-green-600', formula: 'Σ Min( Solar, Load )', tip: dt.tip_pv_used },
+                                { id: 3, label: t.tech_labels.pv_used_pct, value: activeStats.totalSolarGen > 0 ? (activeStats.totalUsed / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-green-600', formula: '( PV Used / PV Total ) * 100', tip: dt.tip_pv_used_pct },
+                                { id: 4, label: t.tech_labels.pv_curtailed, value: activeStats.totalCurtailed + (activeStats.totalExported || 0), unit: 'kWh', highlight: true, color: 'text-red-500', formula: 'PV Total - PV Used', tip: dt.tip_pv_curtailed },
+                                { id: 5, label: t.tech_labels.pv_curtailed_pct, value: activeStats.totalSolarGen > 0 ? ((activeStats.totalCurtailed + (activeStats.totalExported || 0)) / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-red-500', formula: '( PV Curtailed / PV Total ) * 100', tip: dt.tip_pv_curtailed_pct },
+                                { id: 6, label: t.tech_labels.grid_import, value: (activeStats.totalLoad + (activeStats.totalGridCharge || 0)) - activeStats.totalUsed, unit: 'kWh', formula: 'Total Load - PV Used', tip: dt.tip_grid_import },
+                                { id: 7, label: t.tech_labels.total_load, value: activeStats.totalLoad, unit: 'kWh', formula: 'Σ ( Monthly Load Consumption )', tip: dt.tip_total_load },
                                 { id: 8, label: t.tech_labels.loss_pct, value: detailedSpecsList.find(x => x.id === 8)?.value || 0, unit: '%', formula: '( 1 - Total Derate Factor ) * 100' },
                                 { id: 9, label: t.tech_labels.pv_used_normal, value: activeStats.usedNormal, unit: 'kWh', formula: 'Σ PV Used (Normal Hours)' },
                                 { id: 10, label: t.tech_labels.pv_used_normal_pct, value: activeStats.totalUsed > 0 ? (activeStats.usedNormal / activeStats.totalUsed * 100).toFixed(2) : 0, unit: '%', formula: '( PV Used Normal / Total PV Used ) * 100' },
@@ -201,11 +209,13 @@ export const Report = ({
                                             <div className="flex items-start justify-between gap-2 mb-1">
                                                 <div className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
                                                     #{row.id}
-                                                    {row.formula && (
+                                                    {(row.formula || row.tip) && (
                                                         <div className="group relative">
                                                             <Info size={10} className="text-slate-300 cursor-help hover:text-blue-500" />
-                                                            <div className="absolute bottom-full left-0 mb-1 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm font-mono whitespace-nowrap">
-                                                                {row.formula}
+                                                            <div className="absolute bottom-full left-0 mb-1 w-max max-w-[320px] p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg font-normal leading-tight text-left">
+                                                                {row.tip && <div className="mb-1.5"><span className="text-blue-300 font-bold">{dt.concept_label}</span> {row.tip}</div>}
+                                                                {row.formula && <div className="font-mono text-[9px]"><span className="text-emerald-400 font-bold">{lang === 'vi' ? 'Công thức: ' : 'Formula: '}</span> {row.formula}</div>}
+                                                                <div className="absolute top-full left-1 border-4 border-transparent border-t-slate-800"></div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -313,7 +323,8 @@ export const Report = ({
                                     {(() => {
                                         const chartData = currentFinance.cumulativeData.map(d => ({
                                             ...d,
-                                            chartNet: d.year === 0 ? 0 : d.net
+                                            chartNet: d.year === 0 ? 0 : d.net,
+                                            chartDebt: d.year === 0 ? -(currentFinance.loanAmount || 0) : (d.debt || 0)
                                         }));
 
                                         let min = 0, max = 0;
@@ -324,6 +335,8 @@ export const Report = ({
                                             }
                                             min = Math.min(min, d.acc);
                                             max = Math.max(max, d.acc);
+                                            if (d.chartDebt) min = Math.min(min, d.chartDebt);
+                                            if (d.chartDebt) max = Math.max(max, d.chartDebt);
                                         });
                                         const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
 
@@ -345,6 +358,12 @@ export const Report = ({
                                                     <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
                                                     <span>{lang === 'vi' ? 'Đã sinh lời' : 'Profitable'}</span>
                                                 </div>
+                                                {finParams?.loan?.enable && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-3 h-3 bg-amber-400 rounded-sm"></div>
+                                                        <span>{lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
 
@@ -362,6 +381,13 @@ export const Report = ({
                                                             <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
                                                         ))}
                                                     </Bar>
+                                                    {finParams?.loan?.enable && (
+                                                        <Bar yAxisId="left" dataKey="chartDebt" name={lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'} barSize={16} isAnimationActive={false}>
+                                                            {chartData.map((entry, index) => (
+                                                                <Cell key={`debt-${index}`} fill={'#fbbf24'} />
+                                                            ))}
+                                                        </Bar>
+                                                    )}
                                                     <Bar yAxisId="left" dataKey="acc" name={dt.accumulated} barSize={16} isAnimationActive={false}>
                                                         {chartData.map((entry, index) => {
                                                             let fillColor = '#10b981';
@@ -385,8 +411,13 @@ export const Report = ({
                                             <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.revenue}</th>
                                             <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.om_cost}</th>
                                             <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.replacement}</th>
-                                            <th className="px-4 py-3 border-r border-slate-200 text-right text-red-600">{dt.debt}</th>
-                                            <th className="px-4 py-3 border-r border-slate-200 text-right text-orange-600">{dt.tax}</th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right text-red-600 group relative cursor-help">
+                                                <div className="flex items-center justify-end gap-1"><span>{dt.debt}</span><Info size={10} /></div>
+                                                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-max max-w-[280px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">
+                                                    {dt.tip_debt_table}
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
+                                                </div>
+                                            </th>
                                             <th className="px-4 py-3 border-r border-slate-200 text-right text-blue-700">{dt.net_flow}</th>
                                             <th className="px-4 py-3 text-right text-green-700">{dt.accumulated}</th>
                                         </tr>
@@ -412,7 +443,6 @@ export const Report = ({
                                                 <td className="px-4 py-2 text-right text-slate-500">{y.om < 0 ? formatMoney(y.om) : (y.opex < 0 ? formatMoney(y.opex) : '-')}</td>
                                                 <td className="px-4 py-2 text-right text-red-500 font-medium">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
                                                 <td className="px-4 py-2 text-right text-red-600">{y.debt < 0 ? formatMoney(y.debt) : '-'}</td>
-                                                <td className="px-4 py-2 text-right text-orange-600">{y.tax < 0 ? formatMoney(y.tax) : '-'}</td>
                                                 <td className="px-4 py-2 text-right font-bold text-blue-700">{formatMoney(y.net)}</td>
                                                 <td className={`px-4 py-2 text-right font-bold ${y.acc >= 0 ? 'text-green-600' : 'text-orange-600'}`}>{formatMoney(y.acc)}</td>
                                             </tr>

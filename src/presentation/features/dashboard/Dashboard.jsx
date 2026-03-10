@@ -134,16 +134,16 @@ export const Dashboard = ({
     const dt = {
         vi: {
             calculating: "Đang tính toán mô phỏng...",
-            bess_chart_title: "Biểu đồ Điều độ Năng lượng (Solar - Load - BESS) (kW)",
+            bess_chart_title: "Biểu đồ Điều độ Năng lượng (Solar - Load - BESS)",
             bess_charge: "BESS Sạc",
             bess_discharge: "BESS Xả",
-            load: "Phụ tải (Load)",
+            load: "Phụ tải",
             load_compatibility: "Phân tích Tương thích Phụ tải & Solar",
             weekend: "CN",
             solar_avg: "Solar TB",
             correlation_title: "Tương quan Load và Solar (kW)",
             grid_import_bess: "Grid Import vs Solar (với BESS) (kW)",
-            monthly_overview: "Tổng quan Năng lượng Hàng tháng (kWh)",
+            monthly_overview: "Tổng quan Năng lượng Hàng tháng",
             solar_production: "Sản lượng Solar",
             solar_tooltip: "Giá trị trung bình hàng",
             solar_tooltip_suffix: "tính trên toàn bộ dữ liệu 1 năm.",
@@ -164,7 +164,7 @@ export const Dashboard = ({
             grid_import_kw: "Điện mua lưới (kW)",
             load_vs_solar: "Tiêu thụ Load vs Solar",
             m_units: "MWh/năm",
-            energy_management: "Quản lý Năng lượng (kWh)",
+            energy_management: "Quản lý Năng lượng",
             view_day: "Ngày",
             view_month: "Tháng",
             view_year: "Năm",
@@ -186,7 +186,15 @@ export const Dashboard = ({
             unit_trees: "Cây",
             unit_liters: "Lít",
             view_avg: "TB Năm",
-            view_peak_load: "Tải Cao Nhất"
+            view_peak_load: "Phụ tải Đỉnh",
+            tip_pv_yield: "Tổng sản lượng điện mặt trời dự kiến hệ thống tạo ra trong 1 năm.",
+            tip_solar_energy: "Lượng điện mặt trời thực tế được phụ tải tiêu thụ hoặc sạc vào pin lưu trữ.",
+            tip_savings: "Số tiền tiết kiệm được từ việc giảm mua điện lưới, sau khi trừ chi phí vận hành.",
+            tip_self_consumption: "Tỷ lệ phần trăm điện mặt trời được sử dụng tại chỗ trên tổng sản lượng tạo ra.",
+            tip_co2_saved: "Lượng khí thải CO2 cắt giảm được nhờ sử dụng năng lượng tái tạo thay thế điện lưới.",
+            tip_trees_planted: "Số lượng cây tương đương cần trồng để hấp thụ lượng CO2 đã cắt giảm.",
+            tip_coal_saved: "Lượng than đá tiết kiệm được so với sản xuất điện truyền thống.",
+            tip_oil_saved: "Lượng dầu tiết kiệm được so với sản xuất điện truyền thống."
         },
         en: {
             calculating: "Simulation calculating...",
@@ -242,7 +250,15 @@ export const Dashboard = ({
             unit_trees: "Trees",
             unit_liters: "Liters",
             view_avg: "Year Avg",
-            view_peak_load: "Peak Load"
+            view_peak_load: "Peak Load",
+            tip_pv_yield: "Total expected solar energy production for the year.",
+            tip_solar_energy: "Amount of solar energy actually consumed by the load or stored in BESS.",
+            tip_savings: "Estimated monetary savings from reduced grid purchases, net of O&M.",
+            tip_self_consumption: "Percentage of total solar generation used locally.",
+            tip_co2_saved: "CO2 emissions avoided by using renewable energy instead of grid electricity.",
+            tip_trees_planted: "Equivalent number of trees required to absorb the avoided CO2.",
+            tip_coal_saved: "Equivalent amount of coal saved from traditional power generation.",
+            tip_oil_saved: "Equivalent amount of oil saved from traditional power generation."
         }
     }[lang];
 
@@ -263,6 +279,7 @@ export const Dashboard = ({
                     unit={dt.m_units}
                     colorClass="text-emerald-600"
                     bgClass="bg-white"
+                    tip={dt.tip_pv_yield}
                 />
                 <StatCard
                     icon={Zap}
@@ -272,6 +289,7 @@ export const Dashboard = ({
                     subtext={customStats ? `${(customStats.totalUsed / customStats.totalSolarGen * 100).toFixed(1)}% ${t.stats.efficiency}` : ""}
                     colorClass="text-blue-600"
                     bgClass="bg-white"
+                    tip={dt.tip_solar_energy}
                 />
                 <StatCard
                     icon={TrendingUp}
@@ -280,6 +298,7 @@ export const Dashboard = ({
                     unit={dt.m_vnd}
                     colorClass="text-indigo-600"
                     bgClass="bg-white"
+                    tip={dt.tip_savings}
                 />
                 <StatCard
                     icon={PieChart}
@@ -288,6 +307,7 @@ export const Dashboard = ({
                     unit="%"
                     colorClass="text-amber-600"
                     bgClass="bg-white"
+                    tip={dt.tip_self_consumption}
                 />
             </div>
 
@@ -383,7 +403,7 @@ export const Dashboard = ({
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* CO2 Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full">
                                 <Leaf size={24} />
                             </div>
@@ -393,10 +413,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612))} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_co2_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Equivalent Trees */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-green-100 text-green-600 rounded-full">
                                 <Trees size={24} />
                             </div>
@@ -406,10 +430,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612) * 67)} <span className="text-xs font-normal text-slate-500">{dt.unit_trees}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_trees_planted}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Coal Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-slate-100 text-slate-600 rounded-full">
                                 <Factory size={24} />
                             </div>
@@ -419,10 +447,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * 0.4)} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_coal_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Oil Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
                                 <Fuel size={24} />
                             </div>
@@ -431,6 +463,10 @@ export const Dashboard = ({
                                 <p className="text-xl font-black text-slate-800">
                                     {formatNumber(customStats.totalSolarGen * 0.25)} <span className="text-xs font-normal text-slate-500">{dt.unit_liters}</span>
                                 </p>
+                            </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_oil_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                             </div>
                         </div>
                     </div>

@@ -128,17 +128,19 @@ const TRANSLATIONS = {
             energy_dispatch: "Biểu đồ Điều độ Năng lượng (BESS)",
             correlation: "Tương quan Load - Solar",
             power_curves: "Power Curves (12 Tháng)",
-            pv_capacity: "CÔNG SUẤT PV (DC)",
-            panels: "TẤM PIN (PANEL)",
-            inverters: "BIẾN TẦN (INVERTER)",
-            bess: "LƯU TRỮ (BESS)",
+            pv_capacity: "CÔNG SUẤT PV",
+            panels: "TẤM PIN",
+            inverters: "BIẾN TẦN",
+            bess: "LƯU TRỮ",
+            no_bess: "Không sử dụng",
+            not_selected: "Chưa chọn",
             qty: "Số lượng",
             capacity: "Công suất",
             dc_ac_ratio: "Tỷ lệ DC/AC",
             not_used: "Không sử dụng",
             scenario: "Kịch bản",
-            self_use: "Tự dùng (Self-Use)",
-            excess: "Dư thừa (Export/Curtail)",
+            self_use: "Tự dùng",
+            excess: "Dư thừa",
             peak: "Cao điểm",
             normal: "Bình thường",
             solar_yield_chart: "Cân bằng Năng lượng Hàng tháng",
@@ -147,8 +149,8 @@ const TRANSLATIONS = {
             solar_yield_name: "Sản lượng Solar",
             energy_solar_used: "Năng lượng Solar (Sử dụng)",
             curtailed: "Cắt giảm (Dư thừa)",
-            total_load: "Tổng Tải (Load)",
-            import: "Mua lưới (Import)",
+            total_load: "Tổng Tải",
+            import: "Mua lưới",
             bess_charge_avg: "BESS Sạc",
             bess_discharge_avg: "BESS Xả",
             dispatch_desc: "* Biểu đồ hiển thị hoạt động Sạc/Xả của pin lưu trữ theo giờ trong ngày điển hình",
@@ -184,7 +186,7 @@ const TRANSLATIONS = {
             pv_curtailed: "Cắt giảm (Dư thừa)",
             pv_curtailed_pct: "Tỷ lệ cắt giảm",
             grid_import: "Điện mua lưới",
-            total_load: "Tổng Tải (Load)",
+            total_load: "Tổng Tải",
             loss_pct: "Tổn thất hệ thống",
             pv_used_normal: "Solar sử dụng (Giờ BT)",
             pv_used_normal_pct: "Tỷ lệ BT",
@@ -253,6 +255,8 @@ const TRANSLATIONS = {
             soiling: "Bụi bẩn",
             cable: "Dây dẫn",
             inverter: "Biến tần",
+            inverter_life: "TUỔI THỌ INVERTER",
+            inverter_replace_cost: "CHI PHÍ THAY THẾ INVERTER",
             total_derate: "Tỷ lệ hiệu chỉnh"
         },
         export: {
@@ -261,13 +265,13 @@ const TRANSLATIONS = {
             col_value: "Giá trị",
             col_unit: "Đơn vị",
             col_month: "Tháng",
-            col_pv_yield: "Sản lượng PV (kWh)",
-            col_load: "Load (kWh)",
-            col_self_use: "Tự dùng (kWh)",
+            col_pv_yield: "Sản lượng PV",
+            col_load: "Tải",
+            col_self_use: "Tự dùng",
             col_self_use_pct: "Tỷ lệ tự dùng (%)"
         },
         scenarios: {
-            base: "Theo tải nền (Base)",
+            base: "Theo tải nền",
             curtailment: "Cắt giảm"
         },
         profile_types: {
@@ -362,6 +366,8 @@ const TRANSLATIONS = {
             soiling: "Soiling",
             cable: "Cabling",
             inverter: "Inverter",
+            inverter_life: "Inverter Life",
+            inverter_replace_cost: "Inverter Replace Cost",
             availability: "Availability",
             total_derate: "Total Derate"
         },
@@ -397,6 +403,12 @@ const TRANSLATIONS = {
             energy_dispatch: "Energy Dispatch & BESS Activity",
             correlation: "Load-Solar Correlation",
             power_curves: "Power Curves (12 Months)",
+            pv_capacity: "PV CAPACITY (DC)",
+            panels: "PANELS",
+            inverters: "INVERTERS",
+            bess: "BESS STORAGE",
+            no_bess: "Not used",
+            not_selected: "Not selected",
             scenario_comparison: "Investment Scenario Comparison",
             invest_analysis: "Investment Scenario Comparison",
             col_scenario: "Scenario",
@@ -841,11 +853,8 @@ const SolarOptimizer = () => {
         batteryLife: 10,
         batteryReplaceCost: 10, // Default if not using specific events
         inverterLife: 20,
-        inverterReplaceCost: 10, // Default if not using specific events
-        majorRepairs: [
-            { id: Date.now(), year: 10, pct: 10 },
-            { id: Date.now() + 1, year: 15, pct: 10 }
-        ],
+        inverterReplaceCost: 10,
+        majorRepairs: [],
         omSchedule: [], // [{year: number, amount: number}]
         loan: {
             enable: false,
@@ -2885,7 +2894,7 @@ const SolarOptimizer = () => {
                         {/* 10. SCENARIO COMPARISON TABLE */}
                         <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><BarChart2 size={18} /></div>
-                            10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản)"}
+                            10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư"}
                         </h3>
                         <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
@@ -2929,11 +2938,12 @@ const SolarOptimizer = () => {
                         {/* FRAME 2: CASH FLOW CHART */}
                         <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="h-[280px] w-full">
-                                <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền (Tích lũy)"}</h4>
+                                <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền"}</h4>
                                 {(() => {
                                     const chartData = currentFinance.cumulativeData.map(d => ({
                                         ...d,
-                                        chartNet: d.year === 0 ? 0 : d.net
+                                        chartNet: d.year === 0 ? 0 : d.net,
+                                        chartDebt: d.year === 0 ? -(currentFinance.loanAmount || 0) : (d.debt || 0)
                                     }));
 
                                     let min = 0, max = 0;
@@ -2944,6 +2954,8 @@ const SolarOptimizer = () => {
                                         }
                                         min = Math.min(min, d.acc);
                                         max = Math.max(max, d.acc);
+                                        if (d.chartDebt) min = Math.min(min, d.chartDebt);
+                                        if (d.chartDebt) max = Math.max(max, d.chartDebt);
                                     });
                                     const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
 
@@ -2965,6 +2977,12 @@ const SolarOptimizer = () => {
                                                 <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
                                                 <span>{lang === 'vi' ? "Đã sinh lời" : "Profitable"}</span>
                                             </div>
+                                            {finParams.loan.enable && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-amber-400 rounded-sm"></div>
+                                                    <span>{lang === 'vi' ? "Vốn vay / Trả nợ" : "Loan / Debt"}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     );
 
@@ -2995,6 +3013,13 @@ const SolarOptimizer = () => {
                                                         <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
                                                     ))}
                                                 </Bar>
+                                                {finParams.loan.enable && (
+                                                    <Bar yAxisId="left" dataKey="chartDebt" name={lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'} barSize={20} isAnimationActive={false}>
+                                                        {chartData.map((entry, index) => (
+                                                            <Cell key={`debt-${index}`} fill={'#fbbf24'} />
+                                                        ))}
+                                                    </Bar>
+                                                )}
                                                 <Bar yAxisId="left" dataKey="acc" name={t.pdf.finance_table.acc || "Tích lũy"} barSize={20} isAnimationActive={false}>
                                                     {chartData.map((entry, index) => {
                                                         let fillColor = '#10b981';
@@ -3020,6 +3045,9 @@ const SolarOptimizer = () => {
                                             <th className="p-3 border-r border-slate-100 text-right">{t.pdf.finance_table.revenue}</th>
                                             <th className="p-3 border-r border-slate-100 text-right">{t.pdf.finance_table.om}</th>
                                             <th className="p-3 border-r border-slate-100 text-right text-red-500">{t.pdf.finance_table.replacement}</th>
+                                            {finParams.loan.enable && (
+                                                <th className="p-3 border-r border-slate-100 text-right text-red-500">{lang === 'vi' ? 'Trả nợ' : 'Debt Service'}</th>
+                                            )}
                                             <th className="p-3 border-r border-slate-100 text-right font-black text-blue-600">{t.pdf.finance_table.net_flow}</th>
                                             <th className="p-3 text-right font-black text-emerald-600">{t.pdf.finance_table.acc}</th>
                                         </tr>
@@ -3031,6 +3059,9 @@ const SolarOptimizer = () => {
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.revenue) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
+                                                {finParams.loan.enable && (
+                                                    <td className="p-2 text-right font-medium text-red-500">{y.debt < 0 ? formatMoney(y.debt) : '-'}</td>
+                                                )}
                                                 <td className="p-2 text-right font-black text-blue-600">{formatMoney(y.net)}</td>
                                                 <td className={`p-2 text-right font-black ${y.acc >= 0 ? 'text-emerald-600' : 'text-orange-500'}`}>{formatMoney(y.acc)}</td>
                                             </tr>
@@ -3539,6 +3570,7 @@ const SolarOptimizer = () => {
                                 handleDownloadExcelTable={handleDownloadExcelTable}
                                 monthlyDetails={monthlyDetails}
                                 currentFinance={currentFinance}
+                                finParams={finParams}
                                 estimatedLosses={estimatedLosses}
                                 formatMoney={formatMoney}
                                 lang={lang}
