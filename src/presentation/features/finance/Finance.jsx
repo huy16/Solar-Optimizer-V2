@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, HelpCircle, Settings, X } from 'lucide-react';
+import { Coins, AlertCircle, Wallet, DollarSign, ChevronDown, ChevronUp, BarChart2, HelpCircle, Settings, X, Wrench } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 export const Finance = ({
@@ -16,26 +16,34 @@ export const Finance = ({
     const dt = {
         vi: {
             title_finance: "Bản đồ Tài chính Dự án",
-            cycle: "VÒNG ĐỜI (Năm)",
+            cycle: "VÒNG ĐỜI",
             escalation: "LẠM PHÁT ĐIỆN",
             degradation: "SUY HAO PV",
             discount: "LÃI CHIẾT KHẤU",
             om: "CHI PHÍ O&M",
             battery_life: "TUỔI THỌ PIN",
-            major_repair: "SỬA CHỮA LỚN (% CAPEX)",
+            major_repair_title: "SỬA CHỮA LỚN",
+            major_repair_add: "+ Thêm đợt sửa chữa",
+            major_repair_event_label: "Đợt #",
+            major_repair_year: "Năm",
+            carbon_credit: "TÍN CHỈ CARBON",
+            exchange_rate: "TỶ GIÁ USD/VND",
             no_battery_msg: "Chưa có Pin (0 kWh). Phí thay pin sẽ không tính.",
-            om_schedule_title: "CHI PHÍ O&M BỔ SUNG (THEO NĂM)",
+            om_schedule_title: "CHI PHÍ O&M BỔ SUNG",
             om_year: "Năm",
-            om_amount: "Số tiền (VNĐ)",
-            om_add: "+ Thêm chi phí",
+            om_amount: "Số tiền",
+            om_add: "+ Bổ sung chi phí",
             total_capex_manual: "Cấu hình Vốn đầu tư",
             auto_calc_placeholder: "Tự động tính...",
             manual_override_msg: "* Nhập số để ghi đè giá trị tính toán tự động",
+            tax_rate: "THUẾ TNDN",
+            depreciation: "KHẤU HAO",
+            insurance: "BẢO HIỂM",
             title_loan: "Cấu hình Vay vốn",
-            loan_ratio: "TỶ LỆ VAY (%)",
+            loan_ratio: "TỶ LỆ VAY",
             equity: "Vốn tự có",
-            interest_rate: "LÃI SUẤT (%/Năm)",
-            loan_term: "THỜI HẠN (Năm)",
+            interest_rate: "LÃI SUẤT",
+            loan_term: "THỜI HẠN",
             no_lever_msg: "Không sử dụng đòn bẩy tài chính",
             cashflow_chart_title: "Biểu đồ Dòng tiền (VND)",
             net_flow: "Dòng tiền ròng",
@@ -61,8 +69,8 @@ export const Finance = ({
             btn_select: "Chọn",
             unit_year: "Năm",
             unit_percent_year: "%/Năm",
-            system_price: "SUẤT ĐẦU TƯ SOLAR (VNĐ/kWp)",
-            bess_price: "SUẤT ĐẦU TƯ BESS (VNĐ/kWh)",
+            system_price: "SUẤT ĐẦU TƯ SOLAR",
+            bess_price: "SUẤT ĐẦU TƯ BESS",
             co2_factor: "HỆ SỐ CO2",
             col_lcoe: "LCOE (VNĐ/kWh)",
             tip_capex: "Tổng mức đầu tư ban đầu\n= {Công suất × Giá Solar} + {Dung lượng × Giá BESS}",
@@ -72,6 +80,8 @@ export const Finance = ({
             tip_irr: "Tỷ suất Hoàn vốn Nội bộ (IRR)\n= Mức Lãi chiết khấu làm cho NPV bằng 0",
             tip_payback: "Thời gian hoàn vốn\n= Năm(t) khi Dòng tiền tích lũy >= 0 (Tức bồi hoàn toàn bộ mức đầu tư + Lãi tài trợ)",
             tip_discount: "Lãi chiết khấu (r)\n= Tỷ suất sinh lời kỳ vọng hoặc Lãi suất phi rủi ro + Phần bù rủi ro (thường 8-12%)",
+            tip_carbon: "Giá bán tín chỉ Carbon\n= Doanh thu từ việc giảm phát thải CO2 (thường $5-15/tCO2)",
+            tip_exchange: "Tỷ giá hối đoái VND/USD\n= Dùng để quy đổi các chi phí/doanh thu ngoại tệ",
             tip_escalation: "Lạm phát giá điện\n= Tỷ lệ tăng doanh thu tiết kiệm kỳ vọng hằng năm (thường 2-5%)",
             tip_om: "Chi phí O&M năm t\n= (% OM × CAPEX) × (1 + Tỷ lệ lạm phát)^t",
             tip_cycle: "Vòng đời dự án\n= Số năm đánh giá dòng tiền tài chính (thường 20-25 năm)",
@@ -84,26 +94,31 @@ export const Finance = ({
         },
         en: {
             title_finance: "Project Financial Map",
-            cycle: "PROJECT LIFE (Years)",
+            cycle: "PROJECT LIFE",
             escalation: "POWER ESCALATION",
             degradation: "PV DEGRADATION",
             discount: "DISCOUNT RATE",
             om: "O&M COST",
             battery_life: "BATTERY LIFE",
-            major_repair: "MAJOR REPAIR (% CAPEX)",
+            major_repair_title: "MAJOR REPAIR EVENTS",
+            major_repair_add: "+ Add repair event",
+            major_repair_event_label: "Repair #",
+            major_repair_year: "Year",
+            carbon_credit: "CARBON CREDIT",
+            exchange_rate: "USD/VND RATE",
             no_battery_msg: "No Battery (0 kWh). Replacement cost not applied.",
             om_schedule_title: "SCHEDULED O&M COSTS",
             om_year: "Year",
-            om_amount: "Amount (VND)",
+            om_amount: "Amount",
             om_add: "+ Add Cost",
             total_capex_manual: "Investment Capital Configuration",
             auto_calc_placeholder: "Auto-calculated...",
             manual_override_msg: "* Enter amount to override automatic calculation",
             title_loan: "Loan Configuration",
-            loan_ratio: "LOAN RATIO (%)",
+            loan_ratio: "LOAN RATIO",
             equity: "Equity",
-            interest_rate: "INTEREST RATE (%/Year)",
-            loan_term: "LOAN TERM (Years)",
+            interest_rate: "INTEREST RATE",
+            loan_term: "LOAN TERM",
             no_lever_msg: "No financial leverage used",
             cashflow_chart_title: "Cash Flow Chart (VND)",
             net_flow: "Net Cash Flow",
@@ -129,8 +144,8 @@ export const Finance = ({
             btn_select: "Select",
             unit_year: "Years",
             unit_percent_year: "%/Year",
-            system_price: "SOLAR CAPEX (VND/kWp)",
-            bess_price: "BESS CAPEX (VND/kWh)",
+            system_price: "SOLAR CAPEX",
+            bess_price: "BESS CAPEX",
             co2_factor: "CO2 FACTOR",
             col_lcoe: "LCOE (VND/kWh)",
             tip_capex: "Initial Investment\n= {Capacity × Solar Price} + {Capacity × BESS Price}",
@@ -245,14 +260,40 @@ export const Finance = ({
                     <div className="animate-in fade-in slide-in-from-top-2">
                         {/* 1. UNIT PRICES & CO2 */}
                         <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-slate-100">
-                            <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.system_price}</label><div className="relative"><input type="number" step={100000} value={params.systemPrice} onChange={(e) => setParams(prev => ({ ...prev, systemPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-1 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" /></div></div>
-                            {bessKwh > 0 && <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label><div className="relative"><input type="number" step={100000} value={params.bessPrice} onChange={(e) => setParams(prev => ({ ...prev, bessPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-1 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" /></div></div>}
-                            <div><label className="text-[9px] text-emerald-500 font-bold block mb-0.5">{dt.co2_factor}</label><div className="relative"><input type="number" step={0.001} value={params.co2Factor} onChange={(e) => setParams(prev => ({ ...prev, co2Factor: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-emerald-200 rounded bg-emerald-50/50 pr-6 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-300 outline-none" /><span className="absolute right-1.5 top-1.5 text-[9px] text-emerald-400 select-none">kg/kWh</span></div></div>
+                            <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.system_price}</label><div className="relative"><input type="number" step={100000} value={params.systemPrice} onChange={(e) => setParams(prev => ({ ...prev, systemPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-12 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">đ/kWp</span></div></div>
+                            <div>
+                                <label className="text-[9px] text-amber-500 font-bold block mb-0.5 group relative cursor-help w-fit">
+                                    {dt.carbon_credit} <HelpCircle size={8} />
+                                    <div className="absolute bottom-full mb-2 left-0 w-max max-w-[200px] p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                        {dt.tip_carbon}
+                                    </div>
+                                </label>
+                                <div className="relative">
+                                    <input type="number" step={1} value={finParams.carbonPrice} onChange={(e) => setFinParams(prev => ({ ...prev, carbonPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-amber-200 rounded bg-amber-50/50 pr-20 font-bold text-amber-700 focus:ring-1 focus:ring-amber-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                    <span className="absolute right-2 top-1.5 text-[9px] text-amber-400 select-none">$/tCO2</span>
+                                </div>
+                            </div>
+                            <div><label className="text-[9px] text-emerald-500 font-bold block mb-0.5">{dt.co2_factor}</label><div className="relative"><input type="number" step={0.001} value={params.co2Factor} onChange={(e) => setParams(prev => ({ ...prev, co2Factor: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-emerald-200 rounded bg-emerald-50/50 pr-20 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-emerald-400 select-none">kg/kWh</span></div></div>
                         </div>
+
+                        {bessKwh > 0 && (
+                             <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-slate-100">
+                                <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label><div className="relative"><input type="number" step={100000} value={params.bessPrice} onChange={(e) => setParams(prev => ({ ...prev, bessPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-16 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /><span className="absolute right-2 top-1.5 text-[9px] text-blue-400 select-none">đ/kWh</span></div></div>
+                                <div className="col-span-2"></div>
+                            </div>
+                        )}
 
                         {/* 2. FINANCIAL PARAMS */}
                         <div className="grid grid-cols-3 gap-2 mb-2">
-                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, hide: bessKwh === 0 }, { l: dt.major_repair, k: '_majorRepair', u: '%', v: finParams.inverterReplaceCost, step: 1 }].filter(p => !p.hide).map((p, i) => (
+                            {[
+                                { l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle },
+                                { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation },
+                                { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg },
+                                { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount },
+                                { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om },
+                                { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, hide: bessKwh === 0 },
+                                { l: dt.exchange_rate, k: 'usdExchangeRate', u: 'đ/$', v: finParams.usdExchangeRate, step: 100, tip: dt.tip_exchange }
+                            ].filter(p => !p.hide).map((p, i) => (
                                 <div key={i} className={p.dis ? 'opacity-40' : ''}>
                                     <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
                                         {p.l} {p.tip && <HelpCircle size={8} />}
@@ -263,68 +304,162 @@ export const Finance = ({
                                             </div>
                                         )}
                                     </label>
-                                    <div className="relative"><input type="number" step={p.step} value={p.v} disabled={p.dis} onChange={(e) => { const val = e.target.value === '' ? '' : Number(e.target.value); if (p.k === '_majorRepair') { setFinParams(prev => ({ ...prev, batteryReplaceCost: val, inverterReplaceCost: val })); } else { setFinParams(prev => ({ ...prev, [p.k]: val })); } }} className={`w-full p-1.5 text-xs border rounded pr-6 font-bold focus:ring-1 focus:ring-blue-200 outline-none ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div>
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            step={p.step} 
+                                            value={p.v} 
+                                            disabled={p.dis} 
+                                            className={`w-full p-1.5 text-xs border rounded font-bold focus:ring-1 focus:ring-blue-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${p.u.length > 3 ? 'pr-20' : 'pr-12'} ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} 
+                                        />
+                                        <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
 
+                        {/* 2.5 DYNAMIC MAJOR REPAIR EVENTS */}
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                             <div className="flex justify-between items-center mb-3">
+                                <label className="text-[10px] text-slate-600 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                                    <div className="p-1 bg-amber-100 text-amber-600 rounded-md shadow-sm"><Wrench size={10} /></div> {dt.major_repair_title}
+                                </label>
+                                <button
+                                    onClick={() => setFinParams(prev => ({ ...prev, majorRepairs: [...(prev.majorRepairs || []), { id: Date.now(), year: '', pct: '' }] }))}
+                                    className="text-[9px] bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-md font-bold transition-all border border-amber-200 cursor-pointer shadow-sm active:scale-95 flex items-center justify-center gap-1 min-w-[130px]"
+                                >
+                                    {dt.major_repair_add}
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {(finParams.majorRepairs || []).map((mr, idx) => (
+                                    <div key={mr.id || idx} className="grid grid-cols-12 gap-3 items-end p-3 bg-slate-50 border border-slate-200 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <div className="col-span-2">
+                                            <div className="text-[9px] text-slate-400 font-extrabold uppercase mb-1">{dt.major_repair_event_label} {idx + 1}</div>
+                                            <div className="h-9 flex items-center justify-center bg-white border border-slate-200 rounded-md shadow-sm font-bold text-slate-500 text-xs">
+                                                #{idx + 1}
+                                            </div>
+                                        </div>
+                                        <div className="col-span-4">
+                                            <label className="text-[9px] text-slate-400 font-bold ml-1 mb-1 block">{dt.major_repair_year}</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={mr.year}
+                                                    onChange={(e) => {
+                                                        const newRepairs = [...finParams.majorRepairs];
+                                                        newRepairs[idx].year = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setFinParams(prev => ({ ...prev, majorRepairs: newRepairs }));
+                                                    }}
+                                                    className="w-full p-2 text-xs border border-slate-200 rounded-md pr-12 font-bold bg-white text-slate-700 focus:ring-1 focus:ring-amber-300 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    placeholder="--"
+                                                />
+                                                <span className="absolute right-2 top-2.5 text-[9px] text-slate-400 font-bold">{dt.unit_year}</span>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-4">
+                                            <label className="text-[9px] text-slate-400 font-bold ml-1 mb-1 block">% CAPEX</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={mr.pct}
+                                                    onChange={(e) => {
+                                                        const newRepairs = [...finParams.majorRepairs];
+                                                        newRepairs[idx].pct = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setFinParams(prev => ({ ...prev, majorRepairs: newRepairs }));
+                                                    }}
+                                                    className="w-full p-2 text-xs border border-slate-200 rounded-md pr-12 font-bold bg-white text-amber-700 focus:ring-1 focus:ring-amber-300 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    placeholder="0"
+                                                />
+                                                <span className="absolute right-2 top-2.5 text-[10px] text-slate-400 font-bold">%</span>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-2 flex justify-end">
+                                            <button
+                                                onClick={() => {
+                                                    const newRepairs = finParams.majorRepairs.filter((_, i) => i !== idx);
+                                                    setFinParams(prev => ({ ...prev, majorRepairs: newRepairs }));
+                                                }}
+                                                className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-md transition-all border border-red-100 cursor-pointer shadow-sm"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* 3. SCHEDULED O&M */}
                         <div className="mt-4 pt-4 border-t border-slate-100">
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] text-slate-600 font-bold flex items-center gap-1">
-                                    <Settings size={12} className="text-slate-400" /> {dt.om_schedule_title}
+                            <div className="flex justify-between items-center mb-3">
+                                <label className="text-[10px] text-slate-600 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                                    <div className="p-1 bg-blue-100 text-blue-600 rounded-md shadow-sm"><Settings size={10} /></div> {dt.om_schedule_title}
                                 </label>
                                 <button
                                     onClick={() => setFinParams(prev => ({ ...prev, omSchedule: [...(prev.omSchedule || []), { year: '', amount: '' }] }))}
-                                    className="text-[9px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded font-medium transition-colors cursor-pointer"
+                                    className="text-[9px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-bold transition-all border border-blue-200 cursor-pointer shadow-sm active:scale-95 flex items-center justify-center gap-1 min-w-[130px]"
                                 >
                                     {dt.om_add}
                                 </button>
                             </div>
 
                             {(finParams.omSchedule || []).length > 0 && (
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {(finParams.omSchedule || []).map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                                            <div className="w-20">
+                                        <div key={idx} className="grid grid-cols-12 gap-3 items-end p-3 bg-slate-50 border border-slate-200 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="col-span-2">
+                                                <div className="text-[9px] text-slate-400 font-extrabold uppercase mb-1">#{idx + 1}</div>
+                                                <div className="h-9 flex items-center justify-center bg-white border border-slate-200 rounded-md shadow-sm font-bold text-slate-500 text-xs">
+                                                    #{idx + 1}
+                                                </div>
+                                            </div>
+                                            <div className="col-span-4">
+                                                <label className="text-[9px] text-slate-400 font-bold ml-1 mb-1 block">{dt.om_year}</label>
                                                 <div className="relative">
                                                     <input
                                                         type="number"
-                                                        placeholder={dt.om_year}
                                                         value={item.year}
+                                                        placeholder="--"
                                                         onChange={(e) => {
                                                             const newSchedule = [...finParams.omSchedule];
                                                             newSchedule[idx].year = e.target.value;
                                                             setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
                                                         }}
-                                                        className="w-full p-1.5 text-xs border rounded bg-white font-bold text-slate-700 outline-none focus:border-blue-300"
+                                                        className="w-full p-2 text-xs border border-slate-200 rounded-md pr-12 font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-300 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
+                                                    <span className="absolute right-2 top-2.5 text-[9px] text-slate-400 font-bold">{dt.unit_year}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex-1 relative">
-                                                <input
-                                                    type="number"
-                                                    placeholder={dt.om_amount}
-                                                    value={item.amount}
-                                                    onChange={(e) => {
-                                                        const newSchedule = [...finParams.omSchedule];
-                                                        newSchedule[idx].amount = e.target.value;
+                                            <div className="col-span-4">
+                                                <label className="text-[9px] text-slate-400 font-bold ml-1 mb-1 block">{dt.om_amount}</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        value={item.amount}
+                                                        placeholder="0"
+                                                        onChange={(e) => {
+                                                            const newSchedule = [...finParams.omSchedule];
+                                                            newSchedule[idx].amount = e.target.value;
+                                                            setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
+                                                        }}
+                                                        className="w-full p-2 text-xs border border-slate-200 rounded-md pr-16 font-bold bg-white text-blue-700 outline-none focus:ring-1 focus:ring-blue-300 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    />
+                                                    <span className="absolute right-2 top-2.5 text-[9px] text-slate-400 font-medium">VNĐ</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-2 flex justify-end">
+                                                <button
+                                                    onClick={() => {
+                                                        const newSchedule = finParams.omSchedule.filter((_, i) => i !== idx);
                                                         setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
                                                     }}
-                                                    className="w-full p-1.5 pr-8 text-xs border rounded bg-white font-bold text-slate-700 outline-none focus:border-blue-300"
-                                                />
-                                                <span className="absolute right-2 top-1.5 text-[9px] text-slate-400 font-medium select-none pointer-events-none">VNĐ</span>
+                                                    className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-md transition-all border border-red-100 cursor-pointer shadow-sm"
+                                                >
+                                                    <X size={14} />
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    const newSchedule = finParams.omSchedule.filter((_, i) => i !== idx);
-                                                    setFinParams(prev => ({ ...prev, omSchedule: newSchedule }));
-                                                }}
-                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                                                title="Remove"
-                                            >
-                                                <X size={14} />
-                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -389,14 +524,32 @@ export const Finance = ({
 
                     {finParams.loan.enable && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_ratio}</label><input type="number" value={finParams.loan.ratio} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, ratio: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded bg-blue-50 text-blue-900 text-xs font-bold outline-none" /></div>
-                                <div className="pt-4 text-[10px] text-slate-400">{dt.equity}: <span className="font-bold text-slate-700">{100 - finParams.loan.ratio}%</span></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.interest_rate}</label><input type="number" step="0.1" value={finParams.loan.rate} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, rate: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
-                                <div><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_term}</label><input type="number" value={finParams.loan.term} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, term: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none" /></div>
-                            </div>
+                             <div className="grid grid-cols-2 gap-3">
+                                 <div>
+                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_ratio}</label>
+                                     <div className="relative">
+                                         <input type="number" value={finParams.loan.ratio} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, ratio: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded bg-blue-50 text-blue-900 text-xs font-bold outline-none pr-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                         <span className="absolute right-2 top-1.5 text-[10px] text-blue-400 select-none font-bold">%</span>
+                                     </div>
+                                 </div>
+                                 <div className="pt-4 text-[10px] text-slate-400">{dt.equity}: <span className="font-bold text-slate-700">{100 - finParams.loan.ratio}%</span></div>
+                             </div>
+                             <div className="grid grid-cols-2 gap-3">
+                                 <div>
+                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.interest_rate}</label>
+                                     <div className="relative">
+                                         <input type="number" step="0.1" value={finParams.loan.rate} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, rate: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none pr-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                         <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none font-bold">{dt.unit_percent_year}</span>
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <label className="text-[9px] font-bold text-slate-400 block mb-0.5">{dt.loan_term}</label>
+                                     <div className="relative">
+                                         <input type="number" value={finParams.loan.term} onChange={(e) => setFinParams(prev => ({ ...prev, loan: { ...prev.loan, term: e.target.value === '' ? '' : Number(e.target.value) } }))} onFocus={(e) => e.target.select()} className="w-full p-1.5 border rounded text-xs font-bold outline-none pr-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                         <span className="absolute right-2 top-1.5 text-[10px] text-slate-400 select-none font-bold">{dt.unit_year}</span>
+                                     </div>
+                                 </div>
+                             </div>
                         </div>
                     )}
                 </div>
@@ -471,7 +624,7 @@ export const Finance = ({
                                     {currentFinance.cumulativeData.map((y, i) => (
                                         <tr key={i} className={`hover:bg-slate-50 border-b border-slate-100 ${y.year === 0 ? 'bg-orange-50' : ''} ${y.isReplacement ? 'bg-red-50' : ''}`}>
                                             <td className="p-3 font-bold text-slate-700">{y.year === 0 ? dt.year_0 : `${dt.year} ${y.year}`}</td>
-                                            <td className="p-3 text-center font-medium text-slate-700">{formatMoney(y.revenue)}</td>
+                                            <td className="p-3 text-center font-medium text-slate-700">{y.year > 0 ? formatMoney(y.revenue) : '-'}</td>
                                             <td className="p-3 text-center font-medium text-slate-500">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
                                             <td className="p-3 text-center font-bold text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
                                             <td className="p-3 text-center font-bold text-blue-600">{formatMoney(y.net)}</td>

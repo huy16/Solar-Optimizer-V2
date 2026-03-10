@@ -24,7 +24,7 @@ import { FormulaModal } from './presentation/components/FormulaModal';
 import { EVN_TARIFFS, TWO_PART_TARIFF, getTwoPartTariff } from './data/evn_tariffs';
 import { simulatePeakShaving, calculateDemandChargeSavings } from './domain/usecases/CalculatePeakShaving';
 
-import { Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
+import { Search, Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
 import { SmartDesignSelector } from './presentation/components/SmartDesignSelector';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -839,16 +839,22 @@ const SolarOptimizer = () => {
         discountRate: 10,
         omPercent: 1.5, // % of Capex
         batteryLife: 10,
-        batteryReplaceCost: 10, // % (merged into "SỬA CHỮA LỚN")
+        batteryReplaceCost: 10, // Default if not using specific events
         inverterLife: 20,
-        inverterReplaceCost: 10, // % (merged into "SỬA CHỮA LỚN")
+        inverterReplaceCost: 10, // Default if not using specific events
+        majorRepairs: [
+            { id: Date.now(), year: 10, pct: 10 },
+            { id: Date.now() + 1, year: 15, pct: 10 }
+        ],
         omSchedule: [], // [{year: number, amount: number}]
         loan: {
             enable: false,
             ratio: 70, // % Loan
             rate: 8.0, // % Interest
             term: 10 // Years
-        }
+        },
+        carbonPrice: 5.0, // USD / tCO2
+        usdExchangeRate: 25000 // VND / USD
     });
 
     // --- TARIFF CATEGORY STATE (REMOVED - Use pricingType/voltageLevelId from hook) ---
@@ -962,7 +968,17 @@ const SolarOptimizer = () => {
     // Design Mode State
     const [designMode, setDesignMode] = useState(null); // 'profile' or 'manual'
     const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const provinceDropdownRef = useRef(null);
+
+    const filteredProvinces = useMemo(() => {
+        if (!searchTerm) return PROVINCES;
+        const search = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return PROVINCES.filter(p => {
+            const name = p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return name.includes(search);
+        });
+    }, [searchTerm]);
 
 
 
@@ -1393,6 +1409,14 @@ const SolarOptimizer = () => {
 
         const finParamsFull = {
             ...finParams,
+            tax: {
+                enable: false,
+                rate: 0,
+                depreciationParam: 20 // Default value
+            },
+            insuranceRate: 0.5, // Default value
+            carbonPrice: finParams.carbonPrice,
+            usdExchangeRate: finParams.usdExchangeRate,
             batteryCapex // Pass explicit battery capex for replacement calculation
         };
 
@@ -2499,7 +2523,7 @@ const SolarOptimizer = () => {
                                         <tr className="bg-blue-50/30">
                                             <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs">{t.area_province || "KHU VỰC / TỈNH THÀNH"}</td>
                                             <td className="px-4 py-2 font-medium text-slate-700">
-                                                {solarSourceName !== "Mặc định (mô phỏng)" && solarSourceName !== "Default (Simulation)"
+                                                {solarSourceName && !["Mặc định (mô phỏng)", "Default (Simulation)", "GSA Hourly Profile"].includes(solarSourceName)
                                                     ? solarSourceName
                                                     : (selectedProvince?.name || (t.pdf.not_selected || "Chưa chọn"))}
                                             </td>
@@ -3313,7 +3337,10 @@ const SolarOptimizer = () => {
                         <div className="relative w-[250px]">
                             <div
                                 className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition w-full shadow-sm select-none"
-                                onClick={() => setShowProvinceDropdown(!showProvinceDropdown)}
+                                onClick={() => {
+                                    if (showProvinceDropdown) setSearchTerm('');
+                                    setShowProvinceDropdown(!showProvinceDropdown);
+                                }}
                             >
                                 {(() => {
                                     const style = getProvinceStyle(selectedProvince?.id);
@@ -3332,9 +3359,32 @@ const SolarOptimizer = () => {
                             </div>
 
                             {showProvinceDropdown && (
-                                <div className="absolute top-full mt-2 left-0 right-0 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in duration-200">
-                                    <div className="grid grid-cols-1 gap-1">
-                                        {PROVINCES.map(p => {
+                                <div className="absolute top-full mt-2 left-0 right-0 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] flex flex-col animate-in fade-in zoom-in duration-200">
+                                    {/* Search Input Box */}
+                                    <div className="relative mb-2 sticky top-0 bg-white z-10">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder={lang === 'vi' ? "Tìm kiếm tỉnh thành..." : "Search provinces..."}
+                                            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all bg-slate-50/50"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                        {searchTerm && (
+                                            <button 
+                                                onClick={() => setSearchTerm('')}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="overflow-y-auto overflow-x-hidden flex-1 pr-1 custom-scrollbar">
+                                        <div className="grid grid-cols-1 gap-1">
+                                            {filteredProvinces.length > 0 ? (
+                                                filteredProvinces.map(p => {
                                             const style = getProvinceStyle(p.id);
                                             const Icon = style.icon;
                                             return (
@@ -3359,8 +3409,15 @@ const SolarOptimizer = () => {
                                                         {p.peakSunHours.toFixed(2)}h
                                                     </span>
                                                 </div>
-                                            );
-                                        })}
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="py-8 text-center text-slate-400 flex flex-col items-center gap-2">
+                                                    <MapPin size={24} className="opacity-20" />
+                                                    <span className="text-xs italic">{lang === 'vi' ? 'Không tìm thấy kết quả' : 'No provinces found'}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}

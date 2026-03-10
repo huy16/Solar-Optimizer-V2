@@ -19,24 +19,27 @@ export const execute = (
 ) => {
     // Determine defaults
     const safeCapex = Number(capex) || 0;
-    const {
-        years = 20,
-        degradation = 0.55,
-        escalation = 2.0,
-        discountRate = 10.0,
-        omPercent = 1.0,
-        insuranceRate = 0.5,
-        batteryLife = 10,
-        batteryReplaceCostPct = 60, // % of initial battery capex
-        batteryReplaceCost, // Alias from UI
-        batteryCapex = 0,
-        inverterLife = 20,
-        inverterReplaceCostPct = 10, // % of initial system capex (excluding battery)
-        inverterReplaceCost, // Alias from UI
-        omSchedule = [], // [{year, amount}] one-time maintenance
-        loan = { enable: false, ratio: 70, rate: 8.0, term: 10 },
-        tax = { enable: true, rate: 20, depreciationParam: 20 } // CIT 20%
-    } = params || {};
+    const safeParams = params || {};
+    const years = Number(safeParams.years) || 20;
+    const degradation = Number(safeParams.degradation) ?? 0.55;
+    const escalation = Number(safeParams.escalation) ?? 2.0;
+    const discountRate = Number(safeParams.discountRate) ?? 10.0;
+    const omPercent = Number(safeParams.omPercent) ?? 1.0;
+    const insuranceRate = Number(safeParams.insuranceRate) ?? 0.5;
+    const batteryLife = Number(safeParams.batteryLife) || 10;
+    const batteryReplaceCostPct = Number(safeParams.batteryReplaceCostPct) ?? 60;
+    const batteryReplaceCost = safeParams.batteryReplaceCost !== undefined ? Number(safeParams.batteryReplaceCost) : undefined;
+    const batteryCapex = Number(safeParams.batteryCapex) || 0;
+    const inverterLife = Number(safeParams.inverterLife) || 20;
+    const inverterReplaceCostPct = Number(safeParams.inverterReplaceCostPct) ?? 10;
+    const inverterReplaceCost = safeParams.inverterReplaceCost !== undefined ? Number(safeParams.inverterReplaceCost) : undefined;
+    const omSchedule = safeParams.omSchedule || [];
+    const loan = safeParams.loan || { enable: false, ratio: 70, rate: 8.0, term: 10 };
+    const tax = safeParams.tax || { enable: true, rate: 20, depreciationParam: 20 };
+
+    const majorRepairs = safeParams.majorRepairs || [];
+    const carbonPrice = Number(safeParams.carbonPrice) || 0; // USD / tCO2
+    const usdExchangeRate = Number(safeParams.usdExchangeRate) || 25000; // VND / USD
 
     const safeBatteryCapex = Number(batteryCapex) || 0;
     const systemCapexOnly = Math.max(0, safeCapex - safeBatteryCapex);
@@ -98,7 +101,7 @@ export const execute = (
     cashFlows = [-equity];
     cumulative = -equity;
     let hasGoneNegative = cumulative < 0;
-    cumulativeData = [{ year: 0, net: -equity, acc: -equity }];
+    cumulativeData = [{ year: 0, revenue: 0, om: 0, replace: 0, net: -equity, acc: -equity }];
     paybackYear = null;
 
     for (let i = 1; i <= years; i++) {
@@ -112,7 +115,8 @@ export const execute = (
         const gridChargeNotDegraded = costGridCharge * escFactor; // Grid charge cost only escalates, no degradation
         // Demand charge saving: escalates with electricity price, but NOT affected by panel degradation
         const demandSavingEscalated = (Number(demandChargeSaving) || 0) * escFactor;
-        const annualRevenue = solarRevenueDegraded - gridChargeNotDegraded + demandSavingEscalated;
+        const carbonRevenue = ((totalUsed + totalExported) * degFactor * (params.co2Factor || 0.816) * (carbonPrice / 1000) * usdExchangeRate) * escFactor;
+        const annualRevenue = solarRevenueDegraded - gridChargeNotDegraded + demandSavingEscalated + carbonRevenue;
         const omCost = safeCapex * ((omPercent || 0) / 100) * escFactor;
         const insCost = safeCapex * ((insuranceRate || 0) / 100);
         const scheduledOm = (omSchedule || []).filter(e => Number(e.year) === i).reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -121,13 +125,22 @@ export const execute = (
 
         // Replacement
         const effectiveBatReplacePct = batteryReplaceCost !== undefined ? batteryReplaceCost : batteryReplaceCostPct;
-        if (safeBatteryCapex > 0 && i % (batteryLife || 10) === 0 && i < years) {
+        if (safeBatteryCapex > 0 && i % (batteryLife || 10) === 0 && i <= years) {
             replaceCost += safeBatteryCapex * ((effectiveBatReplacePct || 0) / 100) * escFactor;
         }
         const effectiveInvReplacePct = inverterReplaceCost !== undefined ? inverterReplaceCost : inverterReplaceCostPct;
-        if (i % (inverterLife || 20) === 0 && i < years) {
+        if (i % (inverterLife || 20) === 0 && i <= years) {
             replaceCost += systemCapexOnly * ((effectiveInvReplacePct || 0) / 100) * escFactor;
         }
+
+        // 2. Specific Major Repairs (NHẬP SỐ LẦN)
+        (majorRepairs || []).forEach(mr => {
+            const yr = Number(mr.year);
+            const pct = Number(mr.pct);
+            if (yr === i && pct > 0) {
+                replaceCost += safeCapex * (pct / 100) * escFactor;
+            }
+        });
 
         // Loan
         let interestPaid = 0;
