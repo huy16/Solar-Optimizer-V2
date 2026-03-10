@@ -22,9 +22,7 @@ export const Finance = ({
             discount: "LÃI CHIẾT KHẤU",
             om: "CHI PHÍ O&M",
             battery_life: "TUỔI THỌ PIN",
-            battery_replace_pct: "PHÍ THAY PIN (% GIÁ GỐC)",
-            inverter_life: "TUỔI THỌ INVERTER",
-            inverter_replace_pct: "PHÍ THAY INV (% CAPEX HỆ THỐNG)",
+            major_repair: "SỬA CHỮA LỚN (% CAPEX)",
             no_battery_msg: "Chưa có Pin (0 kWh). Phí thay pin sẽ không tính.",
             om_schedule_title: "CHI PHÍ O&M BỔ SUNG (THEO NĂM)",
             om_year: "Năm",
@@ -92,9 +90,7 @@ export const Finance = ({
             discount: "DISCOUNT RATE",
             om: "O&M COST",
             battery_life: "BATTERY LIFE",
-            battery_replace_pct: "BATTERY REPLACEMENT (% OF CAPEX)",
-            inverter_life: "INVERTER LIFE",
-            inverter_replace_pct: "INVERTER REPLACEMENT (% SYS CAPEX)",
+            major_repair: "MAJOR REPAIR (% CAPEX)",
             no_battery_msg: "No Battery (0 kWh). Replacement cost not applied.",
             om_schedule_title: "SCHEDULED O&M COSTS",
             om_year: "Year",
@@ -250,13 +246,13 @@ export const Finance = ({
                         {/* 1. UNIT PRICES & CO2 */}
                         <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b border-slate-100">
                             <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.system_price}</label><div className="relative"><input type="number" step={100000} value={params.systemPrice} onChange={(e) => setParams(prev => ({ ...prev, systemPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-1 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" /></div></div>
-                            <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label><div className="relative"><input type="number" step={100000} value={params.bessPrice} onChange={(e) => setParams(prev => ({ ...prev, bessPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-1 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" /></div></div>
+                            {bessKwh > 0 && <div><label className="text-[9px] text-blue-500 font-bold block mb-0.5">{dt.bess_price}</label><div className="relative"><input type="number" step={100000} value={params.bessPrice} onChange={(e) => setParams(prev => ({ ...prev, bessPrice: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-blue-200 rounded bg-blue-50/50 pr-1 font-bold text-blue-700 focus:ring-1 focus:ring-blue-300 outline-none" /></div></div>}
                             <div><label className="text-[9px] text-emerald-500 font-bold block mb-0.5">{dt.co2_factor}</label><div className="relative"><input type="number" step={0.001} value={params.co2Factor} onChange={(e) => setParams(prev => ({ ...prev, co2Factor: Number(e.target.value) }))} className="w-full p-1.5 text-xs border border-emerald-200 rounded bg-emerald-50/50 pr-6 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-300 outline-none" /><span className="absolute right-1.5 top-1.5 text-[9px] text-emerald-400 select-none">kg/kWh</span></div></div>
                         </div>
 
                         {/* 2. FINANCIAL PARAMS */}
                         <div className="grid grid-cols-3 gap-2 mb-2">
-                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, dis: bessKwh === 0 }, { l: dt.battery_replace_pct, k: 'batteryReplaceCost', u: '%', v: finParams.batteryReplaceCost, step: 1, dis: bessKwh === 0 }, { l: dt.inverter_life, k: 'inverterLife', u: dt.unit_year, v: finParams.inverterLife, step: 1 }, { l: dt.inverter_replace_pct, k: 'inverterReplaceCost', u: '%', v: finParams.inverterReplaceCost, step: 1 }].map((p, i) => (
+                            {[{ l: dt.cycle, k: 'years', u: dt.unit_year, v: finParams.years, step: 1, tip: dt.tip_cycle }, { l: dt.escalation, k: 'escalation', u: dt.unit_percent_year, v: finParams.escalation, step: 0.1, tip: dt.tip_escalation }, { l: dt.degradation, k: 'degradation', u: dt.unit_percent_year, v: finParams.degradation, step: 0.05, tip: dt.tip_deg }, { l: dt.discount, k: 'discountRate', u: '%', v: finParams.discountRate, step: 0.1, tip: dt.tip_discount }, { l: dt.om, k: 'omPercent', u: dt.unit_percent_year, v: finParams.omPercent, step: 0.1, tip: dt.tip_om }, { l: dt.battery_life, k: 'batteryLife', u: dt.unit_year, v: finParams.batteryLife, step: 1, hide: bessKwh === 0 }, { l: dt.major_repair, k: '_majorRepair', u: '%', v: finParams.inverterReplaceCost, step: 1 }].filter(p => !p.hide).map((p, i) => (
                                 <div key={i} className={p.dis ? 'opacity-40' : ''}>
                                     <label className="text-[9px] text-slate-400 font-bold mb-0.5 flex items-center gap-1 group relative cursor-help w-fit">
                                         {p.l} {p.tip && <HelpCircle size={8} />}
@@ -267,7 +263,7 @@ export const Finance = ({
                                             </div>
                                         )}
                                     </label>
-                                    <div className="relative"><input type="number" step={p.step} value={p.v} disabled={p.dis} onChange={(e) => setFinParams(prev => ({ ...prev, [p.k]: e.target.value === '' ? '' : Number(e.target.value) }))} className={`w-full p-1.5 text-xs border rounded pr-6 font-bold focus:ring-1 focus:ring-blue-200 outline-none ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div>
+                                    <div className="relative"><input type="number" step={p.step} value={p.v} disabled={p.dis} onChange={(e) => { const val = e.target.value === '' ? '' : Number(e.target.value); if (p.k === '_majorRepair') { setFinParams(prev => ({ ...prev, batteryReplaceCost: val, inverterReplaceCost: val })); } else { setFinParams(prev => ({ ...prev, [p.k]: val })); } }} className={`w-full p-1.5 text-xs border rounded pr-6 font-bold focus:ring-1 focus:ring-blue-200 outline-none ${p.dis ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700'}`} /><span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400 select-none">{p.u}</span></div>
                                 </div>
                             ))}
                         </div>
@@ -334,8 +330,6 @@ export const Finance = ({
                                 </div>
                             )}
                         </div>
-
-                        {bessKwh === 0 && (<div className="mt-2 bg-orange-50 border border-orange-100 rounded p-2 flex items-center gap-2"><AlertCircle size={12} className="text-orange-500" /><span className="text-[10px] text-orange-700">{dt.no_battery_msg}</span></div>)}
                     </div>
                 )}
             </div>

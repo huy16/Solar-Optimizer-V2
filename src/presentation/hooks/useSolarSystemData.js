@@ -15,6 +15,7 @@ export const useSolarSystemData = () => {
     const [loadTag, setLoadTag] = useState({ label: '', isWeekendOff: false });
     const [solarMetadata, setSolarMetadata] = useState(null);
     const [showFormulaModal, setShowFormulaModal] = useState(false);
+    const [isSmoothSolarProfile, setIsSmoothSolarProfile] = useState(false);
 
     // Xử lý File Upload (Excel Load / Solar)
     const handleFileUpload = useCallback(async (event, type = 'load') => {
@@ -346,6 +347,7 @@ export const useSolarSystemData = () => {
         loadTag, setLoadTag,
         solarMetadata, setSolarMetadata,
         handleFileUpload,
-        showFormulaModal, setShowFormulaModal
+        showFormulaModal, setShowFormulaModal,
+        isSmoothSolarProfile, setIsSmoothSolarProfile
     };
 };

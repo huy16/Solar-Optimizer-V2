@@ -144,8 +144,15 @@ export const Dashboard = ({
             correlation_title: "Tương quan Load và Solar (kW)",
             grid_import_bess: "Grid Import vs Solar (với BESS) (kW)",
             monthly_overview: "Tổng quan Năng lượng Hàng tháng (kWh)",
-            solar_used: "Sản lượng tự dùng",
-            curtailed: "Phát lên lưới/Cắt giảm",
+            solar_production: "Sản lượng Solar",
+            solar_tooltip: "Giá trị trung bình hàng",
+            solar_tooltip_suffix: "tính trên toàn bộ dữ liệu 1 năm.",
+            consumption: "Tiêu thụ",
+            consumption_tooltip: "Phụ tải tiêu thụ trung bình hàng",
+            self_consumed: "Tự dùng",
+            grid_exported: "Phát lưới/Cắt giảm",
+            from_solar: "Từ Solar",
+            from_grid: "Từ lưới",
             grid_import: "Điện mua lưới",
             load_solar_12m: "Biểu đồ Load & Solar 12 Tháng (kW)",
             synthetic_msg: "Đang sử dụng dữ liệu Tổng hợp (Synthetic)",
@@ -164,20 +171,9 @@ export const Dashboard = ({
             view_day_lc: "ngày",
             view_month_lc: "tháng",
             view_year_lc: "năm",
-            solar_production: "Sản lượng Solar",
-            solar_tooltip: "Giá trị trung bình hàng",
-            solar_tooltip_suffix: "tính trên toàn bộ dữ liệu 1 năm.",
-            self_consumed: "Tự dùng:",
-            grid_exported: "Phát lên lưới:",
-            consumption: "Tiêu thụ",
-            consumption_tooltip: "Phụ tải tiêu thụ trung bình hàng",
-            from_solar: "Từ Solar:",
-            from_grid: "Từ lưới:",
             chart_solar: "Solar",
             chart_weekend_load: "Tải cuối tuần",
             chart_weekday_load: "Phụ tải (T2-T7)",
-            chart_solar_yield: "Sản lượng Solar",
-            chart_self_use: "Sản lượng tự dùng",
             chart_solar_yield: "Sản lượng Solar",
             chart_self_use: "Sản lượng tự dùng",
             chart_grid_import: "Điện mua lưới",
@@ -204,8 +200,15 @@ export const Dashboard = ({
             correlation_title: "Load vs Solar Correlation (kW)",
             grid_import_bess: "Grid Import vs Solar (with BESS) (kW)",
             monthly_overview: "Monthly Energy Overview (kWh)",
-            solar_used: "Solar Energy (Used)",
-            curtailed: "Curtailment / Excess",
+            solar_production: "SOLAR PRODUCTION",
+            solar_tooltip: "Average value per",
+            solar_tooltip_suffix: "calculated over the entire year.",
+            consumption: "LOAD CONSUMPTION",
+            consumption_tooltip: "Average consumption per",
+            self_consumed: "Self-consumption",
+            grid_exported: "Grid Export/Curtailed",
+            from_solar: "Met from Solar",
+            from_grid: "Met from Grid",
             grid_import: "Grid Import",
             load_solar_12m: "12-Month Load & Solar Curves (kW)",
             synthetic_msg: "Using Synthetic Data",
@@ -224,15 +227,6 @@ export const Dashboard = ({
             view_day_lc: "day",
             view_month_lc: "month",
             view_year_lc: "year",
-            solar_production: "Solar Production",
-            solar_tooltip: "Average value per",
-            solar_tooltip_suffix: "calculated over the entire year.",
-            self_consumed: "Self-consumption:",
-            grid_exported: "Grid Export:",
-            consumption: "Consumption",
-            consumption_tooltip: "Average consumption per",
-            from_solar: "From Solar:",
-            from_grid: "From Grid:",
             chart_solar: "Solar",
             chart_weekend_load: "Weekend Load",
             chart_weekday_load: "Weekday Load",
@@ -243,11 +237,11 @@ export const Dashboard = ({
             co2_saved: "CO₂ Avoided",
             trees_planted: "Trees Planted",
             coal_saved: "Coal Saved",
-            oil_saved: "Standard Oil Saved",
-            unit_ton: "Tonnes",
+            oil_saved: "Oil Saved",
+            unit_ton: "Tons",
             unit_trees: "Trees",
             unit_liters: "Liters",
-            view_avg: "Avg Year",
+            view_avg: "Year Avg",
             view_peak_load: "Peak Load"
         }
     }[lang];
@@ -715,10 +709,10 @@ export const Dashboard = ({
                                 <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" tickFormatter={formatKValue} />
                                 <RechartsTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={TOOLTIP_STYLE} formatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(1).replace('.', ',') + 'k' : Math.round(val)} kWh`} />
                                 <Legend wrapperStyle={{ paddingTop: '5px', fontSize: '10px' }} />
-                                <Bar dataKey="used" stackId="solar" name={dt.solar_used} fill="#f97316" isAnimationActive={false} />
-                                <Bar dataKey="curtailed" stackId="solar" name={dt.curtailed} fill="#22c55e" fillOpacity={0.6} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                                <Bar dataKey="used" stackId="solar" name={dt.self_consumed} fill="#f97316" fillOpacity={0.7} isAnimationActive={false} />
+                                <Bar dataKey="curtailed" stackId="solar" name={dt.grid_exported} fill="#22c55e" fillOpacity={0.6} radius={[4, 4, 0, 0]} isAnimationActive={false} />
                                 <Line type="monotone" dataKey="load" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, strokeWidth: 1 }} name={dt.load} connectNulls isAnimationActive={false} />
-                                <Line type="monotone" dataKey="gridImport" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name={dt.grid_import} connectNulls isAnimationActive={false} />
+                                <Line type="monotone" dataKey="gridImport" stroke="#7c3aed" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2, fill: '#7c3aed' }} name={dt.grid_import} connectNulls isAnimationActive={false} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>

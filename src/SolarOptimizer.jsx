@@ -283,7 +283,10 @@ const TRANSLATIONS = {
             loaded_short: "Đã tải",
             loaded: "Đã tải: ",
             pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
-            sun_off: "CN Nghỉ"
+            sun_off: "CN Nghỉ",
+            profile_shape: "Loại Profile",
+            shape_realistic: "Thực tế ⚡",
+            shape_smooth: "Sóng Sin 🌊"
         },
         formulas: {
             pv_total: "Σ ( Sản lượng PV hàng tháng )",
@@ -480,7 +483,6 @@ const TRANSLATIONS = {
             spec_name: "SPECIFICATION",
             spec_value: "VALUE",
             spec_unit: "UNIT",
-            scenario_comparison: "Investment Scenario Comparison",
             scenario_name: "SCENARIO"
         },
         months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -555,7 +557,10 @@ const TRANSLATIONS = {
             loaded_short: "Loaded",
             loaded: "Loaded: ",
             pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
-            sun_off: "Sun Off"
+            sun_off: "Sun Off",
+            profile_shape: "Profile Type",
+            shape_realistic: "Realistic ⚡",
+            shape_smooth: "Sine Wave 🌊"
         },
         formulas: {
             pv_total: "Σ ( Monthly Solar Generation )",
@@ -783,7 +788,8 @@ const SolarOptimizer = () => {
         loadTag, setLoadTag,
         solarMetadata, setSolarMetadata,
         handleFileUpload: onFileUpload,
-        showFormulaModal, setShowFormulaModal
+        showFormulaModal, setShowFormulaModal,
+        isSmoothSolarProfile, setIsSmoothSolarProfile
     } = useSolarSystemData();
 
     // 2. CONFIG HOOK (Updated)
@@ -820,7 +826,6 @@ const SolarOptimizer = () => {
     }, {
         gridInjectionPrice: 600,
         inverterMaxAcKw: 0, // Will be updated by hook logic or manual
-        inverterMaxAcKw: 0, // Will be updated by hook logic or manual
         losses: { temp: 0, soiling: 0, cable: 0, inverter: 0 } // Total 0%
     });
 
@@ -834,9 +839,9 @@ const SolarOptimizer = () => {
         discountRate: 10,
         omPercent: 1.5, // % of Capex
         batteryLife: 10,
-        batteryReplaceCost: 80, // % of initial price
+        batteryReplaceCost: 10, // % (merged into "SỬA CHỮA LỚN")
         inverterLife: 20,
-        inverterReplaceCost: 10, // % of system capex (excl. battery)
+        inverterReplaceCost: 10, // % (merged into "SỬA CHỮA LỚN")
         omSchedule: [], // [{year: number, amount: number}]
         loan: {
             enable: false,
@@ -871,8 +876,8 @@ const SolarOptimizer = () => {
     // Fetch the detailed 8760 hourly data for the selected province
     useEffect(() => {
         if (!selectedProvince) return;
-        if (selectedProvince.id === 'vietnam_average') {
-            setLoadedGsaProfile(null); // Fallback to math curve
+        if (selectedProvince.id === 'vietnam_average' || selectedProvince.id === 'viet_nam') {
+            setLoadedGsaProfile(null); // Fallback to math curve (no GSA 8760 file for these)
             return;
         }
 
@@ -915,19 +920,19 @@ const SolarOptimizer = () => {
             siteName: selectedProvince.name,
             lat: 0, lon: 0, // Placeholder
             yield_yearly: selectedProvince.yield_yearly
-        }, `${prefix}: ${pName} - ${suffix}`)[0];
+        }, `${prefix}: ${pName} - ${suffix}`, isSmoothSolarProfile)[0];
 
         setSolarLayers(prev => {
-            // Check if this province layer already exists to avoid dupes?
-            const exists = prev.find(l => l.title === newLayer.title);
-            if (exists) return prev;
-            // Add to top
-            return [newLayer, ...prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '))];
+            // Remove any existing standard layer for this province to allow replacing it with the new profile shape
+            const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
+            
+            // Add the newly generated layer to the top
+            return [newLayer, ...filteredPrev];
         });
         // Auto-select
         setSelectedLayerIndex(0);
 
-    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex, lang, t]);
+    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex, lang, t, isSmoothSolarProfile]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -1169,6 +1174,66 @@ const SolarOptimizer = () => {
 
     }, []);
 
+    // Handle the loaded GSA Profile (Standard/Jagged vs Missing Base)
+    useEffect(() => {
+        if (!loadedGsaProfile) return;
+        // If user wants Sine Wave, skip: the province-change effect (line ~904) handles it
+        if (isSmoothSolarProfile) return;
+
+        // If the API call succeeded, we have 8760 hourly data.
+        // We structure it as a new Solar Layer 
+        const gsaMap = new Map();
+        let annualSum = 0;
+        loadedGsaProfile.forEach((val, hourOfYear) => {
+            // Very critical: The 8760 array is 0-indexed. Convert to M-D-H-0.
+            const date = new Date(Date.UTC(2023, 0, 1, Math.floor(hourOfYear)));
+            const m = date.getUTCMonth();
+            const d = date.getUTCDate();
+            const h = date.getUTCHours();
+            gsaMap.set(`${m}-${d}-${h}-0`, val);
+            annualSum += val;
+        });
+
+        const prefix = lang === 'vi' ? 'Tiêu chuẩn' : 'Standard';
+        const suffix = t.pdf.monthly_agg || (lang === 'vi' ? 'Dữ liệu tháng tổng hợp' : 'Monthly Aggregated Data');
+        const pName = (lang === 'en' && selectedProvince.id === 'viet_nam') ? 'Viet Nam' : selectedProvince.name;
+
+        let newLayer;
+
+        if (isSmoothSolarProfile) {
+            // If they want smooth, we ignore the jagged JSON data and generate a smooth curve from monthly totals
+            const monthlyGhi = selectedProvince.monthly_distribution || Array(12).fill(selectedProvince.peakSunHours * 30);
+            newLayer = generateSolarProfile(monthlyGhi, {
+                siteName: selectedProvince.name,
+                lat: 0, lon: 0,
+                yield_yearly: selectedProvince.yield_yearly
+            }, `${prefix}: ${pName} - ${suffix}`, true)[0];
+        } else {
+            newLayer = {
+                title: `${prefix}: ${pName} - ${suffix}`,
+                map: gsaMap,
+                source: "GSA Hourly Profile",
+                name: "PVOUT",
+                score: 10,
+                meta: {
+                    dataType: "Total Generation",
+                    annualValue: annualSum,
+                    capacity: 1 // Normalize to 1kWp equivalent if possible, but keeping simple
+                }
+            };
+        }
+
+        setSolarLayers(prev => {
+            // Remove existing standard layers
+            const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
+            return [newLayer, ...filteredPrev];
+        });
+        
+        // Auto-select
+        setSelectedLayerIndex(0);
+
+    }, [loadedGsaProfile, setSolarLayers, setSelectedLayerIndex, lang, t, selectedProvince, isSmoothSolarProfile]);
+
     useEffect(() => {
         if (!isManualConfig) {
             // Use the centralized auto-select logic from the hook
@@ -1342,7 +1407,7 @@ const SolarOptimizer = () => {
     useEffect(() => {
         if (rawData.length === 0) return;
         setIsProcessing(true);
-        setTimeout(() => {
+        const processingTimer = setTimeout(() => {
             let failCount = 0;
             const cleanData = rawData.map((d) => {
                 const date = parseAnyDate(d.rawTime, isSwappedDate);
@@ -1352,19 +1417,13 @@ const SolarOptimizer = () => {
                 // 1. If it's a specific user-uploaded file (not 'Standard' province default)
                 // 2. If it's the jagged 8760 GSA data
                 // 3. Fallback to math curve
-                const isStandardProvinceLayer = solarSourceName && (solarSourceName.includes('Standard') || solarSourceName.includes('tổng hợp'));
 
-                if (realSolarProfile && (!loadedGsaProfile || !isStandardProvinceLayer)) {
+                if (realSolarProfile) {
                     const keyExact = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
                     const keyHour = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-0`;
                     const keyMonthly = `MONTHLY-${date.getMonth()}-${date.getHours()}`;
                     const realVal = realSolarProfile.get(keyExact) ?? realSolarProfile.get(keyHour) ?? realSolarProfile.get(keyMonthly);
                     solarUnit = (realVal !== undefined) ? realVal : 0;
-                } else if (loadedGsaProfile) {
-                    const startOfYear = new Date(date.getFullYear(), 0, 1);
-                    const diffTime = (date.getTime() - startOfYear.getTime()) / 3600000;
-                    const hourOfYear = Math.max(0, Math.floor(diffTime)) % 8760;
-                    solarUnit = loadedGsaProfile[hourOfYear] || 0;
                 } else {
                     let currentPsh = params.psh;
                     if (selectedProvince && selectedProvince.monthly_distribution) {
@@ -1495,7 +1554,8 @@ const SolarOptimizer = () => {
             if (isNewFileLoad.current) { setTargetKwp(detectedKwp || Math.round(maxLoad)); isNewFileLoad.current = false; }
             setIsProcessing(false);
         }, 50); // Reduced delay
-    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp, selectedProvince, loadedGsaProfile]);
+        return () => clearTimeout(processingTimer);
+    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp, selectedProvince]);
 
 
 
@@ -3161,7 +3221,25 @@ const SolarOptimizer = () => {
                                     )}
                                 </div>
                                 {solarMetadata && !!solarMetadata.lat && (<div className="text-[9px] text-blue-400 mt-1 flex gap-1 pt-1 border-t border-slate-100"><MapPin size={10} className="mt-0.5" /> {solarMetadata.siteName ? solarMetadata.siteName.substring(0, 10) : ''} ({solarMetadata.lat.toFixed(2)}, {solarMetadata.lon.toFixed(2)})</div>)}
-
+                                
+                                {/* Solar Profile Shape Toggle */}
+                                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-slate-500">{t.status.profile_shape || "Solar Profile Shape"}</span>
+                                    <div className="flex bg-slate-100 rounded p-0.5 border border-slate-200">
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(false)}
+                                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${!isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_realistic || "Realistic ⚡"}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(true)}
+                                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_smooth || "Sine Wave 🌊"}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Weather Scenario - Separate Box */}
