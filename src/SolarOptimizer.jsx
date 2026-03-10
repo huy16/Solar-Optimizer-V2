@@ -1111,13 +1111,17 @@ const SolarOptimizer = () => {
         const t = (currentSolarLayer.title || '').toUpperCase();
         const n = (currentSolarLayer.name || '').toUpperCase();
         const s = (currentSolarLayer.source || '').toUpperCase();
-        const type = (solarMetadata && solarMetadata.sourceType) || '';
+        
+        // Exclude standard province profiles from being treated as "Actual Yield"
+        // so that technical losses (temp, soiling, etc.) are applied to them.
+        const isStandard = t.startsWith('TIÊU CHUẨN') || t.startsWith('STANDARD');
+        if (isStandard) return false;
 
-        // PVOUT, GSA Monthly, or Synthetic profiles represent actual AC/DC yield
+        // PVOUT, GSA Monthly, or Synthetic profiles from uploaded files represent actual AC/DC yield
         return t.includes('PVOUT') || n.includes('PVOUT') || t.includes('SẢN LƯỢNG ĐIỆN') ||
             s.includes('GSA MONTHLY') || s.includes('GSA TRANSPOSED') ||
             s.includes('EXCEL (PVOUT');
-    }, [currentSolarLayer, solarMetadata]);
+    }, [currentSolarLayer]);
 
     useEffect(() => {
         setTechParams(prev => {
