@@ -3351,7 +3351,7 @@ const SolarOptimizer = () => {
             </aside>
 
             <main className={`flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 gap-4">
+                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-40 gap-4">
                     <div className="flex items-center gap-3 shrink-0">
                         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
                             {isSidebarOpen ? <Menu size={20} className="rotate-180" /> : <Menu size={20} />}
