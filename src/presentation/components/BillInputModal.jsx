@@ -5,12 +5,19 @@ import { LOAD_PROFILES } from '../../utils/loadProfileGenerator';
 import ALL_PROVINCES from '../../data/provinces.json';
 import { EVN_TARIFFS, calculateBlendedPrice } from '../../data/evn_tariffs';
 
+const VietnamFlagIcon = ({ size = 18, className, ...props }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
+        <rect width="18" height="18" x="3" y="3" rx="4" fill="#DA251D" />
+        <path d="M12 7.5L13.1 10.1L15.9 10.4L13.8 12.2L14.4 15L12 13.6L9.6 15L10.2 12.2L8.1 10.4L10.9 10.1L12 7.5Z" fill="#FFFF00" />
+    </svg>
+);
+
 export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill Input", lang = 'vi' }) => {
     // Basic Data State
     const [monthlyData, setMonthlyData] = useState(Array(12).fill(0));
 
     // Advanced Configuration State
-    const [province, setProvince] = useState('TP. Hồ Chí Minh');
+    const [province, setProvince] = useState('Việt Nam');
     const [customerGroup, setCustomerGroup] = useState('retail_manufacturing'); // business, manufacture, admin
     const [voltageLevel, setVoltageLevel] = useState('22kv_110kv'); // 110kv_plus, 22kv_110kv, 6kv_22kv, under_6kv
 
@@ -457,7 +464,13 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     <span className={province ? 'text-slate-800 flex items-center gap-2' : 'text-slate-400'}>
                                         {province ? (
                                             <>
-                                                <span className="text-sm">{ALL_PROVINCES.find(p => p.name === province)?.icon || "📍"}</span>
+                                                <span className="text-sm flex items-center">
+                                                    {province === "Việt Nam" ? (
+                                                        <VietnamFlagIcon size={16} />
+                                                    ) : (
+                                                        ALL_PROVINCES.find(p => p.name === province)?.icon || "📍"
+                                                    )}
+                                                </span>
                                                 <span>{province}</span>
                                             </>
                                         ) : t.select_province}
@@ -483,7 +496,13 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                     onClick={() => { setProvince(p.name); setShowProvinceList(false); setSearchTerm(''); }}
                                                     className="px-5 py-3 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors border-b border-slate-50/50 last:border-0 font-medium flex items-center gap-2"
                                                 >
-                                                    <span className="text-sm">{p.icon || "📍"}</span>
+                                                    <span className="text-sm flex items-center">
+                                                        {p.name === "Việt Nam" ? (
+                                                            <VietnamFlagIcon size={16} />
+                                                        ) : (
+                                                            p.icon || "📍"
+                                                        )}
+                                                    </span>
                                                     <span>{p.name}</span>
                                                 </div>
                                             ))}

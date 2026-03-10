@@ -773,7 +773,7 @@ const getProvinceStyle = (id) => {
 // --- COMPONENT CHINH ---
 const SolarOptimizer = () => {
     const [lang, setLang] = useState('vi'); // Default language
-    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'ho_chi_minh') || PROVINCES[0]);
+    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'viet_nam') || PROVINCES[0]);
 
 
     const t = TRANSLATIONS[lang];
@@ -925,7 +925,7 @@ const SolarOptimizer = () => {
         setSolarLayers(prev => {
             // Remove any existing standard layer for this province to allow replacing it with the new profile shape
             const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
-            
+
             // Add the newly generated layer to the top
             return [newLayer, ...filteredPrev];
         });
@@ -1228,7 +1228,7 @@ const SolarOptimizer = () => {
             const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
             return [newLayer, ...filteredPrev];
         });
-        
+
         // Auto-select
         setSelectedLayerIndex(0);
 
@@ -3221,7 +3221,7 @@ const SolarOptimizer = () => {
                                     )}
                                 </div>
                                 {solarMetadata && !!solarMetadata.lat && (<div className="text-[9px] text-blue-400 mt-1 flex gap-1 pt-1 border-t border-slate-100"><MapPin size={10} className="mt-0.5" /> {solarMetadata.siteName ? solarMetadata.siteName.substring(0, 10) : ''} ({solarMetadata.lat.toFixed(2)}, {solarMetadata.lon.toFixed(2)})</div>)}
-                                
+
                                 {/* Solar Profile Shape Toggle */}
                                 <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-slate-500">{t.status.profile_shape || "Solar Profile Shape"}</span>

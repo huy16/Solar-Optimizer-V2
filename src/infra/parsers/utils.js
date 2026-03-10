@@ -17,14 +17,14 @@ export const generateSolarProfile = (monthlyGhi, metadata, sourceName, isSmoothP
         const widthFactor = Math.max(0, (psh - 3.0) / 2.0); // 0-1 range
         const sunrise = sunriseBase - widthFactor * 1.0;  // 5.0 to 6.0
         const sunset = sunsetBase + widthFactor * 1.0;    // 17.0 to 18.0
-        
+
         // Peak hour shifts slightly: higher PSH peaks later (12.5), lower PSH peaks earlier (11.5)
         const peakHour = 11.5 + widthFactor * 1.0; // 11.5 to 12.5
-        
+
         // Asymmetry: afternoon drops faster for lower PSH (more cloud cover)
         const morningWidth = peakHour - sunrise;
         const afternoonWidth = sunset - peakHour;
-        
+
         const profile = {};
         for (let t = 0; t <= 23.5; t += 0.5) {
             let val = 0;
@@ -47,12 +47,12 @@ export const generateSolarProfile = (monthlyGhi, metadata, sourceName, isSmoothP
     for (let m = 0; m < 12; m++) {
         const daysInMonth = new Date(year, m + 1, 0).getDate(); const monthlySum = monthlyGhi[m];
         const avgDailyPsh = monthlySum / daysInMonth;
-        
+
         // Build profile specific to this month's PSH
         const dailyProfile = isSmoothProfile
             ? buildDailyProfile(avgDailyPsh)  // Province-specific bell-curve
             : buildDailyProfile(avgPsh);       // Fallback: use avg PSH
-        
+
         const sumWeights = Object.values(dailyProfile).reduce((a, b) => a + b, 0);
         if (sumWeights === 0) continue;
 
