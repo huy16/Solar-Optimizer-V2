@@ -405,7 +405,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             customerGroup,
             voltageLevel,
             profileSector,
-            workSchedule: SCHEDULE_MAP[workSchedule] || SCHEDULE_MAP.mon_sat,
+            workSchedule: workSchedule,
             seasonalCooling,
             customPrice: currentPrice,
             isManualPrice,

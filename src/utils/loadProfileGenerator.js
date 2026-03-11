@@ -1,5 +1,5 @@
 
-import { LOAD_PROFILES } from './loadProfilesData';
+import { LOAD_PROFILES } from './loadProfilesData.js';
 
 export { LOAD_PROFILES };
 
@@ -53,10 +53,21 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
             const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
             let scale = 1.0;
 
-            if (options.workSchedule === 'mon_fri') {
+            const isMonFri = options.workSchedule === 'mon_fri';
+            const isMonSat = options.workSchedule === 'mon_sat';
+            const scheduleArray = Array.isArray(options.workSchedule) ? options.workSchedule : null;
+
+            if (isMonFri) {
                 if (dayOfWeek === 0 || dayOfWeek === 6) scale = 0.3;
-            } else if (options.workSchedule === 'mon_sat') {
+            } else if (isMonSat) {
                 if (dayOfWeek === 0) scale = 0.3;
+            } else if (scheduleArray && scheduleArray.length === 7) {
+                // If schedule array is 0 for this day, use 30% base load
+                // DayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
+                // Schedule Array usually: [Sun, Mon, Tue, Wed, Thu, Fri, Sat] or similar?
+                // BillInputModal SCHEDULE_MAP: [1, 1, 1, 1, 1, 0, 0] for mon_fri (but wait, check index)
+                // Let's assume index 0 = Sun according to getDay()
+                if (scheduleArray[dayOfWeek] === 0) scale = 0.3;
             }
             // 'all_days' implies scale = 1.0 always
 

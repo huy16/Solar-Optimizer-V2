@@ -1036,6 +1036,7 @@ const SolarOptimizer = () => {
                     // Format for rawData (cleanData mapping expects { rawTime, loadKw })
                     // generateSyntheticProfile ALREADY returns { rawTime, loadKw }
                     setRawData(syntheticProfile);
+                    setSimulateWeekend(false); // Disable override for generated profiles
                     setIsManualConfig(false); // treat as if we have a file
                     setActiveTab('dashboard');
                 } catch (e) {
