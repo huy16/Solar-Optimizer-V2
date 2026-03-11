@@ -134,7 +134,15 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             ratio_help: "So với tải ngày thường (100%).",
             region_north: "Miền Bắc",
             region_central: "Miền Trung",
-            region_south: "Miền Nam"
+            region_south: "Miền Nam",
+            custom_normalize: "Tự khớp",
+            custom_matched: "Đã khớp 100%",
+            custom_short: "Thiếu",
+            custom_over: "Vượt",
+            custom_paste_workday: "Dán dữ liệu từ Ngày làm việc",
+            custom_auto_fix_note: "* Tool sẽ tự động chuẩn hóa về 100% khi tính toán nếu bạn không chỉnh sửa.",
+            custom_wd_title: "Biểu đồ cho Ngày làm việc",
+            custom_we_title: "Biểu đồ cho Ngày cuối tuần"
         },
         en: {
             config: "Configuration",
@@ -157,6 +165,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             est_price: "Estimated Price",
             custom_price: "Custom",
             apply_custom: "Use this price",
+            custom: "Custom",
             three_tier_toggle: "3-Tier Input",
             three_tier_desc: "Normal - Peak - Off-peak",
             normal_label: "Normal",
@@ -214,7 +223,15 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             ratio_help: "Relative to workday load (100%).",
             region_north: "North",
             region_central: "Central",
-            region_south: "South"
+            region_south: "South",
+            custom_normalize: "Normalize",
+            custom_matched: "Matched 100%",
+            custom_short: "Short",
+            custom_over: "Over",
+            custom_paste_workday: "Paste from Workday",
+            custom_auto_fix_note: "* Tool will auto-normalize to 100% during calculation if left unedited.",
+            custom_wd_title: "Workday Profile",
+            custom_we_title: "Weekend Profile"
         }
     };
 
@@ -848,7 +865,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                         setProfileSector(e.target.value);
                                                         setChartTab('day'); // Auto-switch to Day view to show the change
                                                     }}
-                                                    className="w-full bg-white border border-slate-200 rounded-xl pl-4 pr-12 py-3 text-[11px] font-black text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none cursor-pointer"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl pl-3 pr-8 py-2 md:pl-4 md:pr-12 md:py-3 text-[10px] md:text-[11px] font-black text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none cursor-pointer text-ellipsis whitespace-nowrap"
                                                 >
                                                     <option value="custom" className="text-blue-600 font-black">{t.custom}</option>
                                                     <option disabled>──────────</option>
@@ -909,7 +926,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                     <div className="flex items-center gap-2 w-full">
                                                         <div className="h-px bg-slate-200 flex-1"></div>
                                                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                                                            {activeCustomTab === 'weekday' ? "Biểu đồ cho Ngày làm việc" : "Biểu đồ cho Ngày cuối tuần"}
+                                                            {activeCustomTab === 'weekday' ? t.custom_wd_title : t.custom_we_title}
                                                         </div>
                                                         <div className="h-px bg-slate-200 flex-1"></div>
                                                     </div>
@@ -933,13 +950,13 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                                         {isPerfect ? (
                                                                             <div className="flex items-center gap-1.5 text-emerald-600 transition-all">
                                                                                 <CheckCircle size={14} className="fill-current/10" />
-                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Đã khớp 100%</span>
+                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">{t.custom_matched}</span>
                                                                             </div>
                                                                         ) : (
                                                                             <div className="flex items-center gap-1.5 text-orange-600 whitespace-nowrap transition-all">
                                                                                 <AlertCircle size={14} className="fill-current/10 shrink-0" />
                                                                                 <span className="text-[10px] font-black uppercase tracking-widest leading-none">
-                                                                                    {diff > 0 ? `Thiếu ${diff}%` : `Vượt ${Math.abs(diff)}%`}
+                                                                                    {diff > 0 ? `${t.custom_short} ${diff}%` : `${t.custom_over} ${Math.abs(diff)}%`}
                                                                                 </span>
                                                                             </div>
                                                                         )}
@@ -950,7 +967,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                                                     onClick={handleNormalizeWeights}
                                                                                     className="text-[9px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-800 flex items-center gap-1 underline decoration-2 underline-offset-2 transition-all"
                                                                                 >
-                                                                                    <RefreshCw size={10} /> Tự khớp
+                                                                                    <RefreshCw size={10} /> {t.custom_normalize}
                                                                                 </button>
                                                                             )}
                                                                             {!isPerfect && <div className="w-px h-2 bg-slate-200"></div>}
@@ -966,7 +983,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
 
                                                                 {!isPerfect && (
                                                                     <p className="text-[9px] font-medium text-slate-400 italic">
-                                                                        * Tool sẽ tự động chuẩn hóa về 100% khi tính toán nếu bạn không chỉnh sửa.
+                                                                        {t.custom_auto_fix_note}
                                                                     </p>
                                                                 )}
                                                             </div>
@@ -979,7 +996,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                             className="text-[10px] font-bold px-4 py-2 rounded-2xl transition-all shadow-sm flex items-center gap-2 border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 hover:scale-105 active:scale-95"
                                                         >
                                                             <Copy size={12} /> 
-                                                            Dán dữ liệu từ Ngày làm việc
+                                                            {t.custom_paste_workday}
                                                         </button>
                                                     )}
                                                 </div>
