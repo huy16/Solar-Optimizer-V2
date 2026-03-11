@@ -15,7 +15,16 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
     const results = [];
 
     // Safety: Fallback to first available profile if key not found
-    const profileEntry = LOAD_PROFILES[profileType] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
+    let profileEntry = LOAD_PROFILES[profileType] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
+    
+    // Handle Custom Override from UI (Manual 48h input)
+    if (profileType === 'custom' && options.customWeights) {
+        profileEntry = {
+            weights: options.customWeights,
+            intervalMins: 60,
+            isDualDay: true
+        };
+    }
 
     // Support both Legacy (Array) and New (Object) structure
     const weights = Array.isArray(profileEntry) ? profileEntry : (profileEntry.weights || Array(24).fill(1 / 24));
@@ -93,7 +102,8 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
 
                 let weight = 0;
                 if (isDualDay) {
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const isMonFri = options.workSchedule === 'mon_fri';
+                    const isWeekend = isMonFri ? (dayOfWeek === 0 || dayOfWeek === 6) : (dayOfWeek === 0);
                     // Handle case where dual day might not have 2x steps
                     const idx = step + (isWeekend && weights.length >= stepsPerDay * 2 ? stepsPerDay : 0);
                     weight = weights[idx] || (1 / stepsPerDay);

@@ -35,6 +35,16 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     const [priceEscalation, setPriceEscalation] = useState(3);
     const [evCharging, setEvCharging] = useState(false);
     const [extraLoadType, setExtraLoadType] = useState('none'); // none, heatpump, machinery
+
+    // Custom 48h Profile State (24h Weekday + 24h Weekend)
+    const [activeCustomTab, setActiveCustomTab] = useState('weekday');
+    const [customWeights, setCustomWeights] = useState(() => {
+        const weekday = Array(24).fill(0.01); // 1% base
+        for (let h = 8; h <= 17; h++) weekday[h] = 0.08; // 8% during day
+        const weekend = [...weekday];
+        return [...weekday, ...weekend];
+    });
+    const [editingCell, setEditingCell] = useState({ index: -1, value: '' });
     const dropdownRef = useRef(null);
 
     const dt = {
@@ -91,12 +101,18 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             none: "Không có",
             heatpump: "Bơm nhiệt",
             machinery: "Sản Xuất",
-            schedule_help: "Xác định các ngày có tải tiêu thụ. Ngày nghỉ sẽ được giả lập với mức tải tối giản (tải nền).",
+            schedule_help: "Xác định các ngày có tải tiêu thụ. Ngày cuối tuần sẽ được giả lập với mức tải tối giản (tải nền).",
             mon_fri_tip: "Thứ 2-6: 100% tải. Thứ 7: 40% tải nền. CN: 30% tải nền.",
             mon_sat_tip: "Thứ 2-7: 100% tải. Chủ nhật: 30% tải nền.",
             all_days_tip: "Cả tuần: 100% tải.",
             auto_fill: `Bù tháng\nthiếu`,
             auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống.",
+            custom_profile_title: "Tùy chỉnh",
+            weekday_label: "Ngày làm việc",
+            weekend_label: "Ngày cuối tuần",
+            copy_to_weekend: "Sao chép sang cuối tuần",
+            custom_sector_label: "--- TÙY CHỈNH (HỒ SƠ RIÊNG) ---",
+            custom: "  Tùy chỉnh",
             region_north: "Miền Bắc",
             region_central: "Miền Trung",
             region_south: "Miền Nam"
@@ -138,6 +154,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri: "Mon - Fri",
             mon_sat: "Mon - Sat",
             all_days: "All Days",
+            weekday_label: "Workday",
+            weekend_label: "Holiday / Weekend",
             seasonal: "Seasonal Cooling",
             seasonal_desc: "Boost load by 15-20% during Summer",
             ov_title: "Consumption Overview",
@@ -239,16 +257,32 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     }, [monthlyData, currentPrice, t.months]);
 
     const dailyPreviewData = useMemo(() => {
-        const profileEntry = LOAD_PROFILES[profileSector] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
-        const weights = Array.isArray(profileEntry) ? profileEntry : (profileEntry.weights || []);
-        const intervalMins = profileEntry.intervalMins || 60;
-        const isDualDay = profileEntry.isDualDay || false;
+        let weights, intervalMins, isDualDay;
+
+        if (profileSector === 'custom') {
+            weights = customWeights;
+            intervalMins = 60;
+            isDualDay = true;
+        } else {
+            const profileEntry = LOAD_PROFILES[profileSector] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
+            weights = Array.isArray(profileEntry) ? profileEntry : (profileEntry.weights || []);
+            intervalMins = profileEntry.intervalMins || 60;
+            isDualDay = profileEntry.isDualDay || false;
+        }
 
         const dummyDailyTotal = 100;
         const stepsPerDay = Math.floor(1440 / intervalMins);
 
-        // For DualDay, we only preview the first day (Weekday)
-        const previewWeights = isDualDay ? weights.slice(0, stepsPerDay) : weights;
+        // For DualDay/Custom, we normally show Weekday
+        // BUT if editing Custom Profile, show the active tab (what they are editing)
+        let previewWeights = weights;
+        if (isDualDay) {
+            if (profileSector === 'custom') {
+                previewWeights = activeCustomTab === 'weekday' ? weights.slice(0, 24) : weights.slice(24, 48);
+            } else {
+                previewWeights = weights.slice(0, stepsPerDay);
+            }
+        }
 
         return previewWeights.map((w, i) => {
             let loadKw = dummyDailyTotal * w;
@@ -276,12 +310,76 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                 weight: loadKw / dummyDailyTotal
             };
         });
-    }, [profileSector, evCharging, extraLoadType]);
+    }, [profileSector, customWeights, evCharging, extraLoadType]);
+
+    const handleWeightChange = (index, value) => {
+        const newWeights = [...customWeights];
+        // Allow digits and one decimal point
+        const cleanValue = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+        
+        // Handle leading zeros but allow "0." 
+        const formattedValue = cleanValue.replace(/^0+(?=\d)/, '');
+        
+        // Store the raw string for the active editing cell
+        setEditingCell({ index, value: formattedValue });
+
+        const val = formattedValue === '' || formattedValue === '.' ? 0 : parseFloat(formattedValue);
+        newWeights[index] = val / 100;
+        setCustomWeights(newWeights);
+    };
+
+    const handleCopyToWeekend = () => {
+        const newWeights = [...customWeights];
+        for (let i = 0; i < 24; i++) {
+            newWeights[i + 24] = newWeights[i];
+        }
+        setCustomWeights(newWeights);
+    };
 
     const handleInputChange = (index, value) => {
         const newData = [...monthlyData];
         newData[index] = value === '' ? 0 : parseInt(value);
         setMonthlyData(newData);
+    };
+
+    const handleFocus = (e) => e.target.select();
+    
+    const handleCustomWeightsPaste = (e, startIndex) => {
+        e.preventDefault();
+        const pasteData = e.clipboardData.getData('text');
+        // Split by tab (Excel), space, newline or comma
+        const values = pasteData.split(/[\t\r\n\s,]+/).filter(v => v !== "");
+        
+        if (values.length > 0) {
+            const newWeights = [...customWeights];
+            values.forEach((val, i) => {
+                const targetIdx = startIndex + i;
+                // Limit to current 24h block to prevent overflow to the other day
+                const dayLimit = startIndex < 24 ? 24 : 48;
+                if (targetIdx < dayLimit) {
+                    const cleanValue = val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    const num = cleanValue === '' || cleanValue === '.' ? 0 : parseFloat(cleanValue);
+                    newWeights[targetIdx] = num / 100;
+                }
+            });
+            setCustomWeights(newWeights);
+        }
+    };
+
+    const getHeatmapColor = (weight, type) => {
+        const val = weight * 100;
+        if (val === 0) return 'bg-white';
+        if (type === 'weekday') {
+            if (val < 3) return 'bg-blue-50 text-blue-700';
+            if (val < 6) return 'bg-blue-100 text-blue-800';
+            if (val < 10) return 'bg-blue-200 text-blue-900';
+            return 'bg-blue-500 text-white';
+        } else {
+            if (val < 3) return 'bg-rose-50 text-rose-700';
+            if (val < 6) return 'bg-rose-100 text-rose-800';
+            if (val < 10) return 'bg-rose-200 text-rose-900';
+            return 'bg-rose-500 text-white';
+        }
     };
 
     const handleFillAll = (value) => {
@@ -404,6 +502,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             voltageLevel,
             profileSector,
             workSchedule: workSchedule,
+            customWeights: profileSector === 'custom' ? customWeights : null,
             seasonalCooling,
             customPrice: currentPrice,
             isManualPrice,
@@ -419,8 +518,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
         onComplete(monthlyData, profileType, options);
     };
 
-    // Helper for input focus
-    const handleFocus = (e) => e.target.select();
+
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in">
@@ -636,17 +734,91 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     <div className="space-y-2">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.sector}</label>
-                                            <select
-                                                value={profileSector}
-                                                onChange={(e) => {
-                                                    setProfileSector(e.target.value);
-                                                    setChartTab('day'); // Auto-switch to Day view to show the change
-                                                }}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none"
-                                            >
-                                                {Object.keys(LOAD_PROFILES).map((key) => <option key={key} value={key}>{key}</option>)}
-                                            </select>
+                                            <div className="relative group">
+                                                <select
+                                                    value={profileSector}
+                                                    onChange={(e) => {
+                                                        setProfileSector(e.target.value);
+                                                        setChartTab('day'); // Auto-switch to Day view to show the change
+                                                    }}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl pl-4 pr-12 py-3 text-[11px] font-black text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none cursor-pointer"
+                                                >
+                                                    <option value="custom" className="text-blue-600 font-black">{t.custom}</option>
+                                                    <option disabled>──────────</option>
+                                                    {Object.keys(LOAD_PROFILES).map((key) => <option key={key} value={key}>{key}</option>)}
+                                                </select>
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
+                                                    <ChevronDown size={14} />
+                                                </div>
+                                            </div>
                                         </div>
+
+                                        {profileSector === 'custom' && (
+                                            <div className="mt-4 p-4 bg-slate-50/50 rounded-[32px] border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="flex items-center justify-center mb-6">
+                                                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                                                        <button 
+                                                            onClick={() => setActiveCustomTab('weekday')}
+                                                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCustomTab === 'weekday' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                                                        >
+                                                            {t.weekday_label}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setActiveCustomTab('weekend')}
+                                                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCustomTab === 'weekend' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                                                        >
+                                                            {t.weekend_label}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-6 gap-2">
+                                                    {(activeCustomTab === 'weekday' ? customWeights.slice(0, 24) : customWeights.slice(24, 48)).map((w, i) => {
+                                                        const globalIdx = activeCustomTab === 'weekday' ? i : i + 24;
+                                                        const colorClass = getHeatmapColor(w, activeCustomTab);
+                                                        return (
+                                                            <div key={globalIdx} className="space-y-1">
+                                                                <div className="text-[9px] font-bold text-slate-400 text-center">{i}h</div>
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={editingCell.index === globalIdx ? editingCell.value : (w === 0 ? '' : Number((w * 100).toFixed(2)).toString())}
+                                                                    onChange={(e) => handleWeightChange(globalIdx, e.target.value)}
+                                                                    onFocus={(e) => {
+                                                                        handleFocus(e);
+                                                                        setEditingCell({ index: globalIdx, value: w === 0 ? '' : Number((w * 100).toFixed(2)).toString() });
+                                                                    }}
+                                                                    onBlur={() => setEditingCell({ index: -1, value: '' })}
+                                                                    onPaste={(e) => handleCustomWeightsPaste(e, globalIdx)}
+                                                                    placeholder="0"
+                                                                    className={`w-full border border-slate-200 rounded-xl py-2 text-[11px] font-black text-center focus:outline-none focus:ring-4 focus:ring-slate-500/10 transition-all ${colorClass}`}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                
+                                                <div className="mt-6 flex flex-col items-center gap-4">
+                                                    <div className="flex items-center gap-2 w-full">
+                                                        <div className="h-px bg-slate-200 flex-1"></div>
+                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+                                                            {activeCustomTab === 'weekday' ? "Biểu đồ cho Ngày làm việc" : "Biểu đồ cho Ngày cuối tuần"}
+                                                        </div>
+                                                        <div className="h-px bg-slate-200 flex-1"></div>
+                                                    </div>
+
+                                                    {activeCustomTab === 'weekend' && (
+                                                        <button
+                                                            onClick={handleCopyToWeekend}
+                                                            className="text-[10px] font-bold px-4 py-2 rounded-2xl transition-all shadow-sm flex items-center gap-2 border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 hover:scale-105 active:scale-95"
+                                                        >
+                                                            <Copy size={12} /> 
+                                                            Dán dữ liệu từ Ngày làm việc
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">

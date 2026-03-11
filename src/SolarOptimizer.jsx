@@ -3357,9 +3357,9 @@ const SolarOptimizer = () => {
                         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
                             {isSidebarOpen ? <Menu size={20} className="rotate-180" /> : <Menu size={20} />}
                         </button>
-                        <div className="flex flex-col">
-                            <h2 className="font-bold text-slate-800 leading-none">{t[activeTab]}</h2>
-                            {loadTag.label && <span className="text-xs text-slate-500 mt-1 flex items-center gap-1">{loadTag.label} {loadTag.isWeekendOff && '• ' + t.status.sun_off}</span>}
+                        <div className="flex flex-col min-w-0">
+                            <h2 className="text-base font-bold text-slate-800 leading-none truncate">{t[activeTab]}</h2>
+                            {loadTag.label && <span className="text-[10px] text-slate-500 mt-1 flex items-center gap-1 truncate">{loadTag.label} {loadTag.isWeekendOff && '• ' + t.status.sun_off}</span>}
                         </div>
                     </div>
 
@@ -3463,7 +3463,7 @@ const SolarOptimizer = () => {
                         <DebouncedSlider targetKwp={targetKwp} setTargetKwp={setTargetKwp} maxKwp={maxKwpRef || 1000} />
                     </div>
 
-                    <div className="flex items-center gap-4">{detectedMaxLoad > 0 && (<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100"><Maximize size={14} /> {t.max_load}: {formatNumber(detectedMaxLoad)} kW</div>)}<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-100"><Leaf size={14} /> {t.loss_percent}: {estimatedLosses?.systemLossPct?.toFixed(1) || '0.0'}%</div></div>
+                    <div className="flex items-center gap-4">{detectedMaxLoad > 0 && (<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-medium border border-blue-100"><Maximize size={14} /> {t.max_load}: {formatNumber(detectedMaxLoad)} kW</div>)}<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-medium border border-emerald-100"><Leaf size={14} /> {t.loss_percent}: {estimatedLosses?.systemLossPct?.toFixed(1) || '0.0'}%</div></div>
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
