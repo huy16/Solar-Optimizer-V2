@@ -21,6 +21,14 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     const [customerGroup, setCustomerGroup] = useState('retail_manufacturing'); // business, manufacture, admin
     const [voltageLevel, setVoltageLevel] = useState('22kv_110kv'); // 110kv_plus, 22kv_110kv, 6kv_22kv, under_6kv
 
+    // 3-Tier Monthly Consumption State
+    const [isThreeTier, setIsThreeTier] = useState(false);
+    const [threeTierData, setThreeTierData] = useState({
+        normal: Array(12).fill(0),
+        peak: Array(12).fill(0),
+        offPeak: Array(12).fill(0)
+    });
+
     // Default to a valid key from LOAD_PROFILES if possible, or fallback
     const [profileSector, setProfileSector] = useState(Object.keys(LOAD_PROFILES)[0] || "");
     const [workSchedule, setWorkSchedule] = useState('mon_sat'); // mon_fri, mon_sat, all_days
@@ -69,6 +77,12 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             est_price: "Đơn giá dự tính",
             custom_price: "Tùy chỉnh",
             apply_custom: "Dùng giá này",
+            three_tier_toggle: "Nhập 3 khung giờ",
+            three_tier_desc: "Normal - Peak - Off-peak",
+            normal_label: "Bình thường",
+            peak_label: "Cao điểm",
+            offPeak_label: "Thấp điểm",
+            total_label: "Tổng cộng",
             op_profile: "Hồ sơ vận hành",
             unit_kwh: "Đơn vị: kWh",
             unit_vnd: "Đơn vị: VNĐ",
@@ -92,7 +106,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             generate: "Tạo Profile",
             view_year: "Năm",
             view_day: "Ngày",
-            distribute: `Phân bổ\nmùa`,
+            distribute: `Phân bổ`,
             hourly_weights: "Tỷ trọng tiêu thụ theo giờ",
             months: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
             price_escalation: "Tăng giá điện dự kiến",
@@ -107,7 +121,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri_tip: "Thứ 2-6: 100% tải. Thứ 7: 40% tải nền. CN: 30% tải nền.",
             mon_sat_tip: "Thứ 2-7: 100% tải. Chủ nhật: 30% tải nền.",
             all_days_tip: "Cả tuần: 100% tải.",
-            auto_fill: `Bù tháng\nthiếu`,
+            auto_fill: `Bù tháng`,
             auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống.",
             custom_profile_title: "Tùy chỉnh",
             weekday_label: "Ngày làm việc",
@@ -143,6 +157,12 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             est_price: "Estimated Price",
             custom_price: "Custom",
             apply_custom: "Use this price",
+            three_tier_toggle: "3-Tier Input",
+            three_tier_desc: "Normal - Peak - Off-peak",
+            normal_label: "Normal",
+            peak_label: "Peak",
+            offPeak_label: "Off-peak",
+            total_label: "Total",
             op_profile: "Operation Profile",
             unit_kwh: "Unit: kWh",
             unit_vnd: "Unit: VNĐ",
@@ -344,11 +364,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
         setCustomWeights(newWeights);
     };
 
-    const handleInputChange = (index, value) => {
-        const newData = [...monthlyData];
-        newData[index] = value === '' ? 0 : parseInt(value);
-        setMonthlyData(newData);
-    };
 
     const handleFocus = (e) => e.target.select();
     
@@ -414,6 +429,42 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     const handleFillAll = (value) => {
         const numValue = value === '' ? 0 : parseInt(value);
         setMonthlyData(Array(12).fill(numValue));
+        
+        if (isThreeTier) {
+            // Distribute across tiers using default ratios
+            setThreeTierData({
+                normal: Array(12).fill(Math.round(numValue * 0.6)),
+                peak: Array(12).fill(Math.round(numValue * 0.25)),
+                offPeak: Array(12).fill(Math.round(numValue * 0.15))
+            });
+        }
+    };
+
+    const handleThreeTierChange = (monthIdx, tier, value) => {
+        const numValue = value === '' ? 0 : parseFloat(value);
+        const newData = { ...threeTierData };
+        newData[tier][monthIdx] = numValue;
+        setThreeTierData(newData);
+
+        // Sync with monthlyData
+        const newMonthlyData = [...monthlyData];
+        newMonthlyData[monthIdx] = newData.normal[monthIdx] + newData.peak[monthIdx] + newData.offPeak[monthIdx];
+        setMonthlyData(newMonthlyData);
+    };
+
+    const toggleThreeTier = () => {
+        if (!isThreeTier) {
+            // Toggling ON: Prefill 3-tier from current monthlyData
+            const newNormal = monthlyData.map(v => Math.round(v * 0.6));
+            const newPeak = monthlyData.map(v => Math.round(v * 0.25));
+            const newOffPeak = monthlyData.map(v => Math.round(v * 0.15));
+            setThreeTierData({
+                normal: newNormal,
+                peak: newPeak,
+                offPeak: newOffPeak
+            });
+        }
+        setIsThreeTier(!isThreeTier);
     };
 
     const [region, setRegion] = useState('north'); // north, central, south
@@ -446,6 +497,29 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
 
         const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));
         setMonthlyData(newData);
+    };
+
+    const handleInputChange = (index, value) => {
+        const numValue = value === '' ? 0 : parseFloat(value);
+        const newData = [...monthlyData];
+        const oldVal = newData[index];
+        newData[index] = numValue;
+        setMonthlyData(newData);
+
+        if (isThreeTier) {
+            const newTiers = { ...threeTierData };
+            if (oldVal > 0) {
+                const ratio = numValue / oldVal;
+                newTiers.normal[index] = Math.round(newTiers.normal[index] * ratio);
+                newTiers.peak[index] = Math.round(newTiers.peak[index] * ratio);
+                newTiers.offPeak[index] = Math.round(newTiers.offPeak[index] * ratio);
+            } else {
+                newTiers.normal[index] = Math.round(numValue * 0.6);
+                newTiers.peak[index] = Math.round(numValue * 0.25);
+                newTiers.offPeak[index] = Math.round(numValue * 0.15);
+            }
+            setThreeTierData(newTiers);
+        }
     };
 
     // Handle Paste (Excel/Text)
@@ -533,6 +607,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             workSchedule: workSchedule,
             customWeights: profileSector === 'custom' ? customWeights : null,
             seasonalCooling,
+            isThreeTier,
+            threeTierData: isThreeTier ? threeTierData : null,
             customPrice: currentPrice,
             isManualPrice,
             priceEscalation,
@@ -1053,11 +1129,11 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         <h4 className="text-[11px] font-black text-slate-700 tracking-tight uppercase leading-tight">{t.monthly_inputs}</h4>
                                     </div>
 
-                                    <div className="flex items-center flex-nowrap gap-1.5 shrink-0">
+                                    <div className="flex items-center flex-nowrap gap-1.5 shrink-0 overflow-x-auto pb-1 scrollbar-hide">
                                         <select
                                             value={region}
                                             onChange={(e) => setRegion(e.target.value)}
-                                            className="px-2 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
+                                            className="px-2 py-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg text-[9px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
                                             title={lang === 'vi' ? "Chọn vùng để phân bổ mùa" : "Select region for seasonal distribution"}
                                         >
                                             <option value="north">{t.region_north}</option>
@@ -1067,16 +1143,16 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         <button
                                             onClick={handleCopy}
                                             title="Copy dữ liệu 12 tháng (để backup hoặc paste lại sau)"
-                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
+                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-slate-50/80 border border-slate-200/60 rounded-lg text-slate-600 font-black text-[9px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
-                                            <Copy size={16} className="group-hover:scale-110 transition-transform" /> Copy
+                                            <Copy size={12} className="group-hover:scale-110 transition-transform" /> Copy
                                         </button>
                                         <button
                                             onClick={handleAutoCompleteMissing}
                                             title={t.auto_fill_tip}
-                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-blue-50/50 border border-blue-100 rounded-xl text-blue-600 font-bold text-[10px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
+                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-blue-50/50 border border-blue-100 rounded-lg text-blue-600 font-bold text-[9px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <Sparkles size={14} className="group-hover:animate-spin shrink-0" />
+                                            <Sparkles size={12} className="group-hover:animate-spin shrink-0" />
                                             <div className="flex flex-col">
                                                 {t.auto_fill.split('\n').map((line, idx) => (
                                                     <span key={idx} className="whitespace-nowrap">{line}</span>
@@ -1085,18 +1161,18 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         </button>
                                         <button
                                             onClick={() => handleFillAll(monthlyData[0])}
-                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
+                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-slate-50/80 border border-slate-200/60 rounded-lg text-slate-600 font-black text-[9px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
-                                            <RefreshCw size={14} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
+                                            <RefreshCw size={12} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
                                         </button>
                                         <button
                                             onClick={() => handleSeasonalDist(monthlyData[0])}
-                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
+                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg text-emerald-600 font-black text-[9px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <div className="relative w-3.5 h-3.5 overflow-hidden shrink-0">
+                                            <div className="relative w-3 h-3 overflow-hidden shrink-0">
                                                 <div className="flex absolute top-0 left-0 animate-scrolling-ekg-hover opacity-70 group-hover:opacity-100 transition-opacity">
-                                                    <Activity size={14} className="shrink-0" />
-                                                    <Activity size={14} className="shrink-0" />
+                                                    <Activity size={12} className="shrink-0" />
+                                                    <Activity size={12} className="shrink-0" />
                                                 </div>
                                             </div>
                                             <div className="flex flex-col">
@@ -1105,28 +1181,77 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                 ))}
                                             </div>
                                         </button>
+
+                                        <div className="w-px h-5 bg-slate-200/60 mx-1 shrink-0"></div>
+
+                                        <button
+                                            onClick={toggleThreeTier}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all text-[9px] font-black uppercase tracking-tight shadow-sm shrink-0 whitespace-nowrap ${isThreeTier ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600'}`}
+                                        >
+                                            <Table size={12} className={isThreeTier ? 'text-white' : 'text-blue-500'} />
+                                            <span>{t.three_tier_toggle}</span>
+                                        </button>
+
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 mt-4 px-1">
-
-                                    {monthlyData.map((val, i) => (
-                                        <div key={i} className="space-y-1.5 text-center group">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1 group-hover:text-blue-500 transition-colors">
-                                                {t.months[i]}
-                                                {seasonalCooling && (i >= 4 && i <= 7) && <Flame size={8} className="text-orange-500 fill-current animate-pulse" />}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={val || ''}
-                                                onChange={(e) => handleInputChange(i, e.target.value)}
-                                                onFocus={handleFocus}
-                                                onPaste={(e) => handlePaste(i, e)}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-0 py-2.5 text-[11px] font-black text-slate-800 text-center focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                placeholder="0"
-                                            />
+                                <div className="space-y-4 mt-4">
+                                    {isThreeTier && (
+                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            {/* 3-Tier Rows */}
+                                            {['normal', 'peak', 'offPeak'].map((tier) => (
+                                                <div key={tier} className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 px-1 items-center">
+                                                    <div className="col-span-full mb-1 flex items-center gap-2">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${tier === 'normal' ? 'bg-blue-400' : tier === 'peak' ? 'bg-orange-400' : 'bg-emerald-400'}`}></div>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                            {t[`${tier}_label`]}
+                                                        </span>
+                                                    </div>
+                                                    {threeTierData[tier].map((val, i) => (
+                                                        <div key={i} className="space-y-1">
+                                                            <input
+                                                                type="number"
+                                                                value={val || ''}
+                                                                onChange={(e) => handleThreeTierChange(i, tier, e.target.value)}
+                                                                className={`w-full bg-white border border-slate-200 rounded-lg px-0 py-1.5 text-[10px] font-black text-center focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all ${tier === 'normal' ? 'text-blue-700' : tier === 'peak' ? 'text-orange-700' : 'text-emerald-700'}`}
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                            
+                                            {/* Divider for Total */}
+                                            <div className="h-px bg-slate-100 mx-1 my-2"></div>
                                         </div>
-                                    ))}
+                                    )}
+
+                                    <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 px-1">
+                                        {isThreeTier && (
+                                            <div className="col-span-full mb-1">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t.total_label}</span>
+                                            </div>
+                                        )}
+                                        {monthlyData.map((val, i) => (
+                                            <div key={i} className="space-y-1.5 text-center group">
+                                                {!isThreeTier && (
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1 group-hover:text-blue-500 transition-colors">
+                                                        {t.months[i]}
+                                                        {seasonalCooling && (i >= 4 && i <= 7) && <Flame size={8} className="text-orange-500 fill-current animate-pulse" />}
+                                                    </label>
+                                                )}
+                                                <input
+                                                    type="number"
+                                                    value={val || ''}
+                                                    onChange={(e) => handleInputChange(i, e.target.value)}
+                                                    onFocus={handleFocus}
+                                                    onPaste={(e) => handlePaste(i, e)}
+                                                    className={`w-full bg-white border border-slate-200 rounded-xl px-0 ${isThreeTier ? 'py-1.5' : 'py-2.5'} text-[11px] font-black text-slate-800 text-center focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 

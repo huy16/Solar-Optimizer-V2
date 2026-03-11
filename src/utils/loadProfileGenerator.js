@@ -53,13 +53,12 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
         }
 
         // 1. Calculate Total Weighted Days for the Month
-        // This ensures that when we scale down weekends, we boost weekdays to match the Total Monthly kWh
         let weightedDaysCount = 0;
-        const monthByteMap = []; // Store day-type for the second pass
+        const monthByteMap = []; 
 
         for (let d = 1; d <= daysInMonth[m]; d++) {
             const date = new Date(year, m, d, 12, 0, 0);
-            const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
+            const dayOfWeek = date.getDay(); 
             let scale = 1.0;
 
             const isMonFri = options.workSchedule === 'mon_fri';
@@ -79,20 +78,18 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
                     scale = (dayOfWeek === 6) ? ratioSat : ratioSun;
                 }
             }
-            // 'all_days' implies scale = 1.0 always
 
             weightedDaysCount += scale;
             monthByteMap.push({ d, scale, dayOfWeek });
         }
 
-        // 2. Calculate Base Daily Energy (for a "1.0" scale day)
         const baseDailyKwh = totalMonthKwh / weightedDaysCount;
-
-        // 3. Generate Profile
         const stepsPerDay = Math.floor(1440 / intervalMins);
+        
+        // Month generation buffer for TOU normalization
+        const monthResults = [];
 
         monthByteMap.forEach(({ d, scale, dayOfWeek }) => {
-            // Distribute this day's share of energy
             const dailyKwh = baseDailyKwh * scale;
 
             for (let step = 0; step < stepsPerDay; step++) {
@@ -103,34 +100,60 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
 
                 let weight = 0;
                 if (isDualDay) {
-                    const isMonFri = options.workSchedule === 'mon_fri';
-                    const isWeekend = isMonFri ? (dayOfWeek === 0 || dayOfWeek === 6) : (dayOfWeek === 0);
-                    // Handle case where dual day might not have 2x steps
+                    const isMonFriInternal = options.workSchedule === 'mon_fri';
+                    const isWeekend = isMonFriInternal ? (dayOfWeek === 0 || dayOfWeek === 6) : (dayOfWeek === 0);
                     const idx = step + (isWeekend && weights.length >= stepsPerDay * 2 ? stepsPerDay : 0);
                     weight = weights[idx] || (1 / stepsPerDay);
                 } else {
                     weight = weights[step] || (1 / stepsPerDay);
                 }
 
-                // Normalization check: ensure weights sum to ~1 usually, but we rely on dailyKwh distribution here
-                // Formula: Power (kW) = Energy (kWh) / Time (h)
-                // We distribute 'dailyKwh' according to 'weight' profile
-                // Assumption: sum(weights) for a day approx equals 1. If not, we might need to normalize weights per day.
-                // For safety with arbitrary profiles, let's assume raw weights sum to 1. 
-                // If they don't, we should ideally normalize them. 
-                // But for now, adhering to existing logic: Power = (dailyKwh * weight) / (interval / 60)
-
                 const stepEnergyKwh = dailyKwh * weight;
                 const stepPowerKw = stepEnergyKwh / (intervalMins / 60);
 
-                results.push({
+                // Determine TOU group for this step
+                // (Using center of step for more accurate boundary check)
+                const centerMins = mins + (intervalMins / 2);
+                const centerHour = centerMins / 60;
+                let touGroup = 'normal';
+                if (centerHour >= 22 || centerHour < 4) touGroup = 'offPeak';
+                else if ((centerHour >= 9.5 && centerHour < 11.5) || (centerHour >= 17 && centerHour < 20)) touGroup = 'peak';
+
+                monthResults.push({
                     rawTime: pointDate,
                     loadKw: stepPowerKw,
                     weight,
-                    timeStep: intervalMins / 60
+                    timeStep: intervalMins / 60,
+                    touGroup
                 });
             }
         });
+
+        // 4. 3-Tier Normalization (Apply Factor per TOU Bucket)
+        if (options.isThreeTier && options.threeTierData) {
+            const targets = {
+                normal: options.threeTierData.normal[m] || 0,
+                peak: options.threeTierData.peak[m] || 0,
+                offPeak: options.threeTierData.offPeak[m] || 0
+            };
+
+            const actuals = { normal: 0, peak: 0, offPeak: 0 };
+            monthResults.forEach(r => {
+                actuals[r.touGroup] += r.loadKw * r.timeStep;
+            });
+
+            const factors = {
+                normal: actuals.normal > 0 ? targets.normal / actuals.normal : 0,
+                peak: actuals.peak > 0 ? targets.peak / actuals.peak : 0,
+                offPeak: actuals.offPeak > 0 ? targets.offPeak / actuals.offPeak : 0
+            };
+
+            monthResults.forEach(r => {
+                r.loadKw *= factors[r.touGroup];
+            });
+        }
+
+        results.push(...monthResults);
     }
     return results;
 };
