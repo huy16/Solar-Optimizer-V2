@@ -42,8 +42,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             config: "Cấu hình",
             evn_tariff: "Cài đặt Biểu giá EVN",
             evn_desc: "Cấu hình đối tượng và cấp điện áp",
-            location: "Vị trí dự án",
-            customer_group: "Nhóm khách hàng",
             business: "Kinh doanh",
             manufacture: "Sản xuất",
             admin: "Hành chính sự nghiệp",

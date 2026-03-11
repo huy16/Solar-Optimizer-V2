@@ -58,16 +58,16 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
             const scheduleArray = Array.isArray(options.workSchedule) ? options.workSchedule : null;
 
             if (isMonFri) {
-                if (dayOfWeek === 0 || dayOfWeek === 6) scale = 0.3;
+                if (dayOfWeek === 6) scale = 0.4; // Saturday 40%
+                else if (dayOfWeek === 0) scale = 0.3; // Sunday 30%
             } else if (isMonSat) {
-                if (dayOfWeek === 0) scale = 0.3;
+                if (dayOfWeek === 0) scale = 0.3; // Sunday 30%
             } else if (scheduleArray && scheduleArray.length === 7) {
-                // If schedule array is 0 for this day, use 30% base load
-                // DayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
-                // Schedule Array usually: [Sun, Mon, Tue, Wed, Thu, Fri, Sat] or similar?
-                // BillInputModal SCHEDULE_MAP: [1, 1, 1, 1, 1, 0, 0] for mon_fri (but wait, check index)
-                // Let's assume index 0 = Sun according to getDay()
-                if (scheduleArray[dayOfWeek] === 0) scale = 0.3;
+                if (scheduleArray[dayOfWeek] === 0) {
+                    // Smart detection for array-based schedules
+                    if (dayOfWeek === 6) scale = 0.4;
+                    else scale = 0.3;
+                }
             }
             // 'all_days' implies scale = 1.0 always
 
