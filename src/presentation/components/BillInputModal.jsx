@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Zap, Calendar, Snowflake, ArrowBigRight, BarChart3, AlertCircle, Info, MapPin, Table, RefreshCw, Activity, Flame, TrendingUp, Car, HardHat, Sparkles, ChevronDown, Copy } from 'lucide-react';
+import { X, Zap, Calendar, Snowflake, ArrowBigRight, BarChart3, AlertCircle, CheckCircle, Info, MapPin, Table, RefreshCw, Activity, Flame, TrendingUp, Car, HardHat, Sparkles, ChevronDown, Copy } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { LOAD_PROFILES } from '../../utils/loadProfileGenerator';
 import ALL_PROVINCES from '../../data/provinces.json';
@@ -372,6 +372,27 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             });
             setCustomWeights(newWeights);
         }
+    };
+
+    const handleNormalizeWeights = () => {
+        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
+        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
+        const currentSum = currentBlock.reduce((a, b) => a + b, 0);
+
+        if (currentSum > 0) {
+            const newWeights = [...customWeights];
+            currentBlock.forEach((w, i) => {
+                newWeights[startIdx + i] = w / currentSum;
+            });
+            setCustomWeights(newWeights);
+        }
+    };
+
+    const handleCopyCustomWeights = () => {
+        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
+        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
+        const dataStr = currentBlock.map(w => Math.round(w * 1000) / 10).join('\t');
+        navigator.clipboard.writeText(dataStr);
     };
 
     const getHeatmapColor = (weight, type) => {
@@ -816,6 +837,65 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                         </div>
                                                         <div className="h-px bg-slate-200 flex-1"></div>
                                                     </div>
+
+                                                    {/* WEIGHT SUM & VALIDATION */}
+                                                    {(() => {
+                                                        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
+                                                        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
+                                                        const sumPercent = Math.round(currentBlock.reduce((a, b) => a + b, 0) * 1000) / 10;
+                                                        const diff = Math.round((100 - sumPercent) * 10) / 10;
+                                                        const isPerfect = Math.abs(100 - sumPercent) < 0.1;
+
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-1">
+                                                                <div className={`px-4 py-2 rounded-2xl flex items-center gap-3 border transition-all ${isPerfect ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-orange-50 border-orange-100 text-orange-700'}`}>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xl font-black leading-tight">{sumPercent}%</span>
+                                                                    </div>
+                                                                    <div className="w-px h-8 bg-current opacity-10"></div>
+                                                                    <div className="flex flex-col gap-1.5">
+                                                                        {isPerfect ? (
+                                                                            <div className="flex items-center gap-1.5 text-emerald-600 transition-all">
+                                                                                <CheckCircle size={14} className="fill-current/10" />
+                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Đã khớp 100%</span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="flex items-center gap-1.5 text-orange-600 whitespace-nowrap transition-all">
+                                                                                <AlertCircle size={14} className="fill-current/10 shrink-0" />
+                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                                                                                    {diff > 0 ? `Thiếu ${diff}%` : `Vượt ${Math.abs(diff)}%`}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        
+                                                                        <div className="flex items-center gap-2">
+                                                                            {!isPerfect && (
+                                                                                <button 
+                                                                                    onClick={handleNormalizeWeights}
+                                                                                    className="text-[9px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-800 flex items-center gap-1 underline decoration-2 underline-offset-2 transition-all"
+                                                                                >
+                                                                                    <RefreshCw size={10} /> Tự khớp
+                                                                                </button>
+                                                                            )}
+                                                                            {!isPerfect && <div className="w-px h-2 bg-slate-200"></div>}
+                                                                            <button 
+                                                                                onClick={handleCopyCustomWeights}
+                                                                                className="text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-all"
+                                                                            >
+                                                                                <Copy size={10} /> Copy 24h
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {!isPerfect && (
+                                                                    <p className="text-[9px] font-medium text-slate-400 italic">
+                                                                        * Tool sẽ tự động chuẩn hóa về 100% khi tính toán nếu bạn không chỉnh sửa.
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
 
                                                     {activeCustomTab === 'weekend' && (
                                                         <button
