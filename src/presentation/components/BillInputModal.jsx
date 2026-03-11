@@ -35,6 +35,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     const [priceEscalation, setPriceEscalation] = useState(3);
     const [evCharging, setEvCharging] = useState(false);
     const [extraLoadType, setExtraLoadType] = useState('none'); // none, heatpump, machinery
+    const [ratioSat, setRatioSat] = useState(40); // % for Saturday
+    const [ratioSun, setRatioSun] = useState(30); // % for Sunday
 
     // Custom 48h Profile State (24h Weekday + 24h Weekend)
     const [activeCustomTab, setActiveCustomTab] = useState('weekday');
@@ -113,6 +115,9 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             copy_to_weekend: "Sao chép sang cuối tuần",
             custom_sector_label: "--- TÙY CHỈNH (HỒ SƠ RIÊNG) ---",
             custom: "  Tùy chỉnh",
+            ratio_sat: "Tỷ lệ tải Thứ 7 (%)",
+            ratio_sun: "Tỷ lệ tải Chủ nhật (%)",
+            ratio_help: "So với tải ngày thường (100%).",
             region_north: "Miền Bắc",
             region_central: "Miền Trung",
             region_south: "Miền Nam"
@@ -184,6 +189,9 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri_tip: "Mon-Fri: 100% load. Sat: 40% base. Sun: 30% base.",
             mon_sat_tip: "Mon-Sat: 100% load. Sunday: 30% base load.",
             all_days_tip: "All days: 100% load.",
+            ratio_sat: "Saturday Load Ratio (%)",
+            ratio_sun: "Sunday Load Ratio (%)",
+            ratio_help: "Relative to workday load (100%).",
             region_north: "North",
             region_central: "Central",
             region_south: "South"
@@ -508,7 +516,9 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             isManualPrice,
             priceEscalation,
             evCharging,
-            extraLoadType
+            extraLoadType,
+            weekendRatioSat: ratioSat / 100,
+            weekendRatioSun: ratioSun / 100
         };
 
         // Use the selected sector/profile directly as the profileType key
@@ -840,6 +850,50 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                             ))}
                                         </div>
                                     </div>
+
+                                    {workSchedule !== 'all_days' && (
+                                        <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-1">
+                                            {/* SATURDAY SLIDER */}
+                                            {workSchedule === 'mon_fri' && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{t.ratio_sat}</label>
+                                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md leading-none">{ratioSat}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        step="5"
+                                                        value={ratioSat}
+                                                        onChange={(e) => setRatioSat(Number(e.target.value))}
+                                                        className="premium-slider w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* SUNDAY SLIDER */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{t.ratio_sun}</label>
+                                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md leading-none">{ratioSun}%</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="100"
+                                                    step="5"
+                                                    value={ratioSun}
+                                                    onChange={(e) => setRatioSun(Number(e.target.value))}
+                                                    className="premium-slider w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                                                />
+                                            </div>
+
+                                            <p className="text-[8px] leading-tight text-slate-400 font-bold italic">
+                                                {t.ratio_help}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

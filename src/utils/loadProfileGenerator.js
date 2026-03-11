@@ -66,16 +66,17 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
             const isMonSat = options.workSchedule === 'mon_sat';
             const scheduleArray = Array.isArray(options.workSchedule) ? options.workSchedule : null;
 
+            const ratioSat = options.weekendRatioSat !== undefined ? options.weekendRatioSat : 0.4;
+            const ratioSun = options.weekendRatioSun !== undefined ? options.weekendRatioSun : 0.3;
+
             if (isMonFri) {
-                if (dayOfWeek === 6) scale = 0.4; // Saturday 40%
-                else if (dayOfWeek === 0) scale = 0.3; // Sunday 30%
+                if (dayOfWeek === 6) scale = ratioSat; 
+                else if (dayOfWeek === 0) scale = ratioSun;
             } else if (isMonSat) {
-                if (dayOfWeek === 0) scale = 0.3; // Sunday 30%
+                if (dayOfWeek === 0) scale = ratioSun; 
             } else if (scheduleArray && scheduleArray.length === 7) {
                 if (scheduleArray[dayOfWeek] === 0) {
-                    // Smart detection for array-based schedules
-                    if (dayOfWeek === 6) scale = 0.4;
-                    else scale = 0.3;
+                    scale = (dayOfWeek === 6) ? ratioSat : ratioSun;
                 }
             }
             // 'all_days' implies scale = 1.0 always
