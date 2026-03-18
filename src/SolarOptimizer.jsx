@@ -3214,7 +3214,7 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
             }
 
             <aside className={`fixed inset-y-0 left-0 z-20 w-64 bg-slate-50 border-r border-slate-200 transform transition-transform duration-200 ease-in-out shrink-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="h-20 flex items-center justify-start pl-6 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => {
+                <div className="h-20 flex items-center justify-start pl-4 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => {
                     setDesignMode(null);
                     setProcessedData([]);
                     setRawData([]);
@@ -3225,11 +3225,11 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
                     setScenarios([]);
                     setActiveTab('dashboard');
                 }}>
-                    <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-3 transition-transform group-hover:scale-105" />
+                    <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-2 transition-transform group-hover:scale-105" />
                     <div className="flex flex-col">
                         <span className="font-black text-sm leading-tight text-white drop-shadow-sm">SOLAR</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-blue-100 text-[10px] tracking-widest uppercase">Optimizer</span>
+                        <div className="flex items-center gap-1">
+                            <span className="font-bold text-blue-100 text-[10px] tracking-wider uppercase">Optimizer</span>
                             <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isSales ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
                                 {isSales ? 'Sales' : 'Engineer'}
                             </span>

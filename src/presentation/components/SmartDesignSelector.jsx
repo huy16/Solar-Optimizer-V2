@@ -155,7 +155,6 @@ export const SmartDesignSelector = ({ onSelect, lang, setLang, onSignOut }) => {
                     onComplete={handleBillComplete}
                     title={t.bill_modal_title}
                     lang={lang}
-                    onSignOut={onSignOut}
                 />
             )}
 

@@ -12,7 +12,7 @@ const VietnamFlagIcon = ({ size = 18, className, ...props }) => (
     </svg>
 );
 
-export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill Input", lang = 'vi', onSignOut }) => {
+export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill Input", lang = 'vi' }) => {
     // Basic Data State
     const [monthlyData, setMonthlyData] = useState(Array(12).fill(0));
 
@@ -647,18 +647,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in">
             <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col relative my-auto border border-white/20">
-
-                {/* Close & Logout Buttons */}
-                <div className="absolute top-8 right-8 z-50 flex items-center gap-3">
-                    <button
-                        onClick={onSignOut}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-white rounded-full shadow-md border border-slate-200 transition-all text-[10px] font-black text-slate-700 hover:text-rose-600 hover:border-rose-200 active:scale-95 group uppercase tracking-widest"
-                        title={lang === 'vi' ? "Đăng xuất" : "Sign Out"}
-                    >
-                        <LogOut size={14} className="opacity-70 group-hover:text-rose-600 group-hover:opacity-100 transition-all" />
-                        <span className="hidden sm:inline">{lang === 'vi' ? 'ĐĂNG XUẤT' : 'SIGN OUT'}</span>
-                    </button>
-                    
+                {/* Close Button */}
+                <div className="absolute top-8 right-8 z-50">
                     <button
                         onClick={onClose}
                         className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-all text-slate-500 hover:scale-110 active:scale-95 shadow-sm"
