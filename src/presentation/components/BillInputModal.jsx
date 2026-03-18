@@ -869,7 +869,11 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                 >
                                                     <option value="custom" className="text-blue-600 font-black">{t.custom}</option>
                                                     <option disabled>──────────</option>
-                                                    {Object.keys(LOAD_PROFILES).map((key) => <option key={key} value={key}>{key}</option>)}
+                                                    {Object.keys(LOAD_PROFILES).filter(key => {
+                                                        const val = LOAD_PROFILES[key];
+                                                        const weights = Array.isArray(val) ? val : (val?.weights || []);
+                                                        return weights.some(w => w > 0);
+                                                    }).map((key) => <option key={key} value={key}>{key}</option>)}
                                                 </select>
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
                                                     <ChevronDown size={14} />

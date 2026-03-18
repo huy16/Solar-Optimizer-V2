@@ -24,7 +24,7 @@ import { FormulaModal } from './presentation/components/FormulaModal';
 import { EVN_TARIFFS, TWO_PART_TARIFF, getTwoPartTariff } from './data/evn_tariffs';
 import { simulatePeakShaving, calculateDemandChargeSavings } from './domain/usecases/CalculatePeakShaving';
 
-import { Search, Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
+import { Search, Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship, LogOut } from 'lucide-react';
 import { SmartDesignSelector } from './presentation/components/SmartDesignSelector';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -100,6 +100,7 @@ const TRANSLATIONS = {
         max_load: "Tải cực đại",
         loss_percent: "Tổn thất",
         interpolate_msg: "Làm mượt dữ liệu 30p (Interpolate)",
+        logout: "ĐĂNG XUẤT",
         stats: {
             pv_yield: "Sản lượng PV",
             solar_energy: "Năng lượng Solar",
@@ -319,6 +320,7 @@ const TRANSLATIONS = {
         project_name: "Project Name",
         sidebar_open: "Open Sidebar",
         sidebar_close: "Close Sidebar",
+        logout: "SIGN OUT",
         actions: "Actions",
         report_config: "Report Configuration",
         view_formulas: "View Formulas",
@@ -783,7 +785,8 @@ const getProvinceStyle = (id) => {
 // --- DATA PREPARATION HELPERS ---
 
 // --- COMPONENT CHINH ---
-const SolarOptimizer = () => {
+const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
+    const isSales = userRole === 'sales';
     const [lang, setLang] = useState('vi'); // Default language
     const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'viet_nam') || PROVINCES[0]);
 
@@ -3215,15 +3218,20 @@ const SolarOptimizer = () => {
                     <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-3 transition-transform group-hover:scale-105" />
                     <div className="flex flex-col">
                         <span className="font-black text-sm leading-tight text-white drop-shadow-sm">SOLAR</span>
-                        <span className="font-bold text-blue-100 text-[10px] tracking-widest uppercase">Optimizer</span>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-blue-100 text-[10px] tracking-widest uppercase">Optimizer</span>
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isSales ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
+                                {isSales ? 'Sales' : 'Engineer'}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div className="p-3 flex-1 overflow-y-auto space-y-3">
                     <div className="space-y-1">
                         {[
                             { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
-                            { id: 'design', label: t.design, icon: SlidersHorizontal },
-                            { id: 'finance', label: t.finance, icon: TrendingUp },
+                            ...(!isSales ? [{ id: 'design', label: t.design, icon: SlidersHorizontal }] : []),
+                            ...(!isSales ? [{ id: 'finance', label: t.finance, icon: TrendingUp }] : []),
                             { id: 'report', label: t.report, icon: ClipboardList }
                         ].map(item => (
                             <button key={item.id} onClick={() => { setActiveTab(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === item.id ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}><item.icon size={15} /> {item.label}</button>
@@ -3232,12 +3240,13 @@ const SolarOptimizer = () => {
                     <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.actions}</p>
                         {customStats && (
                             <div className="space-y-1">
-                                <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded text-xs transition font-medium"><Settings size={14} /> {t.report_config}</button>
-                                <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs transition font-medium"><Calculator size={14} /> {t.view_formulas}</button>
+                                {!isSales && <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded text-xs transition font-medium"><Settings size={14} /> {t.report_config}</button>}
+                                {!isSales && <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs transition font-medium"><Calculator size={14} /> {t.view_formulas}</button>}
                                 <button onClick={handleExportPDF} disabled={pdfLibStatus !== 'ready' || isExporting} className="w-full flex items-center justify-center gap-2 px-2 py-1.5 bg-gradient-to-r from-blue-700 to-blue-900 hover:shadow-lg text-white rounded text-xs transition disabled:bg-slate-400 shadow-sm">{isExporting ? <RefreshCw className="animate-spin" size={14} /> : <Printer size={14} />}{isExporting ? t.generating_pdf : t.export_pdf}</button>
                             </div>
                         )}
                     </div>
+
                     <div className="border-t border-slate-200 pt-2 px-1">
                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">{t.project_info}</label>
                         <DebouncedInput value={projectName} onChange={setProjectName} placeholder={t.project_name + "..."} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" />
@@ -3249,8 +3258,30 @@ const SolarOptimizer = () => {
                             </div>
                             <input type="file" ref={fileInputRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFileUpload} onClick={(e) => e.target.value = null} />
 
+                            {/* Solar Profile Shape Toggle */}
+                            <div className="px-2 py-1.5 bg-white rounded border border-purple-200 text-xs shadow-sm">
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="font-medium text-slate-700 flex items-center gap-1"><Activity size={12} className="text-purple-500" />{t.status.profile_shape || "Loại Profile"}</span>
+                                    <div className="flex bg-slate-100 rounded p-0.5 border border-slate-200 w-full">
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(false)}
+                                            className={`flex-1 px-2 py-0.5 text-[9px] font-bold rounded transition-colors text-center ${!isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_realistic || "Realistic ⚡"}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(true)}
+                                            className={`flex-1 px-2 py-0.5 text-[9px] font-bold rounded transition-colors text-center ${isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_smooth || "Sine Wave 🌊"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
+
+                            {/* Solar Data & Loss Factors (Engineer only) */}
+                            {!isSales && <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
                                 <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span></div>
 
                                 <div className="mt-1.5 pt-1.5 border-t border-slate-100">
@@ -3267,7 +3298,7 @@ const SolarOptimizer = () => {
                                                         losses: { ...prev.losses, [k]: e.target.value === '' ? '' : Number(e.target.value) }
                                                     }))}
                                                     onFocus={(e) => e.target.select()}
-                                                    className="w-full p-1 border rounded text-xs text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
+                                                    className="w-full p-0.5 border rounded text-[10px] text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
                                                 />
                                             </div>
                                         ))}
@@ -3282,28 +3313,11 @@ const SolarOptimizer = () => {
                                 </div>
                                 {solarMetadata && !!solarMetadata.lat && (<div className="text-[9px] text-blue-400 mt-1 flex gap-1 pt-1 border-t border-slate-100"><MapPin size={10} className="mt-0.5" /> {solarMetadata.siteName ? solarMetadata.siteName.substring(0, 10) : ''} ({solarMetadata.lat.toFixed(2)}, {solarMetadata.lon.toFixed(2)})</div>)}
 
-                                {/* Solar Profile Shape Toggle */}
-                                <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-slate-500">{t.status.profile_shape || "Solar Profile Shape"}</span>
-                                    <div className="flex bg-slate-100 rounded p-0.5 border border-slate-200">
-                                        <button
-                                            onClick={() => setIsSmoothSolarProfile(false)}
-                                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${!isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
-                                        >
-                                            {t.status.shape_realistic || "Realistic ⚡"}
-                                        </button>
-                                        <button
-                                            onClick={() => setIsSmoothSolarProfile(true)}
-                                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
-                                        >
-                                            {t.status.shape_smooth || "Sine Wave 🌊"}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Weather Scenario - Separate Box */}
-                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-blue-50 border-blue-200' :
+                            </div>}
+
+                            {/* Weather Scenario - Separate Box (Engineer only) */}
+                            {!isSales && <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-blue-50 border-blue-200' :
                                 weatherScenario === 'rainy' ? 'bg-green-50 border-green-200' :
                                     weatherScenario === 'bad' ? 'bg-amber-50 border-amber-200' :
                                         'bg-red-50 border-red-200'
@@ -3316,7 +3330,7 @@ const SolarOptimizer = () => {
                                         }`}><CloudSun size={12} /> {lang === 'vi' ? 'Thời tiết' : 'Weather'}</span>
                                 </div>
                                 <select
-                                    className={`w-full text-xs p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-blue-700 border-blue-300' :
+                                    className={`w-full text-[10px] p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-blue-700 border-blue-300' :
                                         weatherScenario === 'rainy' ? 'bg-white text-green-700 border-green-300' :
                                             weatherScenario === 'bad' ? 'bg-white text-amber-700 border-amber-300' :
                                                 'bg-white text-red-700 border-red-300'
@@ -3342,13 +3356,22 @@ const SolarOptimizer = () => {
                                         }
                                     </div>
                                 )}
-                            </div>
+                            </div>}
 
 
                         </div>
                     </div>
                 </div>
-                <div className="p-2 border-t border-slate-200 text-[9px] text-slate-400 text-center"><span className="font-bold">CPS Solar Solutions</span> © 2026 • Engineering Division</div>
+                    <div className="border-t border-slate-100 p-2 text-[9px] text-slate-400 bg-slate-50/50">
+                        <div className="flex justify-between items-center opacity-80 hover:opacity-100 transition-all">
+                            <span><span className="font-bold">CPS Solar</span> © 2026</span>
+                            {onSignOut && (
+                                <button onClick={onSignOut} className="flex items-center gap-1 hover:text-red-500 font-bold transition-colors">
+                                    <LogOut size={10} /> {t.logout}
+                                </button>
+                            )}
+                        </div>
+                    </div>
             </aside>
 
             <main className={`flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
