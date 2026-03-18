@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Zap, Sun, BarChart3, FileSpreadsheet, ArrowRight, CheckCircle2, Globe, FileText } from 'lucide-react';
+import { Upload, Zap, Sun, BarChart3, FileSpreadsheet, ArrowRight, CheckCircle2, Globe, FileText, LogOut } from 'lucide-react';
 import { BillInputModal } from './BillInputModal';
 import casLogo from '../../assets/cas_logo.png';
 
@@ -50,11 +50,12 @@ const TRANSLATIONS = {
         feature_2: "Tối ưu hóa BESS",
         feature_3: "Báo cáo ESG & Tài chính",
         bill_modal_title: "Nhập Hóa đơn Tiền điện",
-        stats: [
+            stats: [
             { label: "Năm kinh nghiệm", value: "20+" },
             { label: "Dự án triển khai", value: "500+" },
             { label: "Giảm phát thải", value: "1000+", unit: "tấn CO2" }
-        ]
+        ],
+        logout: "ĐĂNG XUẤT"
     },
     en: {
         platform: "Solar Management Platform v2.0",
@@ -74,11 +75,12 @@ const TRANSLATIONS = {
             { label: "Years Experience", value: "20+" },
             { label: "Projects Completed", value: "500+" },
             { label: "Carbon Reduction", value: "1000+", unit: "tons CO2" }
-        ]
+        ],
+        logout: "SIGN OUT"
     }
 };
 
-export const SmartDesignSelector = ({ onSelect, lang, setLang }) => {
+export const SmartDesignSelector = ({ onSelect, lang, setLang, onSignOut }) => {
     const [showBillModal, setShowBillModal] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const fileInputRef = useRef(null);
@@ -129,14 +131,21 @@ export const SmartDesignSelector = ({ onSelect, lang, setLang }) => {
                 ></div>
             </div>
 
-            {/* Language Switcher */}
-            <div className="absolute top-6 right-6 z-50">
+            <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
                 <button
                     onClick={() => setLang(prev => prev === 'vi' ? 'en' : 'vi')}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm hover:bg-white rounded-full shadow-sm border border-slate-200 transition-all text-sm font-bold text-slate-600 hover:text-blue-600"
+                    className="flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md hover:bg-white rounded-full shadow-sm border border-slate-200/60 transition-all text-xs font-black text-slate-700 hover:text-blue-600 hover:border-blue-200 hover:shadow-md active:scale-95"
                 >
-                    <Globe size={16} />
-                    <span>{lang === 'vi' ? 'TIẾNG VIỆT' : 'ENGLISH'}</span>
+                    <Globe size={14} className="opacity-70" />
+                    <span className="tracking-widest uppercase">{lang === 'vi' ? 'TIẾNG VIỆT' : 'ENGLISH'}</span>
+                </button>
+                
+                <button
+                    onClick={onSignOut}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md hover:bg-white rounded-full shadow-sm border border-slate-200/60 transition-all text-xs font-black text-slate-700 hover:text-rose-600 hover:border-rose-200 hover:shadow-md active:scale-95 group"
+                >
+                    <LogOut size={14} className="opacity-70 group-hover:text-rose-600 group-hover:opacity-100 transition-all" />
+                    <span className="tracking-widest uppercase">{t.logout}</span>
                 </button>
             </div>
 
@@ -146,6 +155,7 @@ export const SmartDesignSelector = ({ onSelect, lang, setLang }) => {
                     onComplete={handleBillComplete}
                     title={t.bill_modal_title}
                     lang={lang}
+                    onSignOut={onSignOut}
                 />
             )}
 

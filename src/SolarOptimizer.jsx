@@ -2388,7 +2388,17 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
 
     // 4. SMART DESIGN SELECTOR
     if (!designMode) {
-        return <SmartDesignSelector onSelect={handleDesignModeSelect} lang={lang} setLang={setLang} />;
+        return (
+            <SmartDesignSelector
+                onSelect={handleDesignModeSelect}
+                lang={lang}
+                setLang={setLang}
+                voltageLevelId={voltageLevelId}
+                setVoltageLevelId={setVoltageLevelId}
+                EVN_TARIFFS={EVN_TARIFFS}
+                onSignOut={onSignOut}
+            />
+        );
     }
 
 
@@ -3495,7 +3505,7 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
                             <SmartDesignSelector
                                 lang={lang}
                                 setLang={setLang}
-                                onSelect={handleInitialSelect}
+                                onSelect={handleDesignModeSelect}
                                 pricingType={pricingType}
                                 setPricingType={setPricingType}
                                 voltageLevelId={voltageLevelId}
