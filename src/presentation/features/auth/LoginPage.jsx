@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../../infra/supabaseClient';
 import { Lock, Mail, Loader2, Zap, ArrowRight } from 'lucide-react';
 import casLogo from '../../../assets/cas_logo_new.png';
+import loginBg from '../../../assets/login_bg_clean.png';
 
 const LoginPage = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
@@ -30,11 +31,11 @@ const LoginPage = ({ onLoginSuccess }) => {
     return (
         <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans">
 
-            {/* Background Image - HD from Unsplash */}
+            {/* Background Image */}
             <div className="absolute inset-0">
                 <img
-                    src="https://plus.unsplash.com/premium_photo-1679917152396-4b18accacb9d?w=1920&auto=format&fit=crop&q=90"
-                    alt=""
+                    src={loginBg}
+                    alt="Solar panels background"
                     className="w-full h-full object-cover"
                     style={{ objectPosition: 'center 60%' }}
                 />
@@ -58,7 +59,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             <div className="w-full max-w-[420px] px-6 relative z-10">
                 {/* Main Card */}
                 <div className="rounded-[28px] p-[1px] bg-gradient-to-b from-white/20 via-white/5 to-transparent">
-                    <div className="bg-[#0f172a]/80 backdrop-blur-2xl rounded-[27px] p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)]">
+                    <div className="bg-[#0f172a]/50 backdrop-blur-2xl rounded-[27px] p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)]">
 
                         {/* Logo Area */}
                         <div className="flex flex-col items-center mb-5 text-center">
