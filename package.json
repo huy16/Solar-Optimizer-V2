@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
     "html-to-image": "^1.11.13",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.562.0",
