@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../../infra/supabaseClient';
 import { Lock, Mail, Loader2, Zap, ArrowRight } from 'lucide-react';
 import casLogo from '../../../assets/cas_logo_new.png';
-import loginBg from '../../../assets/login_bg_clean.png';
+import loginBg from '../../../assets/login_bg_new.jpg';
 
 const LoginPage = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
