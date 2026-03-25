@@ -56,34 +56,34 @@ const LoginPage = ({ onLoginSuccess }) => {
                 }}></div>
             ))}
 
-            <div className="w-full max-w-[420px] px-6 relative z-10">
+            <div className="w-full max-w-[365px] px-6 relative z-10">
+                {/* Logo Area (Moved Outside) */}
+                <div className="flex flex-col items-center mb-4 text-center animate-in fade-in slide-in-from-top-4 duration-700">
+                    {/* Company Logo */}
+                    <div className="relative mb-1 leading-none">
+                        <div className="relative w-[180px] h-[45px] flex items-center justify-center">
+                            <img src={casLogo} alt="CAS Logo" className="max-w-full max-h-full object-contain filter drop-shadow-md" />
+                        </div>
+                    </div>
+
+                    <h1 className="text-[32px] font-extrabold tracking-tight leading-none animate-gradient-x select-none" style={{
+                        backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #fbd38d 25%, #ffffff 50%, #fbd38d 75%, #ffffff 100%)',
+                        backgroundSize: '200% auto',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                        display: 'block'
+                    }}>SOLAR OPTIMIZER</h1>
+                    <p className="text-white/60 text-[14px] mt-1 font-medium tracking-wide">Energy Analysis & Simulation System</p>
+                </div>
+
                 {/* Main Card */}
                 <div className="rounded-[28px] p-[1px] bg-gradient-to-b from-white/20 via-white/5 to-transparent">
-                    <div className="bg-[#0f172a]/50 backdrop-blur-2xl rounded-[27px] p-10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)]">
-
-                        {/* Logo Area */}
-                        <div className="flex flex-col items-center mb-5 text-center">
-                            {/* Company Logo */}
-                            <div className="relative mb-[2px] leading-none">
-                                <div className="relative w-[160px] h-[40px] flex items-center justify-center">
-                                    <img src={casLogo} alt="CAS Logo" className="max-w-full max-h-full object-contain filter drop-shadow-sm" />
-                                </div>
-                            </div>
-
-                            <h1 className="text-[26px] font-extrabold tracking-tight leading-none animate-gradient-x select-none" style={{
-                                backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #fbd38d 25%, #ffffff 50%, #fbd38d 75%, #ffffff 100%)',
-                                backgroundSize: '200% auto',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                backgroundClip: 'text',
-                                color: 'transparent',
-                                display: 'block'
-                            }}>SOLAR OPTIMIZER</h1>
-                            <p className="text-slate-500 text-[13px] mt-0.5 font-medium tracking-wide">CAS Energy Solutions</p>
-                        </div>
+                    <div className="bg-[#0f172a]/50 backdrop-blur-2xl rounded-[27px] pt-1 pb-6 px-6 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)]">
 
                         {/* Form */}
-                        <form onSubmit={handleLogin} className="space-y-5">
+                        <form onSubmit={handleLogin} className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Email</label>
                                 <div className="relative group">
@@ -128,7 +128,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full relative overflow-hidden disabled:opacity-50 text-white font-bold py-4 rounded-2xl shadow-[0_8px_24px_-4px_rgba(245,158,11,0.35)] transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2.5 mt-3 group"
+                                className="w-full relative overflow-hidden disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl shadow-[0_8px_24px_-4px_rgba(245,158,11,0.35)] transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2.5 mt-4 group"
                                 style={{
                                     background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
                                 }}
@@ -145,14 +145,16 @@ const LoginPage = ({ onLoginSuccess }) => {
                             </button>
                         </form>
 
-                        {/* Footer */}
-                        <div className="mt-10 pt-6 border-t border-white/[0.06] text-center">
-                            <p className="text-slate-600 text-[11px] tracking-wide">
-                                © 2026 CAS Energy Solutions • Solar Optimizer v2.0
-                            </p>
-                        </div>
-                    </div>
                 </div>
+            </div>
+
+            </div>
+
+            {/* Viewport Footer */}
+            <div className="absolute bottom-6 left-0 right-0 text-center z-10">
+                <p className="text-white/40 text-[11px] tracking-wide">
+                    © 2026 CAS Energy Solutions • Solar Optimizer v2.0
+                </p>
             </div>
         </div>
     );

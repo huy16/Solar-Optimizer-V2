@@ -567,21 +567,21 @@ export const Finance = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* NEW: Investment Capital (Capex) */}
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 relative z-20">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><DollarSign size={16} className="text-blue-600" /> {dt.total_capex_manual}</h3>
                         <label className="inline-flex items-center cursor-pointer">
                             <input
                                 type="checkbox"
-                                checked={finParams.manualCapex !== '' && finParams.manualCapex !== null && finParams.manualCapex !== undefined}
-                                onChange={(e) => setFinParams(prev => ({ ...prev, manualCapex: e.target.checked ? 0 : '' }))}
+                                checked={finParams.manualCapex !== null && finParams.manualCapex !== undefined}
+                                onChange={(e) => setFinParams(prev => ({ ...prev, manualCapex: e.target.checked ? 0 : null }))}
                                 className="sr-only peer"
                             />
                             <div className="relative w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
 
-                    {(finParams.manualCapex !== '' && finParams.manualCapex !== null && finParams.manualCapex !== undefined) && (
+                    {(finParams.manualCapex !== null && finParams.manualCapex !== undefined) && (
                         <div className="animate-in fade-in slide-in-from-top-2">
                             <div>
                                 <label className="text-[9px] font-bold text-slate-400 block mb-0.5 uppercase">{lang === 'vi' ? 'Số tiền' : 'Amount'}</label>

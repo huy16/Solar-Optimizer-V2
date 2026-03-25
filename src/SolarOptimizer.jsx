@@ -866,7 +866,8 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
             term: 10 // Years
         },
         carbonPrice: 5.0, // USD / tCO2
-        usdExchangeRate: 25000 // VND / USD
+        usdExchangeRate: 25000, // VND / USD
+        manualCapex: null
     });
 
     // --- TARIFF CATEGORY STATE (REMOVED - Use pricingType/voltageLevelId from hook) ---
@@ -3374,7 +3375,7 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
                 </div>
                     <div className="border-t border-slate-100 p-2 text-[9px] text-slate-400 bg-slate-50/50">
                         <div className="flex justify-between items-center opacity-80 hover:opacity-100 transition-all">
-                            <span><span className="font-bold">CPS Solar</span> © 2026</span>
+                            <span className="font-medium">© 2026 CAS Energy Solutions • Solar Optimizer v2.0</span>
                             {onSignOut && (
                                 <button onClick={onSignOut} className="flex items-center gap-1 hover:text-red-500 font-bold transition-colors">
                                     <LogOut size={10} /> {t.logout}
