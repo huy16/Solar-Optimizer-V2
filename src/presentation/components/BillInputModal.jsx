@@ -486,34 +486,33 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
 
     const [region, setRegion] = useState('north'); // north, central, south
 
-    const handleSeasonalDist = (value) => {
-        const base = value === '' ? 0 : parseInt(value);
-        if (base === 0) return;
-
+    const handleSeasonalDist = () => {
         let coefficients = [];
 
         if (region === 'north') {
-            // MOVED: North - Summer Peak (May-Aug)
             coefficients = [0.85, 0.82, 0.9, 1.05, 1.15, 1.25, 1.3, 1.28, 1.15, 1.05, 0.95, 0.9];
         } else if (region === 'central') {
-            // Central - Summer Peak (May-Aug) similar to North but maybe sharper?
-            // Let's use a slightly modified curve or same for now if not specified.
-            // "May-August Peak" - using similar to North for now.
             coefficients = [0.9, 0.9, 0.95, 1.1, 1.2, 1.25, 1.25, 1.2, 1.1, 1.0, 0.95, 0.9];
         } else {
-            // South - Dry Season Peak (Mar-May) / Rainy Season Low (Aug-Oct) - but relatively flat
-            // "Flat / Slight Dry Season Peak"
             coefficients = [0.98, 0.98, 1.05, 1.1, 1.1, 1.05, 1.0, 0.98, 0.98, 0.98, 0.98, 0.98];
         }
 
-        // Normalize to keep average ~ base? Or base = Jan? 
-        // Existing logic: "Normalize so that base (Jan) is approx 0.85 of peak?" -> No, logic was "Input is Jan".
-        // Code: `const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));` 
-        // Wait, original code was: `Math.round((base / 0.85) * c)`. 0.85 was the first coeff.
-        // So generic formula: `Math.round((base / coefficients[0]) * c)`
+        // Find the first non-zero month to use as base
+        const firstIdx = monthlyData.findIndex(v => Number(v) > 0);
+        if (firstIdx === -1) return;
+        const base = Number(monthlyData[firstIdx]);
 
-        const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));
+        // Use its coefficient to normalize, then distribute
+        const newData = coefficients.map(c => Math.round((base / coefficients[firstIdx]) * c));
         setMonthlyData(newData);
+
+        if (isThreeTier) {
+            setThreeTierData({
+                normal: newData.map(v => Math.round(v * 0.6)),
+                peak: newData.map(v => Math.round(v * 0.25)),
+                offPeak: newData.map(v => Math.round(v * 0.15))
+            });
+        }
     };
 
     const handleInputChange = (index, value) => {
@@ -569,6 +568,14 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
 
         if (hasChanges) {
             setMonthlyData(newData);
+
+            if (isThreeTier) {
+                setThreeTierData({
+                    normal: newData.map(v => Math.round(v * 0.6)),
+                    peak: newData.map(v => Math.round(v * 0.25)),
+                    offPeak: newData.map(v => Math.round(v * 0.15))
+                });
+            }
         }
     };
 
@@ -608,6 +615,14 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             return v;
         });
         setMonthlyData(newData);
+
+        if (isThreeTier) {
+            setThreeTierData({
+                normal: newData.map(v => Math.round(v * 0.6)),
+                peak: newData.map(v => Math.round(v * 0.25)),
+                offPeak: newData.map(v => Math.round(v * 0.15))
+            });
+        }
     };
 
     const handleComplete = () => {
@@ -1171,7 +1186,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         </button>
                                         <button
                                             onClick={handleAutoCompleteMissing}
-                                            title={t.auto_fill_tip}
+                                            title={isThreeTier ? (lang === 'vi' ? 'Bù tháng: Dùng các tháng đã nhập để ước lượng tháng còn trống theo đường cong mùa.\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Auto-fill: Estimates missing months from entered data using seasonal curve.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : t.auto_fill_tip}
                                             className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-blue-50/50 border border-blue-100 rounded-lg text-blue-600 font-bold text-[9px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
                                         >
                                             <Sparkles size={12} className="group-hover:animate-spin shrink-0" />
@@ -1183,12 +1198,14 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         </button>
                                         <button
                                             onClick={() => handleFillAll(monthlyData[0])}
+                                            title={isThreeTier ? (lang === 'vi' ? 'Dàn đều: Lấy giá trị Tháng 1 áp dụng cho tất cả 12 tháng.\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Fill All: Applies Month 1 value to all 12 months.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : (lang === 'vi' ? 'Dàn đều: Lấy giá trị Tháng 1 áp dụng cho tất cả 12 tháng.' : 'Fill All: Applies Month 1 value to all 12 months.')}
                                             className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-slate-50/80 border border-slate-200/60 rounded-lg text-slate-600 font-black text-[9px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
                                             <RefreshCw size={12} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
                                         </button>
                                         <button
-                                            onClick={() => handleSeasonalDist(monthlyData[0])}
+                                            onClick={handleSeasonalDist}
+                                            title={isThreeTier ? (lang === 'vi' ? 'Phân bổ: Lấy tháng đầu tiên có giá trị làm gốc, phân bổ 12 tháng theo đường cong mùa (vùng đã chọn).\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Distribute: Uses first non-zero month as base and distributes across 12 months by seasonal curve.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : (lang === 'vi' ? 'Phân bổ: Lấy tháng đầu tiên có giá trị làm gốc, phân bổ 12 tháng theo đường cong mùa (vùng đã chọn).' : 'Distribute: Uses first non-zero month as base and distributes across 12 months by seasonal curve.')}
                                             className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg text-emerald-600 font-black text-[9px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
                                         >
                                             <div className="relative w-3 h-3 overflow-hidden shrink-0">

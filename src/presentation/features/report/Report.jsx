@@ -234,19 +234,7 @@ export const Report = ({
                             );
                         })()}
 
-                        {estimatedLosses && estimatedLosses.breakdown && (
-                            <div className="mt-4 pt-4 border-t border-slate-200">
-                                <h4 className="font-bold text-slate-700 text-xs mb-3 flex items-center gap-2">
-                                    {dt.losses_title}
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    < LossCard label={t.loss_labels.temp} value={estimatedLosses.breakdown.temp} />
-                                    < LossCard label={t.loss_labels.soiling} value={estimatedLosses.breakdown.soiling} />
-                                    < LossCard label={t.loss_labels.cable} value={estimatedLosses.breakdown.cable} />
-                                    < LossCard label={t.loss_labels.inverter} value={estimatedLosses.breakdown.inverter} />
-                                </div>
-                            </div>
-                        )}
+                        {/* Losses breakdown hidden by design */}
                     </div>
                 )}
             </div>

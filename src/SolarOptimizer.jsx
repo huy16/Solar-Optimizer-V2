@@ -855,7 +855,7 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
         omPercent: 1.5, // % of Capex
         batteryLife: 10,
         batteryReplaceCost: 10, // Default if not using specific events
-        inverterLife: 20,
+        inverterLife: 25,
         inverterReplaceCost: 10,
         majorRepairs: [],
         omSchedule: [], // [{year: number, amount: number}]
@@ -3262,15 +3262,15 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">{t.project_info}</label>
                         <DebouncedInput value={projectName} onChange={setProjectName} placeholder={t.project_name + "..."} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" />
                     </div>
-                    <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>
+                    <div className="border-t border-slate-200 pt-2">{!isSales && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>}
                         <div className="space-y-2">
-                            <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
+                            {!isSales && <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
                                 <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Zap size={12} className="text-amber-500" />{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><RefreshCw size={10} /></button></div><div className="text-[10px] text-slate-500 whitespace-normal">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
-                            </div>
+                            </div>}
                             <input type="file" ref={fileInputRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFileUpload} onClick={(e) => e.target.value = null} />
 
                             {/* Solar Profile Shape Toggle */}
-                            <div className="px-2 py-1.5 bg-white rounded border border-purple-200 text-xs shadow-sm">
+                            {!isSales && <div className="px-2 py-1.5 bg-white rounded border border-purple-200 text-xs shadow-sm">
                                 <div className="flex flex-col gap-1.5">
                                     <span className="font-medium text-slate-700 flex items-center gap-1"><Activity size={12} className="text-purple-500" />{t.status.profile_shape || "Loại Profile"}</span>
                                     <div className="flex bg-slate-100 rounded p-0.5 border border-slate-200 w-full">
@@ -3288,7 +3288,7 @@ const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
                                         </button>
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
 
 
                             {/* Solar Data & Loss Factors (Engineer only) */}
