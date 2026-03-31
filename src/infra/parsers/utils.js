@@ -1,71 +1,37 @@
-export const generateSolarProfile = (monthlyGhi, metadata, sourceName, isSmoothProfile = false) => {
+export const generateSolarProfile = (monthlyGhi, metadata, sourceName) => {
     const solarMap = new Map(); const year = new Date().getFullYear();
-
-    // Calculate overall avg PSH to shape the curve differently per province
-    const totalAnnualGhi = monthlyGhi.reduce((a, b) => a + b, 0);
-    const avgPsh = totalAnnualGhi / 365;
-
-    // Dynamic profile: vary solar window and shape based on province PSH
-    // Higher PSH = wider window, more symmetric peak
-    // Lower PSH = narrower window, sharper peak
-    const buildDailyProfile = (psh) => {
-        // Solar window boundaries (hours)
-        // PSH 4.5 → sunrise 5.5, sunset 18.0 (wide)
-        // PSH 2.8 → sunrise 6.5, sunset 16.5 (narrow)
-        const sunriseBase = 6.0;
-        const sunsetBase = 17.0;
-        const widthFactor = Math.max(0, (psh - 3.0) / 2.0); // 0-1 range
-        const sunrise = sunriseBase - widthFactor * 1.0;  // 5.0 to 6.0
-        const sunset = sunsetBase + widthFactor * 1.0;    // 17.0 to 18.0
-
-        // Peak hour shifts slightly: higher PSH peaks later (12.5), lower PSH peaks earlier (11.5)
-        const peakHour = 11.5 + widthFactor * 1.0; // 11.5 to 12.5
-
-        // Asymmetry: afternoon drops faster for lower PSH (more cloud cover)
-        const morningWidth = peakHour - sunrise;
-        const afternoonWidth = sunset - peakHour;
-
-        const profile = {};
-        for (let t = 0; t <= 23.5; t += 0.5) {
-            let val = 0;
-            if (t >= sunrise && t <= sunset) {
-                let normalized;
-                if (t <= peakHour) {
-                    normalized = (t - sunrise) / morningWidth; // 0 to 1
-                } else {
-                    normalized = (sunset - t) / afternoonWidth; // 1 to 0
-                }
-                // Use sin^2 envelope with province-specific shape
-                const sinVal = Math.sin(normalized * Math.PI / 2);
-                val = Math.pow(sinVal, 1.5 + widthFactor * 0.5); // exponent 1.5-2.0
-            }
-            if (val > 0.001) profile[t] = val;
-        }
-        return profile;
-    };
-
     for (let m = 0; m < 12; m++) {
         const daysInMonth = new Date(year, m + 1, 0).getDate(); const monthlySum = monthlyGhi[m];
+        // monthlyGhi is usually kWh/m2/month or similar.
+        // Convert to daily avg peak sun hours (PSH)
         const avgDailyPsh = monthlySum / daysInMonth;
+        // 1. Calculate the base shape integral (sum of half-hours)
+        let shapeSum = 0;
+        for (let h = 0; h < 24; h++) {
+            if (h >= 6 && h <= 18) {
+                shapeSum += Math.pow(Math.sin((Math.PI * (h - 6)) / 12), 3);
+            }
+            const hNext = h + 0.5;
+            if (hNext >= 6 && hNext <= 18) {
+                shapeSum += Math.pow(Math.sin((Math.PI * (hNext - 6)) / 12), 3);
+            }
+        }
 
-        // Build profile specific to this month's PSH
-        const dailyProfile = isSmoothProfile
-            ? buildDailyProfile(avgDailyPsh)  // Province-specific bell-curve
-            : buildDailyProfile(avgPsh);       // Fallback: use avg PSH
-
-        const sumWeights = Object.values(dailyProfile).reduce((a, b) => a + b, 0);
-        if (sumWeights === 0) continue;
+        // 2. The total daily energy is (Peak * shapeSum * 0.5).
+        // We want Energy = avgDailyPsh. So Peak = avgDailyPsh / (shapeSum * 0.5).
+        const peak = avgDailyPsh / (shapeSum * 0.5);
 
         for (let d = 1; d <= daysInMonth; d++) {
             for (let h = 0; h < 24; h++) {
                 let valCurrent = 0;
                 let valNext = 0;
 
-                if (dailyProfile[h] !== undefined) {
-                    valCurrent = (avgDailyPsh * (dailyProfile[h] / sumWeights)) / 0.5;
+                if (h >= 6 && h <= 18) {
+                    valCurrent = peak * Math.pow(Math.sin((Math.PI * (h - 6)) / 12), 3);
                 }
-                if (dailyProfile[h + 0.5] !== undefined) {
-                    valNext = (avgDailyPsh * (dailyProfile[h + 0.5] / sumWeights)) / 0.5;
+                const hNext = h + 0.5;
+                if (hNext >= 6 && hNext <= 18) {
+                    valNext = peak * Math.pow(Math.sin((Math.PI * (hNext - 6)) / 12), 3);
                 }
 
                 solarMap.set(`${m}-${d}-${h}-0`, Math.max(0, valCurrent));
@@ -73,7 +39,8 @@ export const generateSolarProfile = (monthlyGhi, metadata, sourceName, isSmoothP
             }
         }
     }
-    return [{ map: solarMap, source: sourceName, title: sourceName, score: 2, meta: metadata }];
+    if (metadata) metadata['sourceType'] = 'MET_SYNTHETIC';
+    return [{ map: solarMap, source: `${sourceName} - Dữ liệu tháng tổng hợp`, title: sourceName, score: 2, meta: metadata }];
 };
 
 export const interpolate30Min = (originalMap) => {
@@ -167,12 +134,11 @@ export const generateInstantaneousSolar = (date, dailyPsh) => {
 
     // Profile chuẩn phân bổ theo ngày, tổng các trọng số = 1.0 (trước khi normalize)
     const dailyProfile = {
-        7.0: 0.040, 7.5: 0.060,
+        6.0: 0.010, 6.5: 0.020, 7.0: 0.040, 7.5: 0.060,
         8.0: 0.080, 8.5: 0.095, 9.0: 0.105, 9.5: 0.118,
         10.0: 0.117, 10.5: 0.117, 11.0: 0.118, 11.5: 0.135,
         12.0: 0.155, 12.5: 0.145, 13.0: 0.135, 13.5: 0.125,
-        14.0: 0.090, 14.5: 0.060, 15.0: 0.030, 15.5: 0.015,
-        16.0: 0.010, 16.5: 0.005, 17.0: 0.002
+        14.0: 0.090, 14.5: 0.060, 15.0: 0.030, 15.5: 0.015, 16.0: 0.005
     };
 
     // Chuẩn hoá để tổng weights = 1.0

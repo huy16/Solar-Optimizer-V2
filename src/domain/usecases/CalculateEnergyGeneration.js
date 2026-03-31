@@ -46,12 +46,12 @@ export const execute = (
     const safeLoss = (val) => isNaN(Number(val)) ? 0 : Number(val);
     const totalLossPct = safeLoss(losses.temp) + safeLoss(losses.soiling) + safeLoss(losses.cable) + safeLoss(losses.inverter);
 
-    // If the data is already an Actual Yield profile (like PVSyst PVOUT), do not double-penalize standard technical losses
+    // If the data is already an Actual Yield profile (like PVSyst PVOUT), do not double-penalize
     const isActualYield = techParams.isActualYield === true;
     const systemDerate = isActualYield ? 1.0 : 1 - (totalLossPct / 100);
 
-    // Weather Scenario Derate Factor (for bad weather simulation) - ALWAYS apply regardless of isActualYield
-    const weatherDerate = isNaN(Number(techParams.weatherDerate)) ? 1.0 : Number(techParams.weatherDerate);
+    // Weather Scenario Derate Factor (for bad weather simulation)
+    const weatherDerate = isActualYield ? 1.0 : (isNaN(Number(techParams.weatherDerate)) ? 1.0 : Number(techParams.weatherDerate));
 
     // Sanitize System Size
     const safeSystemSize = isNaN(Number(systemSize)) ? 0 : Number(systemSize);

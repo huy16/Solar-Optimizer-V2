@@ -1,33 +1,18 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Zap, Calendar, Snowflake, ArrowBigRight, BarChart3, AlertCircle, CheckCircle, Info, MapPin, Table, RefreshCw, Activity, Flame, TrendingUp, Car, HardHat, Sparkles, ChevronDown, Copy, LogOut } from 'lucide-react';
+import { X, Zap, Calendar, Snowflake, ArrowBigRight, BarChart3, AlertCircle, Info, MapPin, Table, RefreshCw, Activity, Flame, TrendingUp, Car, HardHat, Sparkles, ChevronDown, Copy } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { LOAD_PROFILES } from '../../utils/loadProfileGenerator';
 import ALL_PROVINCES from '../../data/provinces.json';
 import { EVN_TARIFFS, calculateBlendedPrice } from '../../data/evn_tariffs';
-
-const VietnamFlagIcon = ({ size = 18, className, ...props }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
-        <rect width="18" height="18" x="3" y="3" rx="4" fill="#DA251D" />
-        <path d="M12 7.5L13.1 10.1L15.9 10.4L13.8 12.2L14.4 15L12 13.6L9.6 15L10.2 12.2L8.1 10.4L10.9 10.1L12 7.5Z" fill="#FFFF00" />
-    </svg>
-);
 
 export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill Input", lang = 'vi' }) => {
     // Basic Data State
     const [monthlyData, setMonthlyData] = useState(Array(12).fill(0));
 
     // Advanced Configuration State
-    const [province, setProvince] = useState('Việt Nam');
+    const [province, setProvince] = useState('TP. Hồ Chí Minh');
     const [customerGroup, setCustomerGroup] = useState('retail_manufacturing'); // business, manufacture, admin
     const [voltageLevel, setVoltageLevel] = useState('22kv_110kv'); // 110kv_plus, 22kv_110kv, 6kv_22kv, under_6kv
-
-    // 3-Tier Monthly Consumption State
-    const [isThreeTier, setIsThreeTier] = useState(false);
-    const [threeTierData, setThreeTierData] = useState({
-        normal: Array(12).fill(0),
-        peak: Array(12).fill(0),
-        offPeak: Array(12).fill(0)
-    });
 
     // Default to a valid key from LOAD_PROFILES if possible, or fallback
     const [profileSector, setProfileSector] = useState(Object.keys(LOAD_PROFILES)[0] || "");
@@ -43,18 +28,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     const [priceEscalation, setPriceEscalation] = useState(3);
     const [evCharging, setEvCharging] = useState(false);
     const [extraLoadType, setExtraLoadType] = useState('none'); // none, heatpump, machinery
-    const [ratioSat, setRatioSat] = useState(40); // % for Saturday
-    const [ratioSun, setRatioSun] = useState(30); // % for Sunday
-
-    // Custom 48h Profile State (24h Weekday + 24h Weekend)
-    const [activeCustomTab, setActiveCustomTab] = useState('weekday');
-    const [customWeights, setCustomWeights] = useState(() => {
-        const weekday = Array(24).fill(0.01); // 1% base
-        for (let h = 8; h <= 17; h++) weekday[h] = 0.08; // 8% during day
-        const weekend = [...weekday];
-        return [...weekday, ...weekend];
-    });
-    const [editingCell, setEditingCell] = useState({ index: -1, value: '' });
     const dropdownRef = useRef(null);
 
     const dt = {
@@ -62,6 +35,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             config: "Cấu hình",
             evn_tariff: "Cài đặt Biểu giá EVN",
             evn_desc: "Cấu hình đối tượng và cấp điện áp",
+            location: "Vị trí dự án",
+            customer_group: "Nhóm khách hàng",
             business: "Kinh doanh",
             manufacture: "Sản xuất",
             admin: "Hành chính sự nghiệp",
@@ -77,12 +52,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             est_price: "Đơn giá dự tính",
             custom_price: "Tùy chỉnh",
             apply_custom: "Dùng giá này",
-            three_tier_toggle: "Nhập 3 khung giờ",
-            three_tier_desc: "Normal - Peak - Off-peak",
-            normal_label: "Bình thường",
-            peak_label: "Cao điểm",
-            offPeak_label: "Thấp điểm",
-            total_label: "Tổng cộng",
             op_profile: "Hồ sơ vận hành",
             unit_kwh: "Đơn vị: kWh",
             unit_vnd: "Đơn vị: VNĐ",
@@ -105,8 +74,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             back: "Quay lại",
             generate: "Tạo Profile",
             view_year: "Năm",
-            view_day: "Ngày",
-            distribute: `Phân bổ`,
+            view_day: "Ngày (Mẫu)",
+            distribute: `Phân bổ\nmùa`,
             hourly_weights: "Tỷ trọng tiêu thụ theo giờ",
             months: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
             price_escalation: "Tăng giá điện dự kiến",
@@ -117,32 +86,15 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             none: "Không có",
             heatpump: "Bơm nhiệt",
             machinery: "Sản Xuất",
-            schedule_help: "Xác định các ngày có tải tiêu thụ. Ngày cuối tuần sẽ được giả lập với mức tải tối giản (tải nền).",
+            schedule_help: "Xác định các ngày có tải tiêu thụ. Ngày nghỉ sẽ được giả lập với mức tải tối giản (tải nền).",
             mon_fri_tip: "Thứ 2-6: 100% tải. Thứ 7: 40% tải nền. CN: 30% tải nền.",
             mon_sat_tip: "Thứ 2-7: 100% tải. Chủ nhật: 30% tải nền.",
             all_days_tip: "Cả tuần: 100% tải.",
-            auto_fill: `Bù tháng`,
+            auto_fill: `Bù tháng\nthiếu`,
             auto_fill_tip: "Dựa vào các tháng đã nhập để tính trung bình cho các tháng còn trống.",
-            custom_profile_title: "Tùy chỉnh",
-            weekday_label: "Ngày làm việc",
-            weekend_label: "Ngày cuối tuần",
-            copy_to_weekend: "Sao chép sang cuối tuần",
-            custom_sector_label: "--- TÙY CHỈNH (HỒ SƠ RIÊNG) ---",
-            custom: "  Tùy chỉnh",
-            ratio_sat: "Tỷ lệ tải Thứ 7 (%)",
-            ratio_sun: "Tỷ lệ tải Chủ nhật (%)",
-            ratio_help: "So với tải ngày thường (100%).",
             region_north: "Miền Bắc",
             region_central: "Miền Trung",
-            region_south: "Miền Nam",
-            custom_normalize: "Tự khớp",
-            custom_matched: "Đã khớp 100%",
-            custom_short: "Thiếu",
-            custom_over: "Vượt",
-            custom_paste_workday: "Dán dữ liệu từ Ngày làm việc",
-            custom_auto_fix_note: "* Tool sẽ tự động chuẩn hóa về 100% khi tính toán nếu bạn không chỉnh sửa.",
-            custom_wd_title: "Biểu đồ cho Ngày làm việc",
-            custom_we_title: "Biểu đồ cho Ngày cuối tuần"
+            region_south: "Miền Nam"
         },
         en: {
             config: "Configuration",
@@ -165,13 +117,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             est_price: "Estimated Price",
             custom_price: "Custom",
             apply_custom: "Use this price",
-            custom: "Custom",
-            three_tier_toggle: "3-Tier Input",
-            three_tier_desc: "Normal - Peak - Off-peak",
-            normal_label: "Normal",
-            peak_label: "Peak",
-            offPeak_label: "Off-peak",
-            total_label: "Total",
             op_profile: "Operation Profile",
             unit_kwh: "Unit: kWh",
             unit_vnd: "Unit: VNĐ",
@@ -188,8 +133,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri: "Mon - Fri",
             mon_sat: "Mon - Sat",
             all_days: "All Days",
-            weekday_label: "Workday",
-            weekend_label: "Holiday / Weekend",
             seasonal: "Seasonal Cooling",
             seasonal_desc: "Boost load by 15-20% during Summer",
             ov_title: "Consumption Overview",
@@ -201,7 +144,7 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             back: "Back",
             generate: "Generate Profile",
             view_year: "Year",
-            view_day: "Day",
+            view_day: "Day (Pattern)",
             hourly_weights: "Hourly consumption weights",
             months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             price_escalation: "Annual Price Escalation",
@@ -218,20 +161,9 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             mon_fri_tip: "Mon-Fri: 100% load. Sat: 40% base. Sun: 30% base.",
             mon_sat_tip: "Mon-Sat: 100% load. Sunday: 30% base load.",
             all_days_tip: "All days: 100% load.",
-            ratio_sat: "Saturday Load Ratio (%)",
-            ratio_sun: "Sunday Load Ratio (%)",
-            ratio_help: "Relative to workday load (100%).",
             region_north: "North",
             region_central: "Central",
-            region_south: "South",
-            custom_normalize: "Normalize",
-            custom_matched: "Matched 100%",
-            custom_short: "Short",
-            custom_over: "Over",
-            custom_paste_workday: "Paste from Workday",
-            custom_auto_fix_note: "* Tool will auto-normalize to 100% during calculation if left unedited.",
-            custom_wd_title: "Workday Profile",
-            custom_we_title: "Weekend Profile"
+            region_south: "South"
         }
     };
 
@@ -302,32 +234,16 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
     }, [monthlyData, currentPrice, t.months]);
 
     const dailyPreviewData = useMemo(() => {
-        let weights, intervalMins, isDualDay;
-
-        if (profileSector === 'custom') {
-            weights = customWeights;
-            intervalMins = 60;
-            isDualDay = true;
-        } else {
-            const profileEntry = LOAD_PROFILES[profileSector] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
-            weights = Array.isArray(profileEntry) ? profileEntry : (profileEntry.weights || []);
-            intervalMins = profileEntry.intervalMins || 60;
-            isDualDay = profileEntry.isDualDay || false;
-        }
+        const profileEntry = LOAD_PROFILES[profileSector] || LOAD_PROFILES[Object.keys(LOAD_PROFILES)[0]] || {};
+        const weights = Array.isArray(profileEntry) ? profileEntry : (profileEntry.weights || []);
+        const intervalMins = profileEntry.intervalMins || 60;
+        const isDualDay = profileEntry.isDualDay || false;
 
         const dummyDailyTotal = 100;
         const stepsPerDay = Math.floor(1440 / intervalMins);
 
-        // For DualDay/Custom, we normally show Weekday
-        // BUT if editing Custom Profile, show the active tab (what they are editing)
-        let previewWeights = weights;
-        if (isDualDay) {
-            if (profileSector === 'custom') {
-                previewWeights = activeCustomTab === 'weekday' ? weights.slice(0, 24) : weights.slice(24, 48);
-            } else {
-                previewWeights = weights.slice(0, stepsPerDay);
-            }
-        }
+        // For DualDay, we only preview the first day (Weekday)
+        const previewWeights = isDualDay ? weights.slice(0, stepsPerDay) : weights;
 
         return previewWeights.map((w, i) => {
             let loadKw = dummyDailyTotal * w;
@@ -355,187 +271,49 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                 weight: loadKw / dummyDailyTotal
             };
         });
-    }, [profileSector, customWeights, evCharging, extraLoadType]);
+    }, [profileSector, evCharging, extraLoadType]);
 
-    const handleWeightChange = (index, value) => {
-        const newWeights = [...customWeights];
-        // Allow digits and one decimal point
-        const cleanValue = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-        
-        // Handle leading zeros but allow "0." 
-        const formattedValue = cleanValue.replace(/^0+(?=\d)/, '');
-        
-        // Store the raw string for the active editing cell
-        setEditingCell({ index, value: formattedValue });
-
-        const val = formattedValue === '' || formattedValue === '.' ? 0 : parseFloat(formattedValue);
-        newWeights[index] = val / 100;
-        setCustomWeights(newWeights);
-    };
-
-    const handleCopyToWeekend = () => {
-        const newWeights = [...customWeights];
-        for (let i = 0; i < 24; i++) {
-            newWeights[i + 24] = newWeights[i];
-        }
-        setCustomWeights(newWeights);
-    };
-
-
-    const handleFocus = (e) => e.target.select();
-    
-    const handleCustomWeightsPaste = (e, startIndex) => {
-        e.preventDefault();
-        const pasteData = e.clipboardData.getData('text');
-        // Split by tab (Excel), space, newline or comma
-        const values = pasteData.split(/[\t\r\n\s,]+/).filter(v => v !== "");
-        
-        if (values.length > 0) {
-            const newWeights = [...customWeights];
-            values.forEach((val, i) => {
-                const targetIdx = startIndex + i;
-                // Limit to current 24h block to prevent overflow to the other day
-                const dayLimit = startIndex < 24 ? 24 : 48;
-                if (targetIdx < dayLimit) {
-                    const cleanValue = val.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                    const num = cleanValue === '' || cleanValue === '.' ? 0 : parseFloat(cleanValue);
-                    newWeights[targetIdx] = num / 100;
-                }
-            });
-            setCustomWeights(newWeights);
-        }
-    };
-
-    const handleNormalizeWeights = () => {
-        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
-        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
-        const currentSum = currentBlock.reduce((a, b) => a + b, 0);
-
-        if (currentSum > 0) {
-            const newWeights = [...customWeights];
-            currentBlock.forEach((w, i) => {
-                newWeights[startIdx + i] = w / currentSum;
-            });
-            setCustomWeights(newWeights);
-        }
-    };
-
-    const handleCopyCustomWeights = () => {
-        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
-        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
-        const dataStr = currentBlock.map(w => Math.round(w * 1000) / 10).join('\t');
-        navigator.clipboard.writeText(dataStr);
-    };
-
-    const getHeatmapColor = (weight, type) => {
-        const val = weight * 100;
-        if (val === 0) return 'bg-white';
-        if (type === 'weekday') {
-            if (val < 3) return 'bg-blue-50 text-blue-700';
-            if (val < 6) return 'bg-blue-100 text-blue-800';
-            if (val < 10) return 'bg-blue-200 text-blue-900';
-            return 'bg-blue-500 text-white';
-        } else {
-            if (val < 3) return 'bg-rose-50 text-rose-700';
-            if (val < 6) return 'bg-rose-100 text-rose-800';
-            if (val < 10) return 'bg-rose-200 text-rose-900';
-            return 'bg-rose-500 text-white';
-        }
+    const handleInputChange = (index, value) => {
+        const newData = [...monthlyData];
+        newData[index] = value === '' ? 0 : parseInt(value);
+        setMonthlyData(newData);
     };
 
     const handleFillAll = (value) => {
         const numValue = value === '' ? 0 : parseInt(value);
         setMonthlyData(Array(12).fill(numValue));
-        
-        if (isThreeTier) {
-            // Distribute across tiers using default ratios
-            setThreeTierData({
-                normal: Array(12).fill(Math.round(numValue * 0.6)),
-                peak: Array(12).fill(Math.round(numValue * 0.25)),
-                offPeak: Array(12).fill(Math.round(numValue * 0.15))
-            });
-        }
-    };
-
-    const handleThreeTierChange = (monthIdx, tier, value) => {
-        const numValue = value === '' ? 0 : parseFloat(value);
-        const newData = { ...threeTierData };
-        newData[tier][monthIdx] = numValue;
-        setThreeTierData(newData);
-
-        // Sync with monthlyData
-        const newMonthlyData = [...monthlyData];
-        newMonthlyData[monthIdx] = newData.normal[monthIdx] + newData.peak[monthIdx] + newData.offPeak[monthIdx];
-        setMonthlyData(newMonthlyData);
-    };
-
-    const toggleThreeTier = () => {
-        if (!isThreeTier) {
-            // Toggling ON: Prefill 3-tier from current monthlyData
-            const newNormal = monthlyData.map(v => Math.round(v * 0.6));
-            const newPeak = monthlyData.map(v => Math.round(v * 0.25));
-            const newOffPeak = monthlyData.map(v => Math.round(v * 0.15));
-            setThreeTierData({
-                normal: newNormal,
-                peak: newPeak,
-                offPeak: newOffPeak
-            });
-        }
-        setIsThreeTier(!isThreeTier);
     };
 
     const [region, setRegion] = useState('north'); // north, central, south
 
-    const handleSeasonalDist = () => {
+    const handleSeasonalDist = (value) => {
+        const base = value === '' ? 0 : parseInt(value);
+        if (base === 0) return;
+
         let coefficients = [];
 
         if (region === 'north') {
+            // MOVED: North - Summer Peak (May-Aug)
             coefficients = [0.85, 0.82, 0.9, 1.05, 1.15, 1.25, 1.3, 1.28, 1.15, 1.05, 0.95, 0.9];
         } else if (region === 'central') {
+            // Central - Summer Peak (May-Aug) similar to North but maybe sharper?
+            // Let's use a slightly modified curve or same for now if not specified.
+            // "May-August Peak" - using similar to North for now.
             coefficients = [0.9, 0.9, 0.95, 1.1, 1.2, 1.25, 1.25, 1.2, 1.1, 1.0, 0.95, 0.9];
         } else {
+            // South - Dry Season Peak (Mar-May) / Rainy Season Low (Aug-Oct) - but relatively flat
+            // "Flat / Slight Dry Season Peak"
             coefficients = [0.98, 0.98, 1.05, 1.1, 1.1, 1.05, 1.0, 0.98, 0.98, 0.98, 0.98, 0.98];
         }
 
-        // Find the first non-zero month to use as base
-        const firstIdx = monthlyData.findIndex(v => Number(v) > 0);
-        if (firstIdx === -1) return;
-        const base = Number(monthlyData[firstIdx]);
+        // Normalize to keep average ~ base? Or base = Jan? 
+        // Existing logic: "Normalize so that base (Jan) is approx 0.85 of peak?" -> No, logic was "Input is Jan".
+        // Code: `const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));` 
+        // Wait, original code was: `Math.round((base / 0.85) * c)`. 0.85 was the first coeff.
+        // So generic formula: `Math.round((base / coefficients[0]) * c)`
 
-        // Use its coefficient to normalize, then distribute
-        const newData = coefficients.map(c => Math.round((base / coefficients[firstIdx]) * c));
+        const newData = coefficients.map(c => Math.round((base / coefficients[0]) * c));
         setMonthlyData(newData);
-
-        if (isThreeTier) {
-            setThreeTierData({
-                normal: newData.map(v => Math.round(v * 0.6)),
-                peak: newData.map(v => Math.round(v * 0.25)),
-                offPeak: newData.map(v => Math.round(v * 0.15))
-            });
-        }
-    };
-
-    const handleInputChange = (index, value) => {
-        const numValue = value === '' ? 0 : parseFloat(value);
-        const newData = [...monthlyData];
-        const oldVal = newData[index];
-        newData[index] = numValue;
-        setMonthlyData(newData);
-
-        if (isThreeTier) {
-            const newTiers = { ...threeTierData };
-            if (oldVal > 0) {
-                const ratio = numValue / oldVal;
-                newTiers.normal[index] = Math.round(newTiers.normal[index] * ratio);
-                newTiers.peak[index] = Math.round(newTiers.peak[index] * ratio);
-                newTiers.offPeak[index] = Math.round(newTiers.offPeak[index] * ratio);
-            } else {
-                newTiers.normal[index] = Math.round(numValue * 0.6);
-                newTiers.peak[index] = Math.round(numValue * 0.25);
-                newTiers.offPeak[index] = Math.round(numValue * 0.15);
-            }
-            setThreeTierData(newTiers);
-        }
     };
 
     // Handle Paste (Excel/Text)
@@ -568,14 +346,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
 
         if (hasChanges) {
             setMonthlyData(newData);
-
-            if (isThreeTier) {
-                setThreeTierData({
-                    normal: newData.map(v => Math.round(v * 0.6)),
-                    peak: newData.map(v => Math.round(v * 0.25)),
-                    offPeak: newData.map(v => Math.round(v * 0.15))
-                });
-            }
         }
     };
 
@@ -615,14 +385,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             return v;
         });
         setMonthlyData(newData);
-
-        if (isThreeTier) {
-            setThreeTierData({
-                normal: newData.map(v => Math.round(v * 0.6)),
-                peak: newData.map(v => Math.round(v * 0.25)),
-                offPeak: newData.map(v => Math.round(v * 0.15))
-            });
-        }
     };
 
     const handleComplete = () => {
@@ -636,18 +398,13 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
             customerGroup,
             voltageLevel,
             profileSector,
-            workSchedule: workSchedule,
-            customWeights: profileSector === 'custom' ? customWeights : null,
+            workSchedule: SCHEDULE_MAP[workSchedule] || SCHEDULE_MAP.mon_sat,
             seasonalCooling,
-            isThreeTier,
-            threeTierData: isThreeTier ? threeTierData : null,
             customPrice: currentPrice,
             isManualPrice,
             priceEscalation,
             evCharging,
-            extraLoadType,
-            weekendRatioSat: ratioSat / 100,
-            weekendRatioSun: ratioSun / 100
+            extraLoadType
         };
 
         // Use the selected sector/profile directly as the profileType key
@@ -657,20 +414,20 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
         onComplete(monthlyData, profileType, options);
     };
 
-
+    // Helper for input focus
+    const handleFocus = (e) => e.target.select();
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in">
             <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col relative my-auto border border-white/20">
+
                 {/* Close Button */}
-                <div className="absolute top-8 right-8 z-50">
-                    <button
-                        onClick={onClose}
-                        className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-all text-slate-500 hover:scale-110 active:scale-95 shadow-sm"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
+                <button
+                    onClick={onClose}
+                    className="absolute top-8 right-8 z-50 p-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-all text-slate-500 hover:scale-110 active:scale-95 shadow-sm"
+                >
+                    <X size={20} />
+                </button>
 
                 <div className="flex flex-1 overflow-hidden h-full">
                     {/* LEFT SIDEBAR: CONFIGURATION */}
@@ -697,19 +454,8 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     onClick={() => setShowProvinceList(!showProvinceList)}
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-700 text-[11px] font-bold cursor-pointer hover:border-blue-400 transition-all shadow-sm flex items-center justify-between group"
                                 >
-                                    <span className={province ? 'text-slate-800 flex items-center gap-2' : 'text-slate-400'}>
-                                        {province ? (
-                                            <>
-                                                <span className="text-sm flex items-center">
-                                                    {province === "Việt Nam" ? (
-                                                        <VietnamFlagIcon size={16} />
-                                                    ) : (
-                                                        ALL_PROVINCES.find(p => p.name === province)?.icon || "📍"
-                                                    )}
-                                                </span>
-                                                <span>{province}</span>
-                                            </>
-                                        ) : t.select_province}
+                                    <span className={province ? 'text-slate-800' : 'text-slate-400'}>
+                                        {province || t.select_province}
                                     </span>
                                     <MapPin size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
                                 </div>
@@ -730,16 +476,9 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                 <div
                                                     key={p.id}
                                                     onClick={() => { setProvince(p.name); setShowProvinceList(false); setSearchTerm(''); }}
-                                                    className="px-5 py-3 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors border-b border-slate-50/50 last:border-0 font-medium flex items-center gap-2"
+                                                    className="px-5 py-3 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-colors border-b border-slate-50/50 last:border-0 font-medium"
                                                 >
-                                                    <span className="text-sm flex items-center">
-                                                        {p.name === "Việt Nam" ? (
-                                                            <VietnamFlagIcon size={16} />
-                                                        ) : (
-                                                            p.icon || "📍"
-                                                        )}
-                                                    </span>
-                                                    <span>{p.name}</span>
+                                                    {p.name}
                                                 </div>
                                             ))}
                                         </div>
@@ -874,154 +613,17 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                     <div className="space-y-2">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.sector}</label>
-                                            <div className="relative group">
-                                                <select
-                                                    value={profileSector}
-                                                    onChange={(e) => {
-                                                        setProfileSector(e.target.value);
-                                                        setChartTab('day'); // Auto-switch to Day view to show the change
-                                                    }}
-                                                    className="w-full bg-white border border-slate-200 rounded-xl pl-3 pr-8 py-2 md:pl-4 md:pr-12 md:py-3 text-[10px] md:text-[11px] font-black text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none cursor-pointer text-ellipsis whitespace-nowrap"
-                                                >
-                                                    <option value="custom" className="text-blue-600 font-black">{t.custom}</option>
-                                                    <option disabled>──────────</option>
-                                                    {Object.keys(LOAD_PROFILES).filter(key => {
-                                                        const val = LOAD_PROFILES[key];
-                                                        const weights = Array.isArray(val) ? val : (val?.weights || []);
-                                                        return weights.some(w => w > 0);
-                                                    }).map((key) => <option key={key} value={key}>{key}</option>)}
-                                                </select>
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
-                                                    <ChevronDown size={14} />
-                                                </div>
-                                            </div>
+                                            <select
+                                                value={profileSector}
+                                                onChange={(e) => {
+                                                    setProfileSector(e.target.value);
+                                                    setChartTab('day'); // Auto-switch to Day view to show the change
+                                                }}
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all appearance-none"
+                                            >
+                                                {Object.keys(LOAD_PROFILES).map((key) => <option key={key} value={key}>{key}</option>)}
+                                            </select>
                                         </div>
-
-                                        {profileSector === 'custom' && (
-                                            <div className="mt-4 p-4 bg-slate-50/50 rounded-[32px] border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                <div className="flex items-center justify-center mb-6">
-                                                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                                                        <button 
-                                                            onClick={() => setActiveCustomTab('weekday')}
-                                                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCustomTab === 'weekday' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                                                        >
-                                                            {t.weekday_label}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setActiveCustomTab('weekend')}
-                                                            className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${activeCustomTab === 'weekend' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                                                        >
-                                                            {t.weekend_label}
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-6 gap-2">
-                                                    {(activeCustomTab === 'weekday' ? customWeights.slice(0, 24) : customWeights.slice(24, 48)).map((w, i) => {
-                                                        const globalIdx = activeCustomTab === 'weekday' ? i : i + 24;
-                                                        const colorClass = getHeatmapColor(w, activeCustomTab);
-                                                        return (
-                                                            <div key={globalIdx} className="space-y-1">
-                                                                <div className="text-[9px] font-bold text-slate-400 text-center">{i}h</div>
-                                                                <input
-                                                                    type="text"
-                                                                    inputMode="decimal"
-                                                                    value={editingCell.index === globalIdx ? editingCell.value : (w === 0 ? '' : Number((w * 100).toFixed(2)).toString())}
-                                                                    onChange={(e) => handleWeightChange(globalIdx, e.target.value)}
-                                                                    onFocus={(e) => {
-                                                                        handleFocus(e);
-                                                                        setEditingCell({ index: globalIdx, value: w === 0 ? '' : Number((w * 100).toFixed(2)).toString() });
-                                                                    }}
-                                                                    onBlur={() => setEditingCell({ index: -1, value: '' })}
-                                                                    onPaste={(e) => handleCustomWeightsPaste(e, globalIdx)}
-                                                                    placeholder="0"
-                                                                    className={`w-full border border-slate-200 rounded-xl py-2 text-[11px] font-black text-center focus:outline-none focus:ring-4 focus:ring-slate-500/10 transition-all ${colorClass}`}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                
-                                                <div className="mt-6 flex flex-col items-center gap-4">
-                                                    <div className="flex items-center gap-2 w-full">
-                                                        <div className="h-px bg-slate-200 flex-1"></div>
-                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                                                            {activeCustomTab === 'weekday' ? t.custom_wd_title : t.custom_we_title}
-                                                        </div>
-                                                        <div className="h-px bg-slate-200 flex-1"></div>
-                                                    </div>
-
-                                                    {/* WEIGHT SUM & VALIDATION */}
-                                                    {(() => {
-                                                        const startIdx = activeCustomTab === 'weekday' ? 0 : 24;
-                                                        const currentBlock = customWeights.slice(startIdx, startIdx + 24);
-                                                        const sumPercent = Math.round(currentBlock.reduce((a, b) => a + b, 0) * 1000) / 10;
-                                                        const diff = Math.round((100 - sumPercent) * 10) / 10;
-                                                        const isPerfect = Math.abs(100 - sumPercent) < 0.1;
-
-                                                        return (
-                                                            <div className="flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-1">
-                                                                <div className={`px-4 py-2 rounded-2xl flex items-center gap-3 border transition-all ${isPerfect ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-orange-50 border-orange-100 text-orange-700'}`}>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-xl font-black leading-tight">{sumPercent}%</span>
-                                                                    </div>
-                                                                    <div className="w-px h-8 bg-current opacity-10"></div>
-                                                                    <div className="flex flex-col gap-1.5">
-                                                                        {isPerfect ? (
-                                                                            <div className="flex items-center gap-1.5 text-emerald-600 transition-all">
-                                                                                <CheckCircle size={14} className="fill-current/10" />
-                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">{t.custom_matched}</span>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex items-center gap-1.5 text-orange-600 whitespace-nowrap transition-all">
-                                                                                <AlertCircle size={14} className="fill-current/10 shrink-0" />
-                                                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">
-                                                                                    {diff > 0 ? `${t.custom_short} ${diff}%` : `${t.custom_over} ${Math.abs(diff)}%`}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                        
-                                                                        <div className="flex items-center gap-2">
-                                                                            {!isPerfect && (
-                                                                                <button 
-                                                                                    onClick={handleNormalizeWeights}
-                                                                                    className="text-[9px] font-black uppercase tracking-wider text-blue-600 hover:text-blue-800 flex items-center gap-1 underline decoration-2 underline-offset-2 transition-all"
-                                                                                >
-                                                                                    <RefreshCw size={10} /> {t.custom_normalize}
-                                                                                </button>
-                                                                            )}
-                                                                            {!isPerfect && <div className="w-px h-2 bg-slate-200"></div>}
-                                                                            <button 
-                                                                                onClick={handleCopyCustomWeights}
-                                                                                className="text-[9px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-all"
-                                                                            >
-                                                                                <Copy size={10} /> Copy 24h
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {!isPerfect && (
-                                                                    <p className="text-[9px] font-medium text-slate-400 italic">
-                                                                        {t.custom_auto_fix_note}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })()}
-
-                                                    {activeCustomTab === 'weekend' && (
-                                                        <button
-                                                            onClick={handleCopyToWeekend}
-                                                            className="text-[10px] font-bold px-4 py-2 rounded-2xl transition-all shadow-sm flex items-center gap-2 border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 hover:scale-105 active:scale-95"
-                                                        >
-                                                            <Copy size={12} /> 
-                                                            {t.custom_paste_workday}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -1043,50 +645,6 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                             ))}
                                         </div>
                                     </div>
-
-                                    {workSchedule !== 'all_days' && (
-                                        <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-1">
-                                            {/* SATURDAY SLIDER */}
-                                            {workSchedule === 'mon_fri' && (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{t.ratio_sat}</label>
-                                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md leading-none">{ratioSat}%</span>
-                                                    </div>
-                                                    <input
-                                                        type="range"
-                                                        min="0"
-                                                        max="100"
-                                                        step="5"
-                                                        value={ratioSat}
-                                                        onChange={(e) => setRatioSat(Number(e.target.value))}
-                                                        className="premium-slider w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {/* SUNDAY SLIDER */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{t.ratio_sun}</label>
-                                                    <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md leading-none">{ratioSun}%</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    step="5"
-                                                    value={ratioSun}
-                                                    onChange={(e) => setRatioSun(Number(e.target.value))}
-                                                    className="premium-slider w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                                                />
-                                            </div>
-
-                                            <p className="text-[8px] leading-tight text-slate-400 font-bold italic">
-                                                {t.ratio_help}
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1166,11 +724,11 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         <h4 className="text-[11px] font-black text-slate-700 tracking-tight uppercase leading-tight">{t.monthly_inputs}</h4>
                                     </div>
 
-                                    <div className="flex items-center flex-nowrap gap-1.5 shrink-0 overflow-x-auto pb-1 scrollbar-hide">
+                                    <div className="flex items-center flex-nowrap gap-1.5 shrink-0">
                                         <select
                                             value={region}
                                             onChange={(e) => setRegion(e.target.value)}
-                                            className="px-2 py-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg text-[9px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
+                                            className="px-2 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 outline-none cursor-pointer hover:bg-emerald-100 transition-colors"
                                             title={lang === 'vi' ? "Chọn vùng để phân bổ mùa" : "Select region for seasonal distribution"}
                                         >
                                             <option value="north">{t.region_north}</option>
@@ -1180,16 +738,16 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         <button
                                             onClick={handleCopy}
                                             title="Copy dữ liệu 12 tháng (để backup hoặc paste lại sau)"
-                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-slate-50/80 border border-slate-200/60 rounded-lg text-slate-600 font-black text-[9px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
-                                            <Copy size={12} className="group-hover:scale-110 transition-transform" /> Copy
+                                            <Copy size={16} className="group-hover:scale-110 transition-transform" /> Copy
                                         </button>
                                         <button
                                             onClick={handleAutoCompleteMissing}
-                                            title={isThreeTier ? (lang === 'vi' ? 'Bù tháng: Dùng các tháng đã nhập để ước lượng tháng còn trống theo đường cong mùa.\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Auto-fill: Estimates missing months from entered data using seasonal curve.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : t.auto_fill_tip}
-                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-blue-50/50 border border-blue-100 rounded-lg text-blue-600 font-bold text-[9px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
+                                            title={t.auto_fill_tip}
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-blue-50/50 border border-blue-100 rounded-xl text-blue-600 font-bold text-[10px] hover:bg-blue-600 hover:text-white transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <Sparkles size={12} className="group-hover:animate-spin shrink-0" />
+                                            <Sparkles size={14} className="group-hover:animate-spin shrink-0" />
                                             <div className="flex flex-col">
                                                 {t.auto_fill.split('\n').map((line, idx) => (
                                                     <span key={idx} className="whitespace-nowrap">{line}</span>
@@ -1198,20 +756,18 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                         </button>
                                         <button
                                             onClick={() => handleFillAll(monthlyData[0])}
-                                            title={isThreeTier ? (lang === 'vi' ? 'Dàn đều: Lấy giá trị Tháng 1 áp dụng cho tất cả 12 tháng.\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Fill All: Applies Month 1 value to all 12 months.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : (lang === 'vi' ? 'Dàn đều: Lấy giá trị Tháng 1 áp dụng cho tất cả 12 tháng.' : 'Fill All: Applies Month 1 value to all 12 months.')}
-                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-slate-50/80 border border-slate-200/60 rounded-lg text-slate-600 font-black text-[9px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl text-slate-600 font-black text-[10px] hover:bg-slate-600 hover:text-white hover:border-slate-600 transition-all shadow-sm group whitespace-nowrap"
                                         >
-                                            <RefreshCw size={12} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
+                                            <RefreshCw size={14} className="group-hover:animate-spin transition-transform" /> {t.fill_all}
                                         </button>
                                         <button
-                                            onClick={handleSeasonalDist}
-                                            title={isThreeTier ? (lang === 'vi' ? 'Phân bổ: Lấy tháng đầu tiên có giá trị làm gốc, phân bổ 12 tháng theo đường cong mùa (vùng đã chọn).\nTự động phân bổ 3 khung giờ (BT 60% / CĐ 25% / TĐ 15%).' : 'Distribute: Uses first non-zero month as base and distributes across 12 months by seasonal curve.\nAuto-syncs 3-tier (Normal 60% / Peak 25% / Off-peak 15%).') : (lang === 'vi' ? 'Phân bổ: Lấy tháng đầu tiên có giá trị làm gốc, phân bổ 12 tháng theo đường cong mùa (vùng đã chọn).' : 'Distribute: Uses first non-zero month as base and distributes across 12 months by seasonal curve.')}
-                                            className="flex items-center shrink-0 gap-1 px-2 py-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg text-emerald-600 font-black text-[9px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
+                                            onClick={() => handleSeasonalDist(monthlyData[0])}
+                                            className="flex items-center shrink-0 gap-1.5 px-3 py-2 bg-emerald-50/50 border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-sm group text-left leading-tight"
                                         >
-                                            <div className="relative w-3 h-3 overflow-hidden shrink-0">
+                                            <div className="relative w-3.5 h-3.5 overflow-hidden shrink-0">
                                                 <div className="flex absolute top-0 left-0 animate-scrolling-ekg-hover opacity-70 group-hover:opacity-100 transition-opacity">
-                                                    <Activity size={12} className="shrink-0" />
-                                                    <Activity size={12} className="shrink-0" />
+                                                    <Activity size={14} className="shrink-0" />
+                                                    <Activity size={14} className="shrink-0" />
                                                 </div>
                                             </div>
                                             <div className="flex flex-col">
@@ -1220,77 +776,28 @@ export const BillInputModal = ({ onClose, onComplete, title = "Advanced EVN Bill
                                                 ))}
                                             </div>
                                         </button>
-
-                                        <div className="w-px h-5 bg-slate-200/60 mx-1 shrink-0"></div>
-
-                                        <button
-                                            onClick={toggleThreeTier}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all text-[9px] font-black uppercase tracking-tight shadow-sm shrink-0 whitespace-nowrap ${isThreeTier ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600'}`}
-                                        >
-                                            <Table size={12} className={isThreeTier ? 'text-white' : 'text-blue-500'} />
-                                            <span>{t.three_tier_toggle}</span>
-                                        </button>
-
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 mt-4">
-                                    {isThreeTier && (
-                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            {/* 3-Tier Rows */}
-                                            {['normal', 'peak', 'offPeak'].map((tier) => (
-                                                <div key={tier} className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 px-1 items-center">
-                                                    <div className="col-span-full mb-1 flex items-center gap-2">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${tier === 'normal' ? 'bg-blue-400' : tier === 'peak' ? 'bg-orange-400' : 'bg-emerald-400'}`}></div>
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                                            {t[`${tier}_label`]}
-                                                        </span>
-                                                    </div>
-                                                    {threeTierData[tier].map((val, i) => (
-                                                        <div key={i} className="space-y-1">
-                                                            <input
-                                                                type="number"
-                                                                value={val || ''}
-                                                                onChange={(e) => handleThreeTierChange(i, tier, e.target.value)}
-                                                                className={`w-full bg-white border border-slate-200 rounded-lg px-0 py-1.5 text-[10px] font-black text-center focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all ${tier === 'normal' ? 'text-blue-700' : tier === 'peak' ? 'text-orange-700' : 'text-emerald-700'}`}
-                                                                placeholder="0"
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ))}
-                                            
-                                            {/* Divider for Total */}
-                                            <div className="h-px bg-slate-100 mx-1 my-2"></div>
-                                        </div>
-                                    )}
+                                <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 mt-4 px-1">
 
-                                    <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 px-1">
-                                        {isThreeTier && (
-                                            <div className="col-span-full mb-1">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t.total_label}</span>
-                                            </div>
-                                        )}
-                                        {monthlyData.map((val, i) => (
-                                            <div key={i} className="space-y-1.5 text-center group">
-                                                {!isThreeTier && (
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1 group-hover:text-blue-500 transition-colors">
-                                                        {t.months[i]}
-                                                        {seasonalCooling && (i >= 4 && i <= 7) && <Flame size={8} className="text-orange-500 fill-current animate-pulse" />}
-                                                    </label>
-                                                )}
-                                                <input
-                                                    type="number"
-                                                    value={val || ''}
-                                                    onChange={(e) => handleInputChange(i, e.target.value)}
-                                                    onFocus={handleFocus}
-                                                    onPaste={(e) => handlePaste(i, e)}
-                                                    className={`w-full bg-white border border-slate-200 rounded-xl px-0 ${isThreeTier ? 'py-1.5' : 'py-2.5'} text-[11px] font-black text-slate-800 text-center focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {monthlyData.map((val, i) => (
+                                        <div key={i} className="space-y-1.5 text-center group">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1 group-hover:text-blue-500 transition-colors">
+                                                {t.months[i]}
+                                                {seasonalCooling && (i >= 4 && i <= 7) && <Flame size={8} className="text-orange-500 fill-current animate-pulse" />}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={val || ''}
+                                                onChange={(e) => handleInputChange(i, e.target.value)}
+                                                onFocus={handleFocus}
+                                                onPaste={(e) => handlePaste(i, e)}
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-0 py-2.5 text-[11px] font-black text-slate-800 text-center focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 

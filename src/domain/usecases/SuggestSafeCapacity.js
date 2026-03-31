@@ -124,14 +124,10 @@ export const execute = (processedData, techParams = {}) => {
     let bestKwp = currentKwp;
     let step = 10; // Start with bigger steps to save time
 
-    const MAX_LIMIT_KWP = 100000; // 100MW absolute max safety limit
-    const MAX_ITER = 10000;
-    let safetyCounter1 = 0;
-
     // Phase 1: Rough scan
-    while (safetyCounter1++ < MAX_ITER) {
+    while (true) {
         const curtPct = checkCurtailment(currentKwp + step);
-        if (curtPct > 0.75 || currentKwp > MAX_LIMIT_KWP) {
+        if (curtPct > 0.75) {
             break;
         }
         currentKwp += step;
@@ -140,10 +136,9 @@ export const execute = (processedData, techParams = {}) => {
 
     // Phase 2: Fine scan
     step = 1;
-    let safetyCounter2 = 0;
-    while (safetyCounter2++ < MAX_ITER) {
+    while (true) {
         const curtPct = checkCurtailment(currentKwp + step);
-        if (curtPct > 0.75 || currentKwp > MAX_LIMIT_KWP) {
+        if (curtPct > 0.75) {
             break;
         }
         currentKwp += step;

@@ -15,7 +15,6 @@ export const useSolarSystemData = () => {
     const [loadTag, setLoadTag] = useState({ label: '', isWeekendOff: false });
     const [solarMetadata, setSolarMetadata] = useState(null);
     const [showFormulaModal, setShowFormulaModal] = useState(false);
-    const [isSmoothSolarProfile, setIsSmoothSolarProfile] = useState(true);
 
     // Xử lý File Upload (Excel Load / Solar)
     const handleFileUpload = useCallback(async (event, type = 'load') => {
@@ -167,15 +166,7 @@ export const useSolarSystemData = () => {
                     if (!baseAnnualSum || baseAnnualSum === 0) {
                         baseAnnualSum = 0;
                         // Fallback logic for raw maps without metadata
-                        baseProfile.map.forEach((val, key) => {
-                            const [prefix, m, h] = String(key).split('-');
-                            if (prefix === 'MONTHLY' && !isNaN(parseInt(m))) {
-                                const daysInMonth = new Date(new Date().getFullYear(), parseInt(m) + 1, 0).getDate();
-                                baseAnnualSum += val * daysInMonth;
-                            } else {
-                                baseAnnualSum += val;
-                            }
-                        });
+                        baseProfile.map.forEach(v => baseAnnualSum += v);
                     }
 
                     // Create a layer for each data type
@@ -347,7 +338,6 @@ export const useSolarSystemData = () => {
         loadTag, setLoadTag,
         solarMetadata, setSolarMetadata,
         handleFileUpload,
-        showFormulaModal, setShowFormulaModal,
-        isSmoothSolarProfile, setIsSmoothSolarProfile
+        showFormulaModal, setShowFormulaModal
     };
 };

@@ -92,21 +92,31 @@ export const generateSyntheticProfile = (monthlyData, profileType, year = new Da
         monthByteMap.forEach(({ d, scale, dayOfWeek }) => {
             const dailyKwh = baseDailyKwh * scale;
 
+            // Pre-calculate weight sum to enforce exact normalization
+            let weightSum = 0;
+            const stepWeights = [];
+            for (let step = 0; step < stepsPerDay; step++) {
+                let w = 0;
+                if (isDualDay) {
+                    const isMonFriInternal = options.workSchedule === 'mon_fri';
+                    const isWeekend = isMonFriInternal ? (dayOfWeek === 0 || dayOfWeek === 6) : (dayOfWeek === 0);
+                    const idx = step + (isWeekend && weights.length >= stepsPerDay * 2 ? stepsPerDay : 0);
+                    w = weights[idx] || (1 / stepsPerDay);
+                } else {
+                    w = weights[step] || (1 / stepsPerDay);
+                }
+                stepWeights.push(w);
+                weightSum += w;
+            }
+            const normalizer = weightSum > 0 ? (1.0 / weightSum) : 0;
+
             for (let step = 0; step < stepsPerDay; step++) {
                 const mins = step * intervalMins;
                 const hh = Math.floor(mins / 60);
                 const mm = Math.floor(mins % 60);
                 const pointDate = new Date(year, m, d, hh, mm, 0);
 
-                let weight = 0;
-                if (isDualDay) {
-                    const isMonFriInternal = options.workSchedule === 'mon_fri';
-                    const isWeekend = isMonFriInternal ? (dayOfWeek === 0 || dayOfWeek === 6) : (dayOfWeek === 0);
-                    const idx = step + (isWeekend && weights.length >= stepsPerDay * 2 ? stepsPerDay : 0);
-                    weight = weights[idx] || (1 / stepsPerDay);
-                } else {
-                    weight = weights[step] || (1 / stepsPerDay);
-                }
+                const weight = stepWeights[step] * normalizer;
 
                 const stepEnergyKwh = dailyKwh * weight;
                 const stepPowerKw = stepEnergyKwh / (intervalMins / 60);
