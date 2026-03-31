@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ScatterChart, Scatter, AreaChart, BarChart, ReferenceLine } from 'recharts';
 import { Sun, Zap, TrendingUp, PieChart, BatteryCharging, Info, Activity, BarChart2, Calendar, Layers, RefreshCw, Leaf, Factory, Fuel, Trees, Globe } from 'lucide-react';
 import { StatCard } from '../../components/StatCard';
 
@@ -31,6 +31,8 @@ export const Dashboard = ({
     params,
     bessKwh,
     averageDayData,
+    peakShavingResult,
+    enableTwoPartTariff,
     peakDayProfiles,
     solarMetadata,
     correlationData,
@@ -42,6 +44,7 @@ export const Dashboard = ({
 }) => {
     const [energyViewMode, setEnergyViewMode] = useState('day');
     const [chartViewMode, setChartViewMode] = useState('avg'); // 'avg' | 'peakLoad' | 'peakSun'
+    const [bessChartMode, setBessChartMode] = useState('total'); // 'total' | 'net'
     const [selectedMonth, setSelectedMonth] = useState(() => {
         if (dailyStats && dailyStats.length > 0) return dailyStats[0].fullDate.getMonth();
         return new Date().getMonth();
@@ -131,18 +134,25 @@ export const Dashboard = ({
     const dt = {
         vi: {
             calculating: "Đang tính toán mô phỏng...",
-            bess_chart_title: "Biểu đồ Điều độ Năng lượng (Solar - Load - BESS) (kW)",
+            bess_chart_title: "Biểu đồ Điều độ Năng lượng (Solar - Load - BESS)",
             bess_charge: "BESS Sạc",
             bess_discharge: "BESS Xả",
-            load: "Phụ tải (Load)",
+            load: "Phụ tải",
             load_compatibility: "Phân tích Tương thích Phụ tải & Solar",
             weekend: "CN",
             solar_avg: "Solar TB",
             correlation_title: "Tương quan Load và Solar (kW)",
             grid_import_bess: "Grid Import vs Solar (với BESS) (kW)",
-            monthly_overview: "Tổng quan Năng lượng Hàng tháng (kWh)",
-            solar_used: "Sản lượng tự dùng",
-            curtailed: "Phát lên lưới/Cắt giảm",
+            monthly_overview: "Tổng quan Năng lượng Hàng tháng",
+            solar_production: "Sản lượng Solar",
+            solar_tooltip: "Giá trị trung bình hàng",
+            solar_tooltip_suffix: "tính trên toàn bộ dữ liệu 1 năm.",
+            consumption: "Tiêu thụ",
+            consumption_tooltip: "Phụ tải tiêu thụ trung bình hàng",
+            self_consumed: "Tự dùng",
+            grid_exported: "Phát lưới/Cắt giảm",
+            from_solar: "Từ Solar",
+            from_grid: "Từ lưới",
             grid_import: "Điện mua lưới",
             load_solar_12m: "Biểu đồ Load & Solar 12 Tháng (kW)",
             synthetic_msg: "Đang sử dụng dữ liệu Tổng hợp (Synthetic)",
@@ -154,27 +164,16 @@ export const Dashboard = ({
             grid_import_kw: "Điện mua lưới (kW)",
             load_vs_solar: "Tiêu thụ Load vs Solar",
             m_units: "MWh/năm",
-            energy_management: "Quản lý Năng lượng (kWh)",
+            energy_management: "Quản lý Năng lượng",
             view_day: "Ngày",
             view_month: "Tháng",
             view_year: "Năm",
             view_day_lc: "ngày",
             view_month_lc: "tháng",
             view_year_lc: "năm",
-            solar_production: "Sản lượng Solar",
-            solar_tooltip: "Giá trị trung bình hàng",
-            solar_tooltip_suffix: "tính trên toàn bộ dữ liệu 1 năm.",
-            self_consumed: "Tự dùng:",
-            grid_exported: "Phát lên lưới:",
-            consumption: "Tiêu thụ",
-            consumption_tooltip: "Phụ tải tiêu thụ trung bình hàng",
-            from_solar: "Từ Solar:",
-            from_grid: "Từ lưới:",
             chart_solar: "Solar",
             chart_weekend_load: "Tải cuối tuần",
             chart_weekday_load: "Phụ tải (T2-T7)",
-            chart_solar_yield: "Sản lượng Solar",
-            chart_self_use: "Sản lượng tự dùng",
             chart_solar_yield: "Sản lượng Solar",
             chart_self_use: "Sản lượng tự dùng",
             chart_grid_import: "Điện mua lưới",
@@ -187,7 +186,15 @@ export const Dashboard = ({
             unit_trees: "Cây",
             unit_liters: "Lít",
             view_avg: "TB Năm",
-            view_peak_load: "Tải Cao Nhất"
+            view_peak_load: "Phụ tải Đỉnh",
+            tip_pv_yield: "Tổng sản lượng điện mặt trời dự kiến hệ thống tạo ra trong 1 năm.",
+            tip_solar_energy: "Lượng điện mặt trời thực tế được phụ tải tiêu thụ hoặc sạc vào pin lưu trữ.",
+            tip_savings: "Số tiền tiết kiệm được từ việc giảm mua điện lưới, sau khi trừ chi phí vận hành.",
+            tip_self_consumption: "Tỷ lệ phần trăm điện mặt trời được sử dụng tại chỗ trên tổng sản lượng tạo ra.",
+            tip_co2_saved: "Lượng khí thải CO2 cắt giảm được nhờ sử dụng năng lượng tái tạo thay thế điện lưới.",
+            tip_trees_planted: "Số lượng cây tương đương cần trồng để hấp thụ lượng CO2 đã cắt giảm.",
+            tip_coal_saved: "Lượng than đá tiết kiệm được so với sản xuất điện truyền thống.",
+            tip_oil_saved: "Lượng dầu tiết kiệm được so với sản xuất điện truyền thống."
         },
         en: {
             calculating: "Simulation calculating...",
@@ -201,8 +208,15 @@ export const Dashboard = ({
             correlation_title: "Load vs Solar Correlation (kW)",
             grid_import_bess: "Grid Import vs Solar (with BESS) (kW)",
             monthly_overview: "Monthly Energy Overview (kWh)",
-            solar_used: "Solar Energy (Used)",
-            curtailed: "Curtailment / Excess",
+            solar_production: "SOLAR PRODUCTION",
+            solar_tooltip: "Average value per",
+            solar_tooltip_suffix: "calculated over the entire year.",
+            consumption: "LOAD CONSUMPTION",
+            consumption_tooltip: "Average consumption per",
+            self_consumed: "Self-consumption",
+            grid_exported: "Grid Export/Curtailed",
+            from_solar: "Met from Solar",
+            from_grid: "Met from Grid",
             grid_import: "Grid Import",
             load_solar_12m: "12-Month Load & Solar Curves (kW)",
             synthetic_msg: "Using Synthetic Data",
@@ -221,15 +235,6 @@ export const Dashboard = ({
             view_day_lc: "day",
             view_month_lc: "month",
             view_year_lc: "year",
-            solar_production: "Solar Production",
-            solar_tooltip: "Average value per",
-            solar_tooltip_suffix: "calculated over the entire year.",
-            self_consumed: "Self-consumption:",
-            grid_exported: "Grid Export:",
-            consumption: "Consumption",
-            consumption_tooltip: "Average consumption per",
-            from_solar: "From Solar:",
-            from_grid: "From Grid:",
             chart_solar: "Solar",
             chart_weekend_load: "Weekend Load",
             chart_weekday_load: "Weekday Load",
@@ -240,12 +245,20 @@ export const Dashboard = ({
             co2_saved: "CO₂ Avoided",
             trees_planted: "Trees Planted",
             coal_saved: "Coal Saved",
-            oil_saved: "Standard Oil Saved",
-            unit_ton: "Tonnes",
+            oil_saved: "Oil Saved",
+            unit_ton: "Tons",
             unit_trees: "Trees",
             unit_liters: "Liters",
-            view_avg: "Avg Year",
-            view_peak_load: "Peak Load"
+            view_avg: "Year Avg",
+            view_peak_load: "Peak Load",
+            tip_pv_yield: "Total expected solar energy production for the year.",
+            tip_solar_energy: "Amount of solar energy actually consumed by the load or stored in BESS.",
+            tip_savings: "Estimated monetary savings from reduced grid purchases, net of O&M.",
+            tip_self_consumption: "Percentage of total solar generation used locally.",
+            tip_co2_saved: "CO2 emissions avoided by using renewable energy instead of grid electricity.",
+            tip_trees_planted: "Equivalent number of trees required to absorb the avoided CO2.",
+            tip_coal_saved: "Equivalent amount of coal saved from traditional power generation.",
+            tip_oil_saved: "Equivalent amount of oil saved from traditional power generation."
         }
     }[lang];
 
@@ -266,6 +279,7 @@ export const Dashboard = ({
                     unit={dt.m_units}
                     colorClass="text-emerald-600"
                     bgClass="bg-white"
+                    tip={dt.tip_pv_yield}
                 />
                 <StatCard
                     icon={Zap}
@@ -275,6 +289,7 @@ export const Dashboard = ({
                     subtext={customStats ? `${(customStats.totalUsed / customStats.totalSolarGen * 100).toFixed(1)}% ${t.stats.efficiency}` : ""}
                     colorClass="text-blue-600"
                     bgClass="bg-white"
+                    tip={dt.tip_solar_energy}
                 />
                 <StatCard
                     icon={TrendingUp}
@@ -283,6 +298,7 @@ export const Dashboard = ({
                     unit={dt.m_vnd}
                     colorClass="text-indigo-600"
                     bgClass="bg-white"
+                    tip={dt.tip_savings}
                 />
                 <StatCard
                     icon={PieChart}
@@ -291,29 +307,55 @@ export const Dashboard = ({
                     unit="%"
                     colorClass="text-amber-600"
                     bgClass="bg-white"
+                    tip={dt.tip_self_consumption}
                 />
             </div>
 
             {/* BESS Overview Chart */}
             {bessKwh > 0 && (
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-slate-50/30">
-                    <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-                            <BatteryCharging size={20} />
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-black text-slate-800 flex items-center gap-3">
+                            <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                                <BatteryCharging size={20} />
+                            </div>
+                            {dt.bess_chart_title}
+                        </h3>
+                        <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+                            <button
+                                onClick={() => setBessChartMode('total')}
+                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${bessChartMode === 'total' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {lang === 'vi' ? '⚡ Tổng phụ tải' : '⚡ Total Load'}
+                            </button>
+                            <button
+                                onClick={() => setBessChartMode('net')}
+                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${bessChartMode === 'net' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {lang === 'vi' ? '🔌 Lưới thực tế' : '🔌 Net Grid'}
+                            </button>
                         </div>
-                        {dt.bess_chart_title}
-                    </h3>
+                    </div>
+
                     <div className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={averageDayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorSolarBess" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorLoadDispatch" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
                                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                                    </linearGradient>
+                                    <linearGradient id="colorWeekendLoad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorNetGrid" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
@@ -322,11 +364,28 @@ export const Dashboard = ({
                                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} formatter={formatKw} />
                                 <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '10px' }} iconSize={10} />
 
-                                <Area type="monotone" dataKey="solarProfile" name="Solar" fill="url(#colorSolarBess)" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false} />
-                                <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
-                                <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
-                                <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} fill="url(#colorLoadDispatch)" dot={false} isAnimationActive={false} />
-                                <Line type="monotone" dataKey="weekend" name={`${dt.load} (${dt.weekend})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" dot={false} isAnimationActive={false} />
+                                {bessChartMode === 'total' ? (
+                                    <>
+                                        <Area type="monotone" dataKey="solarProfile" name="Solar" fill="url(#colorSolarBess)" stroke="#22c55e" strokeWidth={2} isAnimationActive={false} />
+                                        <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} fill="url(#colorLoadDispatch)" dot={false} isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="weekend" name={`${dt.load} (${dt.weekend})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="4 2" fill="url(#colorWeekendLoad)" dot={false} isAnimationActive={false} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <Area type="monotone" dataKey="netGridLoad" name={lang === 'vi' ? 'Phụ tải lưới (Net)' : 'Net Grid Load'} stroke="#8b5cf6" strokeWidth={2} fill="url(#colorNetGrid)" dot={false} isAnimationActive={false} />
+                                        <Area type="monotone" dataKey="avgLoad" name={dt.load} stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="5 3" fill="url(#colorLoadDispatch)" fillOpacity={0.5} dot={false} isAnimationActive={false} />
+                                        <Bar dataKey="avgBessCharge" name={dt.bess_charge} fill="#10b981" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        <Bar dataKey="avgBessDischarge" name={dt.bess_discharge} fill="#f43f5e" barSize={20} stackId="bess" isAnimationActive={false} />
+                                        {enableTwoPartTariff && peakShavingResult && peakShavingResult.pmaxBefore > 0 && (
+                                            <ReferenceLine y={peakShavingResult.pmaxBefore} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="6 3" label={{ value: `Pmax gốc: ${peakShavingResult.pmaxBefore} kW`, position: 'insideTopRight', fill: '#a855f7', fontSize: 9, fontWeight: 'bold', dy: -15 }} />
+                                        )}
+                                        {enableTwoPartTariff && peakShavingResult && peakShavingResult.pmaxAfter > 0 && (
+                                            <ReferenceLine y={peakShavingResult.pmaxAfter} stroke="#10b981" strokeWidth={1.5} strokeDasharray="6 3" label={{ value: `Pmax sau BESS: ${peakShavingResult.pmaxAfter} kW`, position: 'insideBottomRight', fill: '#10b981', fontSize: 9, fontWeight: 'bold', dy: 15 }} />
+                                        )}
+                                    </>
+                                )}
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
@@ -344,7 +403,7 @@ export const Dashboard = ({
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* CO2 Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full">
                                 <Leaf size={24} />
                             </div>
@@ -354,10 +413,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612))} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_co2_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Equivalent Trees */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-green-100 text-green-600 rounded-full">
                                 <Trees size={24} />
                             </div>
@@ -367,10 +430,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * (params.co2Factor || 0.6612) * 67)} <span className="text-xs font-normal text-slate-500">{dt.unit_trees}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_trees_planted}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Coal Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-slate-100 text-slate-600 rounded-full">
                                 <Factory size={24} />
                             </div>
@@ -380,10 +447,14 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen / 1000 * 0.4)} <span className="text-xs font-normal text-slate-500">{dt.unit_ton}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_coal_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
 
                         {/* Oil Saved */}
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow group relative">
                             <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
                                 <Fuel size={24} />
                             </div>
@@ -393,15 +464,16 @@ export const Dashboard = ({
                                     {formatNumber(customStats.totalSolarGen * 0.25)} <span className="text-xs font-normal text-slate-500">{dt.unit_liters}</span>
                                 </p>
                             </div>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100] shadow-lg font-normal leading-tight">
+                                {dt.tip_oil_saved}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
             <div className="space-y-6">
-                {solarMetadata && (solarMetadata.sourceType === 'MET_SYNTHETIC' || (solarMetadata.sourceType && solarMetadata.sourceType.includes('PDF'))) && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3"><Info className="text-amber-600 shrink-0 mt-0.5" size={18} /><div><h4 className="font-bold text-amber-800 text-sm">{dt.synthetic_msg}</h4><p className="text-xs text-amber-700 mt-1">{dt.synthetic_desc}</p></div></div>
-                )}
 
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 bg-gradient-to-br from-white to-sky-50/20">
                     {/* ENERGY MANAGEMENT HEADER */}
@@ -673,10 +745,10 @@ export const Dashboard = ({
                                 <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" tickFormatter={formatKValue} />
                                 <RechartsTooltip cursor={{ fill: '#f1f5f9' }} contentStyle={TOOLTIP_STYLE} formatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(1).replace('.', ',') + 'k' : Math.round(val)} kWh`} />
                                 <Legend wrapperStyle={{ paddingTop: '5px', fontSize: '10px' }} />
-                                <Bar dataKey="used" stackId="solar" name={dt.solar_used} fill="#f97316" isAnimationActive={false} />
-                                <Bar dataKey="curtailed" stackId="solar" name={dt.curtailed} fill="#22c55e" fillOpacity={0.6} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                                <Bar dataKey="used" stackId="solar" name={dt.self_consumed} fill="#f97316" fillOpacity={0.7} isAnimationActive={false} />
+                                <Bar dataKey="curtailed" stackId="solar" name={dt.grid_exported} fill="#22c55e" fillOpacity={0.6} radius={[4, 4, 0, 0]} isAnimationActive={false} />
                                 <Line type="monotone" dataKey="load" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, strokeWidth: 1 }} name={dt.load} connectNulls isAnimationActive={false} />
-                                <Line type="monotone" dataKey="gridImport" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name={dt.grid_import} connectNulls isAnimationActive={false} />
+                                <Line type="monotone" dataKey="gridImport" stroke="#7c3aed" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 2, fill: '#7c3aed' }} name={dt.grid_import} connectNulls isAnimationActive={false} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>

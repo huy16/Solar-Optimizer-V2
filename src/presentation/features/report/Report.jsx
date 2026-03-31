@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Info, Image as ImageIcon, FileSpreadsheet, ClipboardList, Zap, Calendar, Coins, ChevronDown, ChevronUp } from 'lucide-react';
+import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, ReferenceLine, Bar, Cell, Line } from 'recharts';
 
 const LossCard = ({ label, value }) => (
     <div className="flex flex-col items-center justify-center p-2 bg-white border border-slate-200 rounded shadow-sm">
         <span className="text-[10px] text-slate-500 font-bold uppercase">{label}</span>
-        <span className="text-sm font-bold text-slate-700">{typeof value === 'number' ? value.toFixed(1) : value}%</span>
+        <span className="text-xs font-bold text-slate-700">{typeof value === 'number' ? value.toFixed(1) : value}%</span>
     </div>
 );
 
@@ -20,6 +21,7 @@ export const Report = ({
     onSelectScenario,
     onShowFormulas,
     currentFinance,
+    finParams,
     estimatedLosses,
     formatMoney,
     lang,
@@ -28,20 +30,20 @@ export const Report = ({
     const dt = {
         vi: {
             analysis_title: "Phân tích Năng lượng theo Khung giờ & Kịch bản",
-            analysis_desc: "Chi tiết sản lượng tự dùng và cắt giảm phân theo giờ Cao điểm (Peak) và Bình thường (Normal).",
+            analysis_desc: "Chi tiết sản lượng tự dùng và cắt giảm phân theo giờ Cao điểm và Bình thường.",
             scenario: "Kịch bản",
-            self_use: "Tự dùng (Self-Use)",
-            excess: "Dư thừa (Export / Curtail)",
-            peak: "Cao điểm (Peak)",
+            self_use: "Tự dùng",
+            excess: "Dư thừa",
+            peak: "Cao điểm",
             normal: "Bình thường",
             selecting: "Đang chọn",
-            tech_specs_title: "Thông số Kỹ thuật chi tiết (Kịch bản hiện tại)",
-            losses_title: "Chi tiết Tổn thất (System Losses Breakdown)",
-            monthly_table_title: "Bảng dữ liệu Sản lượng Solar & Tải (12 Tháng) (kWh)",
-            cashflow_title: "Phân tích Dòng tiền Chi tiết (VND)",
+            tech_specs_title: "Thông số Kỹ thuật chi tiết",
+            losses_title: "Chi tiết các thành phần suy hao hiệu suất (%)",
+            monthly_table_title: "Bảng dữ liệu Sản lượng Solar & Tải",
+            cashflow_title: "Phân tích Dòng tiền Chi tiết",
             year: "Năm",
             year_0: "Năm 0",
-            capex_tooltip: "Vốn đầu tư ban đầu (CAPEX)",
+            capex_tooltip: "Vốn đầu tư ban đầu",
             revenue: "Doanh thu (Tiết kiệm)",
             om_cost: "Chi phí O&M",
             replacement: "Thay thế (Pin/Inv)",
@@ -50,10 +52,19 @@ export const Report = ({
             net_flow: "Dòng tiền ròng",
             accumulated: "Tích lũy",
             col_month: "Tháng",
-            col_pv_yield: "Sản lượng PV (kWh)",
-            col_load: "Tổng Tải (kWh)",
-            col_self_consumption: "Tự dùng (kWh)",
-            col_self_consumption_rate: "Tỷ lệ Tự dùng %"
+            col_pv_yield: "Sản lượng PV",
+            col_load: "Tổng Tải",
+            col_self_consumption: "Tự dùng",
+            col_self_consumption_rate: "Tỷ lệ Tự dùng",
+            tip_pv_total: "Tổng sản lượng điện dự kiến mà hệ thống Solar tạo ra trong 1 năm.",
+            tip_pv_used: "Lượng điện Solar được tiêuhtu trực tiếp bởi phụ tải (hoặc sạc vào BESS) mà không bị cắt giảm hoặc phát lưới.",
+            tip_pv_used_pct: "Tỷ lệ phần trăm điện Solar được sử dụng tại chỗ trên tổng sản lượng tạo ra. Tỷ lệ này càng cao thì hiệu quả đầu tư tự dùng càng tốt.",
+            tip_pv_curtailed: "Lượng điện Solar dư thừa không thể tiêu thụ hết và không có pin lưu trữ để giữ lại (hoặc lượng điện phát ngược lên lưới).",
+            tip_grid_import: "Lượng điện thiếu hụt mà hộ tiêu thụ vẫn phải mua từ lưới điện quốc gia sau khi đã có Solar.",
+            tip_total_load: "Tổng nhu cầu tiêu thụ điện năng của hộ tiêu dùng trong 1 năm.",
+            tip_debt_table: "Số tiền trả nợ ngân hàng hàng năm (bao gồm cả gốc và lãi) nếu dự án có sử dụng đòn bẩy tài chính.",
+            公式_label: "Công thức: ",
+            concept_label: "Ý nghĩa: "
         },
         en: {
             analysis_title: "Energy Analysis by Time-of-Use & Scenario",
@@ -86,60 +97,67 @@ export const Report = ({
         }
     }[lang];
 
+    const [showEnergyAnalysis, setShowEnergyAnalysis] = useState(true);
     const [showDetailedSpecs, setShowDetailedSpecs] = useState(false);
     const [showMonthlyData, setShowMonthlyData] = useState(false);
+    const [showCashFlow, setShowCashFlow] = useState(true);
 
     if (!customStats) return null;
 
     return (
         <div className="space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                    <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Zap size={18} className="text-amber-500" /> {dt.analysis_title}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{dt.analysis_desc}</p>
+                <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center transition-colors hover:bg-slate-100 cursor-pointer" onClick={() => setShowEnergyAnalysis(!showEnergyAnalysis)}>
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <Zap size={18} className="text-amber-500" /> {dt.analysis_title}
+                            {showEnergyAnalysis ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">{dt.analysis_desc}</p>
+                    </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                            <tr>
-                                <th rowSpan={2} className="px-6 py-3 border-r border-slate-200">{dt.scenario}</th>
-                                <th colSpan={2} className="px-6 py-2 border-r border-slate-200 text-center bg-blue-50 text-blue-700 border-b border-slate-200">{dt.self_use}</th>
-                                <th colSpan={2} className="px-6 py-2 text-center bg-amber-50 text-amber-700 border-b border-slate-200">{dt.excess}</th>
-                            </tr>
-                            <tr>
-                                <th className="px-6 py-2 border-r border-slate-200 text-center text-blue-600">{dt.peak}</th>
-                                <th className="px-6 py-2 border-r border-slate-200 text-center text-blue-600">{dt.normal}</th>
-                                <th className="px-6 py-2 border-r border-slate-200 text-center text-amber-600">{dt.peak}</th>
-                                <th className="px-6 py-2 text-center text-amber-600">{dt.normal}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {scenarios.map((s, i) => (
-                                <tr key={i}
-                                    onClick={() => onSelectScenario && onSelectScenario(s)}
-                                    className={`hover:bg-slate-50 transition cursor-pointer ${targetKwp === s.kwp ? 'bg-indigo-50/30 font-medium' : ''}`}
-                                >
-                                    <td className="px-6 py-3 border-r border-slate-200">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="flex items-center gap-2">
-                                                {s.label}
-                                                {targetKwp === s.kwp && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">{dt.selecting}</span>}
-                                            </span>
-                                            <span className="text-slate-500 font-mono text-xs">({s.kwp} kWp)</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-right text-blue-700 border-r border-slate-200">{formatNumber(s.stats.usedPeak)}</td>
-                                    <td className="px-6 py-3 text-right text-blue-700 border-r border-slate-200">{formatNumber(s.stats.usedNormal)}</td>
-                                    <td className="px-6 py-3 text-right text-amber-700 border-r border-slate-200">{formatNumber(s.stats.curtailedPeak + (s.stats.exportedPeak || 0))}</td>
-                                    <td className="px-6 py-3 text-right text-amber-700">{formatNumber(s.stats.curtailedNormal + (s.stats.exportedNormal || 0))}</td>
+                {showEnergyAnalysis && (
+                    <div className="overflow-x-auto animate-in fade-in slide-in-from-top-2">
+                        <table className="w-full text-xs text-left">
+                            <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th rowSpan={2} className="px-6 py-3 border-r border-slate-200">{dt.scenario}</th>
+                                    <th colSpan={2} className="px-6 py-2 border-r border-slate-200 text-center bg-blue-50 text-blue-700 border-b border-slate-200">{dt.self_use}</th>
+                                    <th colSpan={2} className="px-6 py-2 text-center bg-amber-50 text-amber-700 border-b border-slate-200">{dt.excess}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                <tr>
+                                    <th className="px-6 py-2 border-r border-slate-200 text-center text-blue-600">{dt.peak}</th>
+                                    <th className="px-6 py-2 border-r border-slate-200 text-center text-blue-600">{dt.normal}</th>
+                                    <th className="px-6 py-2 border-r border-slate-200 text-center text-amber-600">{dt.peak}</th>
+                                    <th className="px-6 py-2 text-center text-amber-600">{dt.normal}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {scenarios.map((s, i) => (
+                                    <tr key={i}
+                                        onClick={() => onSelectScenario && onSelectScenario(s)}
+                                        className={`hover:bg-slate-50 transition cursor-pointer ${targetKwp === s.kwp ? 'bg-indigo-50/30 font-medium' : ''}`}
+                                    >
+                                        <td className="px-6 py-3 border-r border-slate-200">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="flex items-center gap-2">
+                                                    {s.label}
+                                                    {targetKwp === s.kwp && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">{dt.selecting}</span>}
+                                                </span>
+                                                <span className="text-slate-500 font-mono text-xs">({formatNumber(s.kwp)} kWp)</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3 text-right text-blue-700 border-r border-slate-200">{formatNumber(s.stats.usedPeak)}</td>
+                                        <td className="px-6 py-3 text-right text-blue-700 border-r border-slate-200">{formatNumber(s.stats.usedNormal)}</td>
+                                        <td className="px-6 py-3 text-right text-amber-700 border-r border-slate-200">{formatNumber(s.stats.curtailedPeak + (s.stats.exportedPeak || 0))}</td>
+                                        <td className="px-6 py-3 text-right text-amber-700">{formatNumber(s.stats.curtailedNormal + (s.stats.exportedNormal || 0))}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
-
-
 
             <div id="detailed-specs-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center transition-colors hover:bg-slate-100 cursor-pointer" onClick={() => setShowDetailedSpecs(!showDetailedSpecs)}>
@@ -166,13 +184,13 @@ export const Report = ({
                         {(() => {
                             const activeStats = customStats;
                             const displayList = [
-                                { id: 1, label: t.tech_labels.pv_total, value: activeStats.totalSolarGen, unit: 'kWh', formula: 'Σ ( Monthly Solar Generation )' },
-                                { id: 2, label: t.tech_labels.pv_used, value: activeStats.totalUsed, unit: 'kWh', highlight: true, color: 'text-green-600', formula: 'Σ Min( Solar, Load )' },
-                                { id: 3, label: t.tech_labels.pv_used_pct, value: activeStats.totalSolarGen > 0 ? (activeStats.totalUsed / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-green-600', formula: '( PV Used / PV Total ) * 100' },
-                                { id: 4, label: t.tech_labels.pv_curtailed, value: activeStats.totalCurtailed + (activeStats.totalExported || 0), unit: 'kWh', highlight: true, color: 'text-red-500', formula: 'PV Total - PV Used' },
-                                { id: 5, label: t.tech_labels.pv_curtailed_pct, value: activeStats.totalSolarGen > 0 ? ((activeStats.totalCurtailed + (activeStats.totalExported || 0)) / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-red-500', formula: '( PV Curtailed / PV Total ) * 100' },
-                                { id: 6, label: t.tech_labels.grid_import, value: (activeStats.totalLoad + (activeStats.totalGridCharge || 0)) - activeStats.totalUsed, unit: 'kWh', formula: 'Total Load - PV Used' },
-                                { id: 7, label: t.tech_labels.total_load, value: activeStats.totalLoad, unit: 'kWh', formula: 'Σ ( Monthly Load Consumption )' },
+                                { id: 1, label: t.tech_labels.pv_total, value: activeStats.totalSolarGen, unit: 'kWh', formula: 'Σ ( Monthly Solar Generation )', tip: dt.tip_pv_total },
+                                { id: 2, label: t.tech_labels.pv_used, value: activeStats.totalUsed, unit: 'kWh', highlight: true, color: 'text-green-600', formula: 'Σ Min( Solar, Load )', tip: dt.tip_pv_used },
+                                { id: 3, label: t.tech_labels.pv_used_pct, value: activeStats.totalSolarGen > 0 ? (activeStats.totalUsed / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-green-600', formula: '( PV Used / PV Total ) * 100', tip: dt.tip_pv_used_pct },
+                                { id: 4, label: t.tech_labels.pv_curtailed, value: activeStats.totalCurtailed + (activeStats.totalExported || 0), unit: 'kWh', highlight: true, color: 'text-red-500', formula: 'PV Total - PV Used', tip: dt.tip_pv_curtailed },
+                                { id: 5, label: t.tech_labels.pv_curtailed_pct, value: activeStats.totalSolarGen > 0 ? ((activeStats.totalCurtailed + (activeStats.totalExported || 0)) / activeStats.totalSolarGen * 100).toFixed(2) : 0, unit: '%', highlight: true, color: 'text-red-500', formula: '( PV Curtailed / PV Total ) * 100', tip: dt.tip_pv_curtailed_pct },
+                                { id: 6, label: t.tech_labels.grid_import, value: (activeStats.totalLoad + (activeStats.totalGridCharge || 0)) - activeStats.totalUsed, unit: 'kWh', formula: 'Total Load - PV Used', tip: dt.tip_grid_import },
+                                { id: 7, label: t.tech_labels.total_load, value: activeStats.totalLoad, unit: 'kWh', formula: 'Σ ( Monthly Load Consumption )', tip: dt.tip_total_load },
                                 { id: 8, label: t.tech_labels.loss_pct, value: detailedSpecsList.find(x => x.id === 8)?.value || 0, unit: '%', formula: '( 1 - Total Derate Factor ) * 100' },
                                 { id: 9, label: t.tech_labels.pv_used_normal, value: activeStats.usedNormal, unit: 'kWh', formula: 'Σ PV Used (Normal Hours)' },
                                 { id: 10, label: t.tech_labels.pv_used_normal_pct, value: activeStats.totalUsed > 0 ? (activeStats.usedNormal / activeStats.totalUsed * 100).toFixed(2) : 0, unit: '%', formula: '( PV Used Normal / Total PV Used ) * 100' },
@@ -191,11 +209,13 @@ export const Report = ({
                                             <div className="flex items-start justify-between gap-2 mb-1">
                                                 <div className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
                                                     #{row.id}
-                                                    {row.formula && (
+                                                    {(row.formula || row.tip) && (
                                                         <div className="group relative">
                                                             <Info size={10} className="text-slate-300 cursor-help hover:text-blue-500" />
-                                                            <div className="absolute bottom-full left-0 mb-1 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm font-mono whitespace-nowrap">
-                                                                {row.formula}
+                                                            <div className="absolute bottom-full left-0 mb-1 w-max max-w-[320px] p-2 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg font-normal leading-tight text-left">
+                                                                {row.tip && <div className="mb-1.5"><span className="text-blue-300 font-bold">{dt.concept_label}</span> {row.tip}</div>}
+                                                                {row.formula && <div className="font-mono text-[9px]"><span className="text-emerald-400 font-bold">{lang === 'vi' ? 'Công thức: ' : 'Formula: '}</span> {row.formula}</div>}
+                                                                <div className="absolute top-full left-1 border-4 border-transparent border-t-slate-800"></div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -203,7 +223,7 @@ export const Report = ({
                                             </div>
                                             <div>
                                                 <div className="text-xs text-slate-500 font-medium line-clamp-2 min-h-[32px]" title={row.label}>{row.label}</div>
-                                                <div className={`text-sm font-bold mt-0.5 flex items-baseline gap-1 ${row.highlight && row.color ? row.color : 'text-slate-800'}`}>
+                                                <div className={`text-xs font-bold mt-0.5 flex items-baseline gap-1 ${row.highlight && row.color ? row.color : 'text-slate-800'}`}>
                                                     {typeof row.value === 'number' ? formatNumber(row.value) : row.value}
                                                     <span className="text-[10px] font-normal text-slate-400">{row.unit}</span>
                                                 </div>
@@ -214,19 +234,7 @@ export const Report = ({
                             );
                         })()}
 
-                        {estimatedLosses && estimatedLosses.breakdown && (
-                            <div className="mt-4 pt-4 border-t border-slate-200">
-                                <h4 className="font-bold text-slate-700 text-xs mb-3 flex items-center gap-2">
-                                    {dt.losses_title}
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    < LossCard label={t.loss_labels.temp} value={estimatedLosses.breakdown.temp} />
-                                    < LossCard label={t.loss_labels.soiling} value={estimatedLosses.breakdown.soiling} />
-                                    < LossCard label={t.loss_labels.cable} value={estimatedLosses.breakdown.cable} />
-                                    < LossCard label={t.loss_labels.inverter} value={estimatedLosses.breakdown.inverter} />
-                                </div>
-                            </div>
-                        )}
+                        {/* Losses breakdown hidden by design */}
                     </div>
                 )}
             </div>
@@ -249,7 +257,7 @@ export const Report = ({
                 </div>
                 {showMonthlyData && (
                     <div className="overflow-x-auto animate-in fade-in slide-in-from-top-2">
-                        <table className="w-full text-sm text-left">
+                        <table className="w-full text-xs text-left">
                             <thead className="bg-indigo-50 font-bold text-indigo-900 border-b border-indigo-100">
                                 <tr>
                                     <th className="p-3 border-b border-indigo-100 text-center">{dt.col_month}</th>
@@ -267,7 +275,7 @@ export const Report = ({
                                         <td className="p-3 text-right font-medium text-blue-600">{formatNumber(row.load)}</td>
                                         <td className="p-3 text-right font-medium text-emerald-600">{formatNumber(row.used)}</td>
                                         <td className="p-3 text-center">
-                                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${row.solar > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${row.solar > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                                 {row.solar > 0 ? ((row.used / row.solar) * 100).toFixed(0) : '0'}%
                                             </span>
                                         </td>
@@ -279,63 +287,159 @@ export const Report = ({
                 )}
             </div>
 
-            {/* 4. FINANCIAL DETAIL SECTION */}
             {currentFinance && currentFinance.cumulativeData && (
-                <div id="financial-detail-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                    <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Coins size={18} className="text-emerald-500" /> {dt.cashflow_title}</h3>
-                        <div className="flex gap-2">
-                            <button onClick={() => handleDownloadImage('financial-detail-dashboard', 'Financial_CashFlow')} className="text-slate-600 hover:text-blue-600 hover:bg-white p-1.5 rounded transition flex items-center gap-1 text-xs border border-transparent hover:border-slate-200" title="Tải ảnh">
+                <div id="financial-detail-dashboard" className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mt-6">
+                    <div className="bg-slate-50 px-6 py-5 border-b border-slate-200 flex justify-between items-center transition-colors hover:bg-slate-100 cursor-pointer" onClick={() => setShowCashFlow(!showCashFlow)}>
+                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <Coins size={18} className="text-emerald-500" /> {dt.cashflow_title}
+                            {showCashFlow ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                        </h3>
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => handleDownloadImage('financial-detail-dashboard', 'Financial_CashFlow')} className="text-slate-600 hover:text-blue-600 hover:bg-white p-1.5 rounded transition flex items-center gap-1 text-xs border border-transparent hover:border-slate-200" title="Download Image">
                                 <ImageIcon size={16} />
                             </button>
-                            <button onClick={() => handleDownloadExcelTable(currentFinance.cumulativeData, 'Financial_Yearly', 'CashFlow')} className="text-slate-600 hover:text-green-600 hover:bg-white p-1.5 rounded transition flex items-center gap-1 text-xs border border-transparent hover:border-slate-200" title="Xuất Excel">
+                            <button onClick={() => handleDownloadExcelTable(currentFinance.cumulativeData, 'Financial_Yearly', 'CashFlow')} className="text-slate-600 hover:text-green-600 hover:bg-white p-1.5 rounded transition flex items-center gap-1 text-xs border border-transparent hover:border-slate-200" title="Export Excel">
                                 <FileSpreadsheet size={16} />
                             </button>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-left">
-                            <thead className="bg-slate-50 font-bold text-slate-600 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-4 py-3 border-r border-slate-200 w-20">{dt.year}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.revenue}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.om_cost}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.replacement}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right text-red-600">{dt.debt}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right text-orange-600">{dt.tax}</th>
-                                    <th className="px-4 py-3 border-r border-slate-200 text-right text-blue-700">{dt.net_flow}</th>
-                                    <th className="px-4 py-3 text-right text-green-700">{dt.accumulated}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {currentFinance.cumulativeData.map((y, i) => (
-                                    <tr key={i} className={`hover:bg-slate-50 transition border-b border-slate-100 ${y.year === 0 ? 'bg-orange-50' : ''} ${y.replace < 0 ? 'bg-red-50' : ''}`}>
-                                        <td className="px-4 py-2 font-medium">
-                                            {y.year === 0 ? (
-                                                <div className="flex items-center gap-1 whitespace-nowrap">
-                                                    {dt.year_0}
-                                                    <div className="group relative">
-                                                        <Info size={12} className="text-slate-400 cursor-help" />
-                                                        <div className="absolute left-0 bottom-full mb-2 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm whitespace-nowrap">
-                                                            {dt.capex_tooltip}
-                                                            <div className="absolute top-full left-2 border-4 border-transparent border-t-slate-800"></div>
-                                                        </div>
-                                                    </div>
+
+                    {showCashFlow && (
+                        <>
+                            <div className="p-4 border-b border-slate-100 animate-in fade-in slide-in-from-top-2">
+                                <div className="h-64 w-full">
+                                    {(() => {
+                                        const chartData = currentFinance.cumulativeData.map(d => ({
+                                            ...d,
+                                            chartNet: d.year === 0 ? 0 : d.net,
+                                            chartDebt: d.year === 0 ? -(currentFinance.loanAmount || 0) : (d.debt || 0)
+                                        }));
+
+                                        let min = 0, max = 0;
+                                        chartData.forEach(d => {
+                                            if (d.year > 0) {
+                                                min = Math.min(min, d.chartNet);
+                                                max = Math.max(max, d.chartNet);
+                                            }
+                                            min = Math.min(min, d.acc);
+                                            max = Math.max(max, d.acc);
+                                            if (d.chartDebt) min = Math.min(min, d.chartDebt);
+                                            if (d.chartDebt) max = Math.max(max, d.chartDebt);
+                                        });
+                                        const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
+
+                                        const renderCustomLegend = () => (
+                                            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-[11px] text-slate-600 font-medium">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                                                    <span>{dt.net_flow}</span>
                                                 </div>
-                                            ) : `${dt.year} ${y.year}`}
-                                        </td>
-                                        <td className="px-4 py-2 text-right">{y.revenue > 0 ? formatMoney(y.revenue) : '-'}</td>
-                                        <td className="px-4 py-2 text-right text-slate-500">{y.om < 0 ? formatMoney(y.om) : (y.opex < 0 ? formatMoney(y.opex) : '-')}</td>
-                                        <td className="px-4 py-2 text-right text-red-500 font-medium">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
-                                        <td className="px-4 py-2 text-right text-red-600">{y.debt < 0 ? formatMoney(y.debt) : '-'}</td>
-                                        <td className="px-4 py-2 text-right text-orange-600">{y.tax < 0 ? formatMoney(y.tax) : '-'}</td>
-                                        <td className="px-4 py-2 text-right font-bold text-blue-700">{formatMoney(y.net)}</td>
-                                        <td className={`px-4 py-2 text-right font-bold ${y.acc >= 0 ? 'text-green-600' : 'text-orange-600'}`}>{formatMoney(y.acc)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                                                    <span>{lang === 'vi' ? 'Vốn đầu tư ban đầu' : 'Initial Investment'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+                                                    <span>{lang === 'vi' ? 'Đang thu hồi vốn' : 'Recovering Capital'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                                                    <span>{lang === 'vi' ? 'Đã sinh lời' : 'Profitable'}</span>
+                                                </div>
+                                                {finParams?.loan?.enable && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-3 h-3 bg-amber-400 rounded-sm"></div>
+                                                        <span>{lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+
+                                        return (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 25 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
+                                                    <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                                                    <YAxis domain={unifiedDomain} yAxisId="left" tick={{ fontSize: 10 }} width={60} tickFormatter={(val) => Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}` : val} />
+                                                    <RechartsTooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                    <Legend content={renderCustomLegend} verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px' }} />
+                                                    <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+                                                    <Bar yAxisId="left" dataKey="chartNet" name={dt.net_flow} barSize={16} isAnimationActive={false}>
+                                                        {chartData.map((entry, index) => (
+                                                            <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
+                                                        ))}
+                                                    </Bar>
+                                                    {finParams?.loan?.enable && (
+                                                        <Bar yAxisId="left" dataKey="chartDebt" name={lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'} barSize={16} isAnimationActive={false}>
+                                                            {chartData.map((entry, index) => (
+                                                                <Cell key={`debt-${index}`} fill={'#fbbf24'} />
+                                                            ))}
+                                                        </Bar>
+                                                    )}
+                                                    <Bar yAxisId="left" dataKey="acc" name={dt.accumulated} barSize={16} isAnimationActive={false}>
+                                                        {chartData.map((entry, index) => {
+                                                            let fillColor = '#10b981';
+                                                            if (entry.year === 0) fillColor = '#ef4444';
+                                                            else if (entry.acc < 0) fillColor = '#fb923c';
+                                                            return <Cell key={`acc-${index}`} fill={fillColor} />;
+                                                        })}
+                                                    </Bar>
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs text-left">
+                                    <thead className="bg-slate-50 font-bold text-slate-600 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-4 py-3 border-r border-slate-200 w-20">{dt.year}</th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.revenue}</th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.om_cost}</th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right">{dt.replacement}</th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right text-red-600 group relative cursor-help">
+                                                <div className="flex items-center justify-end gap-1"><span>{dt.debt}</span><Info size={10} /></div>
+                                                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-max max-w-[280px] p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] font-normal whitespace-pre-line leading-tight text-left">
+                                                    {dt.tip_debt_table}
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 border-r border-slate-200 text-right text-blue-700">{dt.net_flow}</th>
+                                            <th className="px-4 py-3 text-right text-green-700">{dt.accumulated}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {currentFinance.cumulativeData.map((y, i) => (
+                                            <tr key={i} className={`hover:bg-slate-50 transition border-b border-slate-100 ${y.year === 0 ? 'bg-orange-50' : ''} ${y.replace < 0 ? 'bg-red-50' : ''}`}>
+                                                <td className="px-4 py-2 font-medium">
+                                                    {y.year === 0 ? (
+                                                        <div className="flex items-center gap-1 whitespace-nowrap">
+                                                            {dt.year_0}
+                                                            <div className="group relative">
+                                                                <Info size={12} className="text-slate-400 cursor-help" />
+                                                                <div className="absolute left-0 bottom-full mb-2 w-max px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-sm whitespace-nowrap">
+                                                                    {dt.capex_tooltip}
+                                                                    <div className="absolute top-full left-2 border-4 border-transparent border-t-slate-800"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : `${dt.year} ${y.year}`}
+                                                </td>
+                                                <td className="px-4 py-2 text-right">{y.revenue > 0 ? formatMoney(y.revenue) : '-'}</td>
+                                                <td className="px-4 py-2 text-right text-slate-500">{y.om < 0 ? formatMoney(y.om) : (y.opex < 0 ? formatMoney(y.opex) : '-')}</td>
+                                                <td className="px-4 py-2 text-right text-red-500 font-medium">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
+                                                <td className="px-4 py-2 text-right text-red-600">{y.debt < 0 ? formatMoney(y.debt) : '-'}</td>
+                                                <td className="px-4 py-2 text-right font-bold text-blue-700">{formatMoney(y.net)}</td>
+                                                <td className={`px-4 py-2 text-right font-bold ${y.acc >= 0 ? 'text-green-600' : 'text-orange-600'}`}>{formatMoney(y.acc)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
         </div>

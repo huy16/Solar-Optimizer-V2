@@ -106,34 +106,45 @@ const simulatePeakShaving = (hourlyData, bessKwh, bessMaxPowerKw, bessEffRoundTr
             let actualPmax = 0;
 
             for (const p of points) {
+                const timeStep = p.timeStep || 1; // Extract time interval dynamically (1h or 0.5h)
+                const maxTransferKwhStep = bessMaxPowerKw * timeStep;
+
                 const load = Number(p.load) || 0;
                 const solarGen = Number(p.solarUsed || p.solar || 0);
-                const netLoad = Math.max(0, load - solarGen);
+                const netLoad = Math.max(0, load - solarGen); // Power (kW)
 
                 if (netLoad > targetPmax) {
                     // Need to discharge to bring load down
-                    const deficit = netLoad - targetPmax;
-                    const maxDischarge = Math.min(
-                        deficit,
-                        maxTransferKwh,
+                    const deficitKw = netLoad - targetPmax;
+                    const deficitKwh = deficitKw * timeStep;
+                    
+                    const maxDischargeKwh = Math.min(
+                        deficitKwh,
+                        maxTransferKwhStep,
                         (soc - minSocKwh) * SINGLE_WAY_EFF
                     );
-                    const actualDischarge = Math.max(0, maxDischarge);
-                    soc -= actualDischarge / SINGLE_WAY_EFF;
-                    const remainingLoad = netLoad - actualDischarge;
-                    actualPmax = Math.max(actualPmax, remainingLoad);
+                    const actualDischargeKwh = Math.max(0, maxDischargeKwh);
+                    soc -= actualDischargeKwh / SINGLE_WAY_EFF;
+                    
+                    const actualDischargeKw = actualDischargeKwh / timeStep;
+                    const remainingLoadKw = netLoad - actualDischargeKw;
+                    actualPmax = Math.max(actualPmax, remainingLoadKw);
                 } else {
                     // Load is below target — charge if possible
-                    const surplus = targetPmax - netLoad;
-                    const maxCharge = Math.min(
-                        surplus * 0.5, // Use 50% of headroom for charging
-                        maxTransferKwh,
-                        (bessKwh - soc)
+                    const surplusKw = targetPmax - netLoad;
+                    const surplusKwh = surplusKw * timeStep;
+
+                    const maxChargeKwh = Math.min(
+                        surplusKwh * 0.5, // Use 50% of headroom for charging
+                        maxTransferKwhStep,
+                        (bessKwh - soc) / SINGLE_WAY_EFF // Use max AC input needed to fill the battery
                     );
-                    const actualCharge = Math.max(0, maxCharge);
-                    soc += actualCharge * SINGLE_WAY_EFF;
+                    const actualChargeKwh = Math.max(0, maxChargeKwh);
+                    soc += actualChargeKwh * SINGLE_WAY_EFF;
                     soc = Math.min(soc, bessKwh); // Cap at max
-                    actualPmax = Math.max(actualPmax, netLoad);
+                    
+                    const actualChargeKw = actualChargeKwh / timeStep;
+                    actualPmax = Math.max(actualPmax, netLoad + actualChargeKw); // Track extra load pulled during charge
                 }
             }
 

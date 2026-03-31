@@ -21,9 +21,10 @@ import { useSolarConfiguration, WEATHER_SCENARIOS } from './presentation/hooks/u
 import PROVINCES from './data/provinces.json';
 import { useFinancialModel } from './presentation/hooks/useFinancialModel';
 import { FormulaModal } from './presentation/components/FormulaModal';
-import { EVN_TARIFFS } from './data/evn_tariffs';
+import { EVN_TARIFFS, TWO_PART_TARIFF, getTwoPartTariff } from './data/evn_tariffs';
+import { simulatePeakShaving, calculateDemandChargeSavings } from './domain/usecases/CalculatePeakShaving';
 
-import { Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship } from 'lucide-react';
+import { Search, Upload, Sun, BatteryCharging, Zap, FileText, AlertCircle, Settings, Download, Bug, RefreshCw, Calendar, SlidersHorizontal, CloudSun, CheckCircle2, Leaf, Trees, Factory, Fuel, ArrowDownRight, Info, ShieldCheck, Grid3X3, Lock, Cpu, Server, Target, MousePointerClick, TrendingUp, DollarSign, Wallet, Plus, Minus, ToggleLeft, ToggleRight, Calculator, Table, ClipboardList, Moon, FileSpreadsheet, Hourglass, Clock, Eye, ZapOff, Gauge, MapPin, Maximize, Battery, Briefcase, Sofa, LayoutDashboard, PieChart, ChevronRight, Menu, X, Printer, Image as ImageIcon, Coins, Percent, ArrowUpRight, BarChart3, BarChart2, CheckSquare, Square, Layers, Activity, AlertTriangle, Wrench, Globe, Building2, Landmark, Mountain, Waves, Anchor, Sprout, Castle, Coffee, Fish, Flower2, Plane, Utensils, Music, Medal, Snowflake, Sailboat, Ship, LogOut } from 'lucide-react';
 import { SmartDesignSelector } from './presentation/components/SmartDesignSelector';
 import * as htmlToImage from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -74,6 +75,528 @@ const isOffPeakHour = (date) => {
 
 
 // --- COMPONENTS ---
+const TRANSLATIONS = {
+    vi: {
+        dashboard: "Tổng quan",
+        design: "Thiết kế & BESS",
+        finance: "Kịch bản Đầu tư",
+        report: "Báo cáo chi tiết",
+        project_name: "Tên dự án",
+        sidebar_open: "Mở menu",
+        sidebar_close: "Đóng menu",
+        actions: "Hành động",
+        report_config: "Cấu hình Báo cáo",
+        view_formulas: "Xem Công Thức",
+        export_pdf: "Xuất PDF Báo cáo",
+        generating_pdf: "Đang tạo PDF...",
+        project_info: "Thông tin Dự án",
+        input_data: "Dữ liệu đầu vào",
+        load_profile: "Load Profile",
+        solar_data: "Dữ liệu Solar",
+        load_tuning: "Tinh chỉnh Tải",
+        simulate_sun: "Giả lập CN",
+        area_province: "Khu vực / Tỉnh thành",
+        solar_capacity: "Công suất Solar",
+        max_load: "Tải cực đại",
+        loss_percent: "Tổn thất",
+        interpolate_msg: "Làm mượt dữ liệu 30p (Interpolate)",
+        logout: "ĐĂNG XUẤT",
+        stats: {
+            pv_yield: "Sản lượng PV",
+            solar_energy: "Năng lượng Solar",
+            savings: "Tiết kiệm",
+            self_consumption: "Tự dùng",
+            efficiency: "Hiệu suất"
+        },
+        pdf: {
+            exec_summary: "Đánh giá Hiệu quả Vận hành",
+            max_solar_month: "Tháng Nắng Nhiều Nhất",
+            max_curtailed_month: "Tháng Dư Thừa Nhiều Nhất",
+            avg_self_use: "Tỷ Lệ Tự Dùng Năng Lượng",
+            grid_independence: "Tỷ lệ Tự chủ Năng lượng",
+            yearly_avg: "Bình quân năm",
+            pv_coverage: "Tải được đáp ứng bởi Solar",
+            energy_scenario_comparison: "Năng lượng giữa các Kịch bản",
+            title: "Báo Cáo Tính Toán Công Suất Lắp Đặt",
+            report_date: "Ngày báo cáo",
+            tech_overview: "Tổng quan Hiệu quả Kỹ thuật",
+            tech_config: "Cấu hình Kỹ thuật Sơ bộ",
+            energy_analysis: "Phân tích Năng lượng theo Kịch bản",
+            daily_charts: "Biểu đồ Ngày điển hình",
+            peak_load_chart: "Biểu đồ Phụ tải Đỉnh (Ngày cao nhất)",
+            legend_load_peak: "Phụ tải Đỉnh",
+            monthly_overview: "Tổng quan Năng lượng Hàng tháng",
+            energy_dispatch: "Biểu đồ Điều độ Năng lượng (BESS)",
+            correlation: "Tương quan Load - Solar",
+            power_curves: "Power Curves (12 Tháng)",
+            pv_capacity: "CÔNG SUẤT PV",
+            panels: "TẤM PIN",
+            inverters: "BIẾN TẦN",
+            bess: "LƯU TRỮ",
+            no_bess: "Không sử dụng",
+            not_selected: "Chưa chọn",
+            qty: "Số lượng",
+            capacity: "Công suất",
+            dc_ac_ratio: "Tỷ lệ DC/AC",
+            not_used: "Không sử dụng",
+            scenario: "Kịch bản",
+            self_use: "Tự dùng",
+            excess: "Dư thừa",
+            peak: "Cao điểm",
+            normal: "Bình thường",
+            solar_yield_chart: "Cân bằng Năng lượng Hàng tháng",
+            solar_energy_name: "Năng lượng Solar",
+            grid_import_name: "Mua lưới",
+            solar_yield_name: "Sản lượng Solar",
+            energy_solar_used: "Năng lượng Solar (Sử dụng)",
+            curtailed: "Cắt giảm (Dư thừa)",
+            total_load: "Tổng Tải",
+            import: "Mua lưới",
+            bess_charge_avg: "BESS Sạc",
+            bess_discharge_avg: "BESS Xả",
+            dispatch_desc: "* Biểu đồ hiển thị hoạt động Sạc/Xả của pin lưu trữ theo giờ trong ngày điển hình",
+            detailed_specs_title: "Thông số Kỹ thuật Chi tiết",
+            cash_flow_roi_title: "Phân tích Dòng tiền & ROI",
+            financial_chart_title: "Biểu đồ Dòng tiền (Tích lũy)",
+            finance_table: {
+                year: "Năm",
+                year_0: "Đầu tư (Năm 0)",
+                revenue: "Doanh thu (Tiết kiệm)",
+                om: "Chi phí O&M",
+                replacement: "Thay thế Thiết bị",
+                net_flow: "Dòng tiền ròng",
+                acc: "Tích lũy"
+            },
+            payback: "Hoàn vốn",
+            roi: "ROI",
+            mon_sat: "T2-T7",
+            sun: "CN",
+            col_month: "Tháng",
+            col_solar: "Solar (MWh)",
+            col_load: "Load (MWh)",
+            col_pv_used: "Tự dùng (MWh)",
+            col_self_use_pct: "Tỷ lệ %",
+            monthly_agg: "Dữ liệu tháng tổng hợp"
+        },
+        months: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
+        months_short: ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"],
+        tech_labels: {
+            pv_total: "Tổng sản lượng PV",
+            pv_used: "Năng lượng Solar",
+            pv_used_pct: "Tỷ lệ sử dụng Solar",
+            pv_curtailed: "Cắt giảm (Dư thừa)",
+            pv_curtailed_pct: "Tỷ lệ cắt giảm",
+            grid_import: "Điện mua lưới",
+            total_load: "Tổng Tải",
+            loss_pct: "Tổn thất hệ thống",
+            pv_used_normal: "Solar sử dụng (Giờ BT)",
+            pv_used_normal_pct: "Tỷ lệ BT",
+            pv_used_peak: "Solar sử dụng (Giờ CĐ)",
+            pv_used_peak_pct: "Tỷ lệ CĐ",
+            curtailed_normal: "Cắt giảm (Giờ BT)",
+            curtailed_normal_pct: "Tỷ lệ Cắt giảm BT",
+            curtailed_peak: "Cắt giảm (Giờ CĐ)",
+            curtailed_peak_pct: "Tỷ lệ Cắt giảm CĐ"
+        },
+        pdf_config: {
+            title: "Tùy chọn xuất PDF",
+            desc: "Chọn các phần bạn muốn đưa vào báo cáo:",
+            chart_mode: "DỮ LIỆU BIỂU ĐỒ",
+            mode_avg: "Trung bình Năm",
+            mode_peak: "Tải Cao Nhất",
+            overview: "Tổng quan & Sản lượng tháng",
+            system_config: "Cấu hình hệ thống & Kịch bản",
+            daily_charts: "Biểu đồ ngày & Tuần",
+            energy_dispatch: "Biểu đồ Điều độ Năng lượng (Mới)",
+            correlation: "Biểu đồ tương quan",
+            monthly_table: "Bảng số liệu tháng",
+            power_curves: "Power Curve 12 tháng",
+            detailed_specs: "Thông số chi tiết",
+            cashflow: "Biểu đồ dòng tiền (Cash Flow)",
+            cashflow_table: "Bảng chi tiết dòng tiền",
+            investment_analysis: "Phân tích hiệu quả đầu tư",
+            close: "Đóng",
+            env_impact: "Hiệu quả Môi trường",
+            co2_saved: "Giảm phát thải CO2",
+            trees_planted: "Cây trồng",
+            coal_saved: "Tiết kiệm than tiêu chuẩn",
+            ton_year: "Tấn/năm",
+            trees: "Cây xanh",
+            ton_coal: "Tấn than",
+            oil_saved: "Dầu tiết kiệm",
+            liters: "Lít",
+            env_desc: "Dự án đóng góp tích cực vào việc bảo vệ môi trường và giảm thiểu biến đổi khí hậu.",
+        },
+        alerts: {
+            lib_not_ready: "Thư viện chưa tải xong. Vui lòng đợi một lát.",
+            pdf_error: "Lỗi tạo PDF: ",
+            new_project: "DỰ ÁN MỚI"
+        },
+        landing: {
+            headline_1: "Tối ưu hóa hệ thống",
+            headline_2: "Điện mặt trời",
+            headline_3: "của bạn",
+            description: "Công cụ phân tích dữ liệu Load Profile tải tiêu thụ, mô phỏng năng suất PV và đề xuất cấu hình Inverter/BESS tối ưu nhất cho doanh nghiệp.",
+            btn_select: "Chọn file Load Profile",
+            loading: "Đang tải thư viện...",
+            solar: "Solar",
+            load: "Tải",
+            roi: "ROI"
+        },
+        units: {
+            m_units: "MWh/năm",
+            m_units_short: "MWh",
+            m_units_yr: "MWh/năm",
+            kw: "kW",
+            kwp: "kWp",
+            m_vnd: "Triệu VNĐ"
+        },
+        loss_labels: {
+            temp: "Nhiệt độ",
+            soiling: "Bụi bẩn",
+            cable: "Dây dẫn",
+            inverter: "Biến tần",
+            inverter_life: "TUỔI THỌ INVERTER",
+            inverter_replace_cost: "CHI PHÍ THAY THẾ INVERTER",
+            total_derate: "Tỷ lệ hiệu chỉnh"
+        },
+        export: {
+            loading_excel: "Thư viện Excel chưa tải xong. Vui lòng đợi.",
+            col_param: "Thông số",
+            col_value: "Giá trị",
+            col_unit: "Đơn vị",
+            col_month: "Tháng",
+            col_pv_yield: "Sản lượng PV",
+            col_load: "Tải",
+            col_self_use: "Tự dùng",
+            col_self_use_pct: "Tỷ lệ tự dùng (%)"
+        },
+        scenarios: {
+            base: "Theo tải nền",
+            curtailment: "Cắt giảm"
+        },
+        profile_types: {
+            shift_1: "🏢 1 Ca (Hành chính)",
+            shift_2: "🌅 2 Ca (Sáng/Chiều)",
+            shift_3: "🏭 3 Ca (24/7)",
+            weekend_off: "📅 Nghỉ cuối tuần",
+            fnb_retail: "🍽️ F&B/Bán lẻ",
+            none: "Chưa có"
+        },
+        status: {
+            select_layer: "CHỌN LỚP DỮ LIỆU",
+            loaded_short: "Đã tải",
+            loaded: "Đã tải: ",
+            pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
+            sun_off: "CN Nghỉ",
+            profile_shape: "Loại Profile",
+            shape_realistic: "Thực tế ⚡",
+            shape_smooth: "Sóng Sin 🌊"
+        },
+        formulas: {
+            pv_total: "Σ ( Sản lượng PV hàng tháng )",
+            pv_used: "Σ Min( Solar, Tải )",
+            pv_used_pct: "( Solar Tự dùng / Tổng Solar ) * 100",
+            pv_curtailed: "Tổng Solar - Solar Tự dùng",
+            pv_curtailed_pct: "( Cắt giảm / Tổng Solar ) * 100",
+            grid_import: "Tổng tải - Solar Tự dùng",
+            total_load: "Σ ( Phụ tải hàng tháng )",
+            loss_pct: "( 1 - Tỷ lệ hiệu chỉnh tổng ) * 100",
+            pv_used_normal: "Σ Solar Tự dùng (Giờ Bình thường)",
+            pv_used_normal_pct: "( Tự dùng Bình thường / Tổng Tự dùng ) * 100",
+            pv_used_peak: "Σ Solar Tự dùng (Giờ Cao điểm)",
+            pv_used_peak_pct: "( Tự dùng Cao điểm / Tổng Tự dùng ) * 100",
+            curtailed_normal: "Σ Cắt giảm (Giờ Bình thường)",
+            curtailed_normal_pct: "( Cắt giảm Bình thường / Tổng Cắt giảm ) * 100",
+            curtailed_peak: "Σ Cắt giảm (Giờ Cao điểm)",
+            curtailed_peak_pct: "( Cắt giảm Cao điểm / Tổng Cắt giảm ) * 100"
+        }
+    },
+    en: {
+        dashboard: "Dashboard",
+        design: "Design & Config",
+        finance: "Financial Scenarios",
+        report: "Detailed Report",
+        project_name: "Project Name",
+        sidebar_open: "Open Sidebar",
+        sidebar_close: "Close Sidebar",
+        logout: "SIGN OUT",
+        actions: "Actions",
+        report_config: "Report Configuration",
+        view_formulas: "View Formulas",
+        export_pdf: "Export PDF Report",
+        generating_pdf: "Generating PDF...",
+        project_info: "Project Information",
+        input_data: "Input Data",
+        load_profile: "Load Profile",
+        solar_data: "Solar Data",
+        load_tuning: "Load Tuning",
+        simulate_sun: "Simulate Sun",
+        area_province: "Region / Province",
+        solar_capacity: "Solar Capacity",
+        max_load: "Max Load",
+        loss_percent: "Loss",
+        interpolate_msg: "Interpolate 30m data",
+        stats: {
+            pv_yield: "PV Yield",
+            solar_energy: "Solar Energy",
+            savings: "Savings",
+            self_consumption: "Self-consumption",
+            efficiency: "Efficiency"
+        },
+        landing: {
+            headline_1: "Optimize Your",
+            headline_2: "Solar Energy",
+            headline_3: "System",
+            description: "Load profile analysis tool, PV yield simulation, and optimal Inverter/BESS configuration for businesses.",
+            btn_select: "Select Load Profile File",
+            loading: "Loading libraries...",
+            solar: "Solar",
+            load: "Load",
+            roi: "ROI"
+        },
+        units: {
+            m_units: "MWh/year",
+            m_units_short: "MWh",
+            m_units_yr: "MWh/year",
+            kw: "kW",
+            kwp: "kWp",
+            m_vnd: "M VND"
+        },
+        loss_labels: {
+            temp: "Temperature",
+            soiling: "Soiling",
+            cable: "Cabling",
+            inverter: "Inverter",
+            inverter_life: "Inverter Life",
+            inverter_replace_cost: "Inverter Replace Cost",
+            availability: "Availability",
+            total_derate: "Total Derate"
+        },
+        export: {
+            loading_excel: "Excel library not loaded. Please wait.",
+            col_param: "Parameter",
+            col_value: "Value",
+            col_unit: "Unit",
+            col_month: "Month",
+            col_pv_yield: "PV Yield (kWh)",
+            col_load: "Load (kWh)",
+            col_self_use: "Self-Use (kWh)",
+            col_self_use_pct: "Self-Use (%)"
+        },
+        pdf: {
+            exec_summary: "Operational Performance Evaluation",
+            max_solar_month: "Max Solar Month",
+            max_curtailed_month: "Max Curtailed Month",
+            avg_self_use: "Self-Consumption Ratio",
+            grid_independence: "Grid Independence Ratio",
+            yearly_avg: "Yearly Average",
+            pv_coverage: "Load covered by Solar",
+            energy_scenario_comparison: "Energy Scenario Comparison",
+            title: "Solar Capacity & Financial Design Report",
+            report_date: "Report Date",
+            tech_overview: "Technical Performance Overview",
+            tech_config: "Preliminary Technical Configuration",
+            energy_analysis: "Scenario-based Energy Analysis",
+            daily_charts: "Typical Daily Charts",
+            peak_load_chart: "Peak Load Chart (Max Day)",
+            legend_load_peak: "Peak Load",
+            monthly_overview: "Monthly Energy Overview",
+            energy_dispatch: "Energy Dispatch & BESS Activity",
+            correlation: "Load-Solar Correlation",
+            power_curves: "Power Curves (12 Months)",
+            pv_capacity: "PV CAPACITY (DC)",
+            panels: "PANELS",
+            inverters: "INVERTERS",
+            bess: "BESS STORAGE",
+            no_bess: "Not used",
+            not_selected: "Not selected",
+            scenario_comparison: "Investment Scenario Comparison",
+            invest_analysis: "Investment Scenario Comparison",
+            col_scenario: "Scenario",
+            col_capacity: "Capacity",
+            col_capex: "CAPEX (VND)",
+            col_saving: "Saving (Y1) (VND)",
+            col_lcoe: "LCOE (VND/kWh)",
+            col_npv: "NPV (VND)",
+            col_irr: "IRR",
+            col_payback: "Payback",
+            self_use: "Self-use (kWh)",
+            excess: "Excess (kWh)",
+            peak: "Peak",
+            normal: "Normal",
+            solar_yield_chart: "Monthly Energy Balance",
+            solar_energy_name: "Solar Energy",
+            grid_import_name: "Grid Import",
+            solar_yield_name: "Solar Yield",
+            energy_solar_used: "Solar Energy (Consumed)",
+            curtailed: "Curtailed (Excess)",
+            total_load: "Total Load",
+            import: "Grid Import",
+            bess_charge_avg: "BESS Charge",
+            bess_discharge_avg: "BESS Discharge",
+            dispatch_desc: "* Chart shows typical hourly BESS charging/discharging activity",
+            detailed_specs_title: "Detailed Technical Specifications",
+            cash_flow_roi_title: "Cash Flow & ROI Analysis",
+            financial_chart_title: "Cash Flow (Cumulative)",
+            finance_table: {
+                year: "Year",
+                year_0: "Investment (Year 0)",
+                revenue: "Revenue",
+                om: "O&M",
+                replacement: "Equipment Replacement",
+                net_flow: "Cashflow",
+                acc: "Cumulative"
+            },
+            payback: "Payback",
+            roi: "ROI",
+            mon_sat: "Mon-Sat",
+            sun: "Sun",
+            col_month: "Month",
+            col_solar: "Solar (MWh)",
+            col_load: "Load (MWh)",
+            col_pv_used: "Self-use (MWh)",
+            col_self_use_pct: "Self-use %",
+            monthly_agg: "Monthly Aggregated Data",
+            tech_efficiency_title: "Technical Performance Overview",
+            pv_yield_yearly: "PV YIELD",
+            solar_used_yearly: "SOLAR SELF-CONSUMPTION",
+            grid_import_yearly: "FROM GRID",
+            mwh_year: "MWh/year",
+            yearly_summary: "Yearly Energy Summary",
+            curtailment: "Curtailment (MWh)",
+            ratio_pct: "Ratio %",
+            total_year: "TOTAL YEAR",
+            investment_indicators: "Investment Performance Indicators",
+            cashflow_chart: "Cash Flow Chart (Cumulative)",
+            energy_dispatch_day: "Typical Day Profile",
+            bess_dispatch_day: "BESS Dispatch (Typical Day)",
+            header_report: "CAPACITY CALCULATION REPORT",
+            header_install: "INSTALLATION DESIGN",
+            header_operation: "OPERATION DETAILS",
+            header_finance: "FINANCIAL ANALYSIS",
+            header_specs: "DETAILED SPECIFICATIONS",
+            load_weekday: "Load (Mon-Sat)",
+            load_weekend: "Load (Weekend)",
+            legend_self_use: "Self-Consumption",
+            legend_curtail: "Grid Export/Curtail",
+            legend_load: "Load Profile",
+            legend_grid_import: "Grid Import",
+            legend_bess_charge: "BESS Charge",
+            legend_bess_discharge: "BESS Discharge",
+            legend_load_avg: "Average Load",
+            legend_load_we: "Weekend Load",
+            no_bess: "Not used",
+            not_selected: "Not selected",
+            chart_load_solar: "Load vs Solar",
+            chart_grid_import_bess: "Grid Import vs Solar (with BESS)",
+            axis_solar_kw: "Solar Generation (kW)",
+            axis_load_kw: "Load Consumption (kW)",
+            axis_grid_kw: "Grid Import (kW)",
+            detailed_specs: "Detailed Technical Specifications",
+            spec_name: "SPECIFICATION",
+            spec_value: "VALUE",
+            spec_unit: "UNIT",
+            scenario_name: "SCENARIO"
+        },
+        months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        months_short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        tech_labels: {
+            pv_total: "Total PV Yield",
+            pv_used: "Solar Energy Used",
+            pv_used_pct: "Solar Self-Use %",
+            pv_curtailed: "Curtailment (Excess)",
+            pv_curtailed_pct: "Curtailment %",
+            grid_import: "Grid Import",
+            total_load: "Total Load Consumption",
+            loss_pct: "System Loss Percent",
+            pv_used_normal: "Solar Used (Normal)",
+            pv_used_normal_pct: "Normal Use %",
+            pv_used_peak: "Solar Used (Peak)",
+            pv_used_peak_pct: "Peak Use %",
+            curtailed_normal: "Curtailment (Normal)",
+            curtailed_normal_pct: "Curtail normal %",
+            curtailed_peak: "Curtailment (Peak)",
+            curtailed_peak_pct: "Curtail peak %"
+        },
+        pdf_config: {
+            title: "PDF Export Options",
+            desc: "Select the sections to include in your report:",
+            chart_mode: "CHART DATA",
+            mode_avg: "Yearly Average",
+            mode_peak: "Peak Load",
+            overview: "Overview & Monthly Yield",
+            system_config: "System Config & Scenarios",
+            daily_charts: "Daily & Weekly Charts",
+            energy_dispatch: "Energy Dispatch & BESS",
+            correlation: "Correlation Charts",
+            monthly_table: "Monthly Data Table",
+            power_curves: "12-Month Power Curves",
+            detailed_specs: "Detailed Specifications",
+            cashflow: "Cash Flow Chart",
+            cashflow_table: "Detailed Cash Flow Table",
+            investment_analysis: "Investment Analysis",
+            close: "Close",
+            export: "Export PDF",
+            env_impact: "Environmental Impact",
+            co2_saved: "CO2 Emissions Reduced",
+            trees_planted: "Trees Planted",
+            coal_saved: "Standard Coal Saved",
+            ton_year: "Tons/year",
+            trees: "Trees",
+            ton_coal: "Tons coal",
+            oil_saved: "Standard Oil Saved",
+            liters: "Liters",
+            env_desc: "This project contributes positively to environmental protection and climate change mitigation."
+        },
+        alerts: {
+            lib_not_ready: "Libraries are not yet loaded. Please wait a moment.",
+            pdf_error: "PDF Generation Error: ",
+            new_project: "NEW PROJECT"
+        },
+        scenarios: {
+            base: "Base Load Scenario",
+            curtailment: "Curtailment"
+        },
+        profile_types: {
+            shift_1: "🏢 1 Shift (Office)",
+            shift_2: "🌅 2 Shifts (Day/Eve)",
+            shift_3: "🏭 3 Shifts (24/7)",
+            weekend_off: "📅 Weekend Off",
+            fnb_retail: "🍽️ F&B/Retail",
+            none: "None"
+        },
+        status: {
+            select_layer: "SELECT LAYER",
+            loaded_short: "Loaded",
+            loaded: "Loaded: ",
+            pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
+            sun_off: "Sun Off",
+            profile_shape: "Profile Type",
+            shape_realistic: "Realistic ⚡",
+            shape_smooth: "Sine Wave 🌊"
+        },
+        formulas: {
+            pv_total: "Σ ( Monthly Solar Generation )",
+            pv_used: "Σ Min( Solar, Load )",
+            pv_used_pct: "( PV Used / PV Total ) * 100",
+            pv_curtailed: "PV Total - PV Used",
+            pv_curtailed_pct: "( PV Curtailed / PV Total ) * 100",
+            grid_import: "Total Load - PV Used",
+            total_load: "Σ ( Monthly Load Consumption )",
+            loss_pct: "( 1 - Total Derate Factor ) * 100",
+            pv_used_normal: "Σ PV Used (Normal Hours)",
+            pv_used_normal_pct: "( PV Used Normal / Total PV Used ) * 100",
+            pv_used_peak: "Σ PV Used (Peak Hours)",
+            pv_used_peak_pct: "( PV Used Peak / Total PV Used ) * 100",
+            curtailed_normal: "Σ PV Curtailed (Normal Hours)",
+            curtailed_normal_pct: "( Curtailed Normal / Total Curtailed ) * 100",
+            curtailed_peak: "Σ PV Curtailed (Peak Hours)",
+            curtailed_peak_pct: "( Curtailed Peak / Total Curtailed ) * 100"
+        }
+    }
+};
+
 const StatCard = ({ icon: Icon, label, value, unit, colorClass = "text-slate-800" }) => (
     <div className="p-3 bg-slate-50 border border-slate-300 rounded flex flex-col items-center justify-center text-center">
         <Icon size={20} className={`mb-1 ${colorClass}`} />
@@ -83,10 +606,10 @@ const StatCard = ({ icon: Icon, label, value, unit, colorClass = "text-slate-800
 );
 
 // --- CUSTOM ICONS ---
-const VietnamFlagIcon = ({ size = 24, className, ...props }) => (
+const VietnamFlagIcon = ({ size = 18, className, ...props }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} {...props}>
-        <rect width="24" height="24" rx="4" fill="#DA251D" />
-        <path d="M12 5.5L14.2 9.8L19 10.5L15.5 13.9L16.4 18.5L12 16.2L7.6 18.5L8.5 13.9L5 10.5L9.8 9.8L12 5.5Z" fill="#FFFF00" />
+        <rect width="18" height="18" x="3" y="3" rx="4" fill="#DA251D" />
+        <path d="M12 7.5L13.1 10.1L15.9 10.4L13.8 12.2L14.4 15L12 13.6L9.6 15L10.2 12.2L8.1 10.4L10.9 10.1L12 7.5Z" fill="#FFFF00" />
     </svg>
 );
 
@@ -164,14 +687,14 @@ const IslandIcon = ({ size = 24, className, ...props }) => (
 // --- PROVINCE STYLING ---
 // Helper to wrap Emoji as a component compatible with Lucide Icon interface
 const EmojiIcon = ({ emoji, size = 18, className }) => (
-    <span style={{ fontSize: size, lineHeight: '1em' }} className={className} role="img" aria-label="icon">
+    <span style={{ fontSize: size, lineHeight: '1em' }} className={`inline-block whitespace-nowrap shrink-0 ${className}`} role="img" aria-label="icon">
         {emoji}
     </span>
 );
 
 const PROVINCE_STYLES = {
     // SPECIAL
-    vietnam_average: { icon: VietnamFlagIcon, color: "text-red-600", bg: "bg-red-50" },
+    viet_nam: { icon: VietnamFlagIcon, color: "text-red-600", bg: "bg-red-50" },
 
     // NORTH
     ha_noi: { icon: (props) => <EmojiIcon emoji="🏛️" {...props} />, color: "text-red-700", bg: "bg-fuchsia-50" }, // Biểu tượng Khuê Văn Các
@@ -246,6 +769,15 @@ const PROVINCE_STYLES = {
 
 const getProvinceStyle = (id) => {
     if (!id) return { icon: MapPin, color: "text-slate-500", bg: "bg-slate-100" };
+    // Try to use the emoji icon from PROVINCES data first
+    const provinceData = PROVINCES.find(p => p.id === id);
+    if (provinceData?.icon && id !== 'viet_nam') {
+        return {
+            icon: (props) => <EmojiIcon emoji={provinceData.icon} {...props} />,
+            color: "text-slate-700",
+            bg: "bg-slate-50"
+        };
+    }
     const style = PROVINCE_STYLES[id] || { icon: MapPin, color: "text-slate-500", bg: "bg-slate-100" };
     return style;
 };
@@ -253,7 +785,14 @@ const getProvinceStyle = (id) => {
 // --- DATA PREPARATION HELPERS ---
 
 // --- COMPONENT CHINH ---
-const SolarOptimizer = () => {
+const SolarOptimizer = ({ user, userRole = 'engineer', onSignOut }) => {
+    const isSales = userRole === 'sales';
+    const [lang, setLang] = useState('vi'); // Default language
+    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'viet_nam') || PROVINCES[0]);
+
+
+    const t = TRANSLATIONS[lang];
+
     // 1. DATA HOOK
     const {
         rawData, setRawData,
@@ -264,7 +803,8 @@ const SolarOptimizer = () => {
         loadTag, setLoadTag,
         solarMetadata, setSolarMetadata,
         handleFileUpload: onFileUpload,
-        showFormulaModal, setShowFormulaModal
+        showFormulaModal, setShowFormulaModal,
+        isSmoothSolarProfile, setIsSmoothSolarProfile
     } = useSolarSystemData();
 
     // 2. CONFIG HOOK (Updated)
@@ -301,7 +841,6 @@ const SolarOptimizer = () => {
     }, {
         gridInjectionPrice: 600,
         inverterMaxAcKw: 0, // Will be updated by hook logic or manual
-        inverterMaxAcKw: 0, // Will be updated by hook logic or manual
         losses: { temp: 0, soiling: 0, cable: 0, inverter: 0 } // Total 0%
     });
 
@@ -315,13 +854,20 @@ const SolarOptimizer = () => {
         discountRate: 10,
         omPercent: 1.5, // % of Capex
         batteryLife: 10,
-        batteryReplaceCost: 80, // % of initial price
+        batteryReplaceCost: 10, // Default if not using specific events
+        inverterLife: 25,
+        inverterReplaceCost: 10,
+        majorRepairs: [],
+        omSchedule: [], // [{year: number, amount: number}]
         loan: {
             enable: false,
             ratio: 70, // % Loan
             rate: 8.0, // % Interest
             term: 10 // Years
-        }
+        },
+        carbonPrice: 5.0, // USD / tCO2
+        usdExchangeRate: 25000, // VND / USD
+        manualCapex: null
     });
 
     // --- TARIFF CATEGORY STATE (REMOVED - Use pricingType/voltageLevelId from hook) ---
@@ -339,10 +885,39 @@ const SolarOptimizer = () => {
     const [isSwappedDate, setIsSwappedDate] = useState(false);
     const [calibrationFactor, setCalibrationFactor] = useState(100);
     const [customStats, setCustomStats] = useState(null);
+    const [enableTwoPartTariff, setEnableTwoPartTariff] = useState(false);
+    const [peakShavingResult, setPeakShavingResult] = useState(null);
     const [isSimulating, setIsSimulating] = useState(false);
 
     // Province State for Solar Generation
-    const [selectedProvince, setSelectedProvince] = useState(PROVINCES.find(p => p.id === 'ho_chi_minh') || PROVINCES[0]);
+    const [loadedGsaProfile, setLoadedGsaProfile] = useState(null);
+
+    // Fetch the detailed 8760 hourly data for the selected province
+    useEffect(() => {
+        if (!selectedProvince) return;
+        if (selectedProvince.id === 'vietnam_average' || selectedProvince.id === 'viet_nam') {
+            setLoadedGsaProfile(null); // Fallback to math curve (no GSA 8760 file for these)
+            return;
+        }
+
+        // Fetch the statically hosted JSON array with a cache-buster to ensure jagged data is loaded
+        fetch(`/data/gsa/${selectedProvince.id}.json?v=${Date.now()}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data) && data.length === 8760) {
+                    setLoadedGsaProfile(data);
+                } else {
+                    setLoadedGsaProfile(null);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load GSA profile for province", selectedProvince.name, err);
+                setLoadedGsaProfile(null);
+            });
+    }, [selectedProvince]);
 
     // Update Solar Layer when Province changes (If in Manual Mode or Empty)
     useEffect(() => {
@@ -354,24 +929,29 @@ const SolarOptimizer = () => {
 
         const monthlyGhi = selectedProvince.monthly_distribution || Array(12).fill(selectedProvince.peakSunHours * 30);
 
-        // Generate Synthetic Profile
-        const newLayer = generateSolarProfile(monthlyGhi, {
+        // Generate Synthetic Profile (still used for basic dashboard metadata layer mapping)
+        let newLayer;
+        const prefix = lang === 'vi' ? 'Tiêu chuẩn' : 'Standard';
+        const suffix = t.pdf.monthly_agg || (lang === 'vi' ? 'Dữ liệu tháng tổng hợp' : 'Monthly Aggregated Data');
+        const pName = (lang === 'en' && selectedProvince.id === 'viet_nam') ? 'Viet Nam' : selectedProvince.name;
+
+        newLayer = generateSolarProfile(monthlyGhi, {
             siteName: selectedProvince.name,
             lat: 0, lon: 0, // Placeholder
             yield_yearly: selectedProvince.yield_yearly
-        }, `Standard: ${selectedProvince.name}`)[0];
+        }, `${prefix}: ${pName} - ${suffix}`, isSmoothSolarProfile)[0];
 
         setSolarLayers(prev => {
-            // Check if this province layer already exists to avoid dupes?
-            const exists = prev.find(l => l.title === newLayer.title);
-            if (exists) return prev;
-            // Add to top
-            return [newLayer, ...prev.filter(l => !l.title.startsWith('Standard: '))];
+            // Remove any existing standard layer for this province to allow replacing it with the new profile shape
+            const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
+
+            // Add the newly generated layer to the top
+            return [newLayer, ...filteredPrev];
         });
         // Auto-select
         setSelectedLayerIndex(0);
 
-    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex]);
+    }, [selectedProvince, setSolarLayers, setSelectedLayerIndex, lang, t, isSmoothSolarProfile]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -401,511 +981,20 @@ const SolarOptimizer = () => {
     // Design Mode State
     const [designMode, setDesignMode] = useState(null); // 'profile' or 'manual'
     const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const provinceDropdownRef = useRef(null);
-    const [lang, setLang] = useState('vi'); // Default language
 
-    const TRANSLATIONS = {
-        vi: {
-            dashboard: "Tổng quan",
-            design: "Thiết kế & BESS",
-            finance: "Kịch bản Đầu tư",
-            report: "Báo cáo chi tiết",
-            project_name: "Tên dự án",
-            sidebar_open: "Mở menu",
-            sidebar_close: "Đóng menu",
-            actions: "Hành động",
-            report_config: "Cấu hình Báo cáo",
-            view_formulas: "Xem Công Thức",
-            export_pdf: "Xuất PDF Báo cáo",
-            generating_pdf: "Đang tạo PDF...",
-            project_info: "Thông tin Dự án",
-            input_data: "Dữ liệu đầu vào",
-            load_profile: "Load Profile",
-            solar_data: "Dữ liệu Solar",
-            load_tuning: "Tinh chỉnh Tải",
-            simulate_sun: "Giả lập CN",
-            area_province: "Khu vực / Tỉnh thành",
-            solar_capacity: "Công suất Solar",
-            max_load: "Tải cực đại",
-            loss_percent: "Tổn thất",
-            interpolate_msg: "Làm mượt dữ liệu 30p (Interpolate)",
-            stats: {
-                pv_yield: "Sản lượng PV",
-                solar_energy: "Năng lượng Solar",
-                savings: "Tiết kiệm",
-                self_consumption: "Tự dùng",
-                efficiency: "Hiệu suất"
-            },
-            pdf: {
-                exec_summary: "Đánh giá Hiệu quả Vận hành",
-                max_solar_month: "Tháng Nắng Nhiều Nhất",
-                max_curtailed_month: "Tháng Dư Thừa Nhiều Nhất",
-                avg_self_use: "Tỷ Lệ Tự Dùng Năng Lượng",
-                grid_independence: "Tỷ lệ Tự chủ Năng lượng",
-                yearly_avg: "Bình quân năm",
-                pv_coverage: "Tải được đáp ứng bởi Solar",
-                energy_scenario_comparison: "Năng lượng giữa các Kịch bản",
-                title: "Báo Cáo Tính Toán Công Suất Lắp Đặt",
-                report_date: "Ngày báo cáo",
-                tech_overview: "Tổng quan Hiệu quả Kỹ thuật",
-                tech_config: "Cấu hình Kỹ thuật Sơ bộ",
-                energy_analysis: "Phân tích Năng lượng theo Kịch bản",
-                daily_charts: "Biểu đồ Ngày điển hình",
-                peak_load_chart: "Biểu đồ Phụ tải Đỉnh (Ngày cao nhất)",
-                legend_load_peak: "Phụ tải Đỉnh",
-                monthly_overview: "Tổng quan Năng lượng Hàng tháng",
-                energy_dispatch: "Biểu đồ Điều độ Năng lượng (BESS)",
-                correlation: "Tương quan Load - Solar",
-                power_curves: "Power Curves (12 Tháng)",
-                pv_capacity: "CÔNG SUẤT PV (DC)",
-                panels: "TẤM PIN (PANEL)",
-                inverters: "BIẾN TẦN (INVERTER)",
-                bess: "LƯU TRỮ (BESS)",
-                qty: "Số lượng",
-                capacity: "Công suất",
-                dc_ac_ratio: "Tỷ lệ DC/AC",
-                not_used: "Không sử dụng",
-                scenario: "Kịch bản",
-                self_use: "Tự dùng (Self-Use)",
-                excess: "Dư thừa (Export/Curtail)",
-                peak: "Cao điểm",
-                normal: "Bình thường",
-                solar_yield_chart: "Cân bằng Năng lượng Hàng tháng",
-                solar_energy_name: "Năng lượng Solar",
-                grid_import_name: "Mua lưới",
-                solar_yield_name: "Sản lượng Solar",
-                energy_solar_used: "Năng lượng Solar (Sử dụng)",
-                curtailed: "Cắt giảm (Dư thừa)",
-                total_load: "Tổng Tải (Load)",
-                import: "Mua lưới (Import)",
-                bess_charge_avg: "BESS Sạc",
-                bess_discharge_avg: "BESS Xả",
-                dispatch_desc: "* Biểu đồ hiển thị hoạt động Sạc/Xả của pin lưu trữ theo giờ trong ngày điển hình",
-                detailed_specs_title: "Thông số Kỹ thuật Chi tiết",
-                cash_flow_roi_title: "Phân tích Dòng tiền & ROI",
-                financial_chart_title: "Biểu đồ Dòng tiền (Tích lũy)",
-                finance_table: {
-                    year: "Năm",
-                    year_0: "Đầu tư (Năm 0)",
-                    revenue: "Doanh thu (Tiết kiệm)",
-                    om: "Chi phí O&M",
-                    replacement: "Thay thế Thiết bị",
-                    net_flow: "Dòng tiền ròng",
-                    acc: "Tích lũy"
-                },
-                payback: "Hoàn vốn",
-                roi: "ROI",
-                mon_sat: "T2-T7",
-                sun: "CN",
-                col_month: "Tháng",
-                col_solar: "Solar (kWh)",
-                col_load: "Load (kWh)",
-                col_pv_used: "Tự dùng (kWh)",
-                col_self_use_pct: "Tỷ lệ %"
-            },
-            months: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-            months_short: ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"],
-            tech_labels: {
-                pv_total: "Tổng sản lượng PV",
-                pv_used: "Năng lượng Solar",
-                pv_used_pct: "Tỷ lệ sử dụng Solar",
-                pv_curtailed: "Cắt giảm (Dư thừa)",
-                pv_curtailed_pct: "Tỷ lệ cắt giảm",
-                grid_import: "Điện mua lưới",
-                total_load: "Tổng Tải (Load)",
-                loss_pct: "Tổn thất hệ thống",
-                pv_used_normal: "Solar sử dụng (Giờ BT)",
-                pv_used_normal_pct: "Tỷ lệ BT",
-                pv_used_peak: "Solar sử dụng (Giờ CĐ)",
-                pv_used_peak_pct: "Tỷ lệ CĐ",
-                curtailed_normal: "Cắt giảm (Giờ BT)",
-                curtailed_normal_pct: "Tỷ lệ Cắt giảm BT",
-                curtailed_peak: "Cắt giảm (Giờ CĐ)",
-                curtailed_peak_pct: "Tỷ lệ Cắt giảm CĐ"
-            },
-            pdf_config: {
-                title: "Tùy chọn xuất PDF",
-                desc: "Chọn các phần bạn muốn đưa vào báo cáo:",
-                chart_mode: "DỮ LIỆU BIỂU ĐỒ",
-                mode_avg: "Trung bình Năm",
-                mode_peak: "Tải Cao Nhất",
-                overview: "Tổng quan & Sản lượng tháng",
-                system_config: "Cấu hình hệ thống & Kịch bản",
-                daily_charts: "Biểu đồ ngày & Tuần",
-                energy_dispatch: "Biểu đồ Điều độ Năng lượng (Mới)",
-                correlation: "Biểu đồ tương quan",
-                monthly_table: "Bảng số liệu tháng",
-                power_curves: "Power Curve 12 tháng",
-                detailed_specs: "Thông số chi tiết",
-                cashflow: "Biểu đồ dòng tiền (Cash Flow)",
-                cashflow_table: "Bảng chi tiết dòng tiền",
-                investment_analysis: "Phân tích hiệu quả đầu tư",
-                close: "Đóng",
-                env_impact: "Hiệu quả Môi trường",
-                co2_saved: "Giảm phát thải CO2",
-                trees_planted: "Cây trồng",
-                coal_saved: "Tiết kiệm than tiêu chuẩn",
-                ton_year: "Tấn/năm",
-                trees: "Cây xanh",
-                ton_coal: "Tấn than",
-                oil_saved: "Dầu tiết kiệm",
-                liters: "Lít",
-                env_desc: "Dự án đóng góp tích cực vào việc bảo vệ môi trường và giảm thiểu biến đổi khí hậu.",
-            },
-            alerts: {
-                lib_not_ready: "Thư viện chưa tải xong. Vui lòng đợi một lát.",
-                pdf_error: "Lỗi tạo PDF: ",
-                new_project: "DỰ ÁN MỚI"
-            },
-            landing: {
-                headline_1: "Tối ưu hóa hệ thống",
-                headline_2: "Điện mặt trời",
-                headline_3: "của bạn",
-                description: "Công cụ phân tích dữ liệu Load Profile tải tiêu thụ, mô phỏng năng suất PV và đề xuất cấu hình Inverter/BESS tối ưu nhất cho doanh nghiệp.",
-                btn_select: "Chọn file Load Profile",
-                loading: "Đang tải thư viện...",
-                solar: "Solar",
-                load: "Tải",
-                roi: "ROI"
-            },
-            units: {
-                m_units: "MWh/năm",
-                m_units_short: "MWh",
-                m_units_yr: "MWh/năm",
-                kw: "kW",
-                kwp: "kWp",
-                m_vnd: "Triệu VNĐ"
-            },
-            loss_labels: {
-                temp: "Nhiệt độ",
-                soiling: "Bụi bẩn",
-                cable: "Dây dẫn",
-                inverter: "Biến tần",
+    const filteredProvinces = useMemo(() => {
+        if (!searchTerm) return PROVINCES;
+        const search = searchTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return PROVINCES.filter(p => {
+            const name = p.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return name.includes(search);
+        });
+    }, [searchTerm]);
 
-                total_derate: "Tỷ lệ hiệu chỉnh"
-            },
-            export: {
-                loading_excel: "Thư viện Excel chưa tải xong. Vui lòng đợi.",
-                col_param: "Thông số",
-                col_value: "Giá trị",
-                col_unit: "Đơn vị",
-                col_month: "Tháng",
-                col_pv_yield: "Sản lượng PV (kWh)",
-                col_load: "Load (kWh)",
-                col_self_use: "Tự dùng (kWh)",
-                col_self_use_pct: "Tỷ lệ tự dùng (%)"
-            },
-            scenarios: {
-                base: "Theo tải nền (Base)",
-                curtailment: "Cắt giảm"
-            },
-            profile_types: {
-                shift_1: "🏢 1 Ca (Hành chính)",
-                shift_2: "🌅 2 Ca (Sáng/Chiều)",
-                shift_3: "🏭 3 Ca (24/7)",
-                weekend_off: "📅 Nghỉ cuối tuần",
-                fnb_retail: "🍽️ F&B/Bán lẻ",
-                none: "Chưa có"
-            },
-            status: {
-                select_layer: "CHỌN LỚP DỮ LIỆU",
-                loaded_short: "Đã tải",
-                loaded: "Đã tải: ",
-                pvout_explanation: "Dữ liệu PVOUT đã bao gồm hao hụt hệ thống (Nhiệt độ, Bụi, Dây dẫn, Biến tần).",
-                sun_off: "CN Nghỉ"
-            },
-            formulas: {
-                pv_total: "Σ ( Sản lượng PV hàng tháng )",
-                pv_used: "Σ Min( Solar, Tải )",
-                pv_used_pct: "( Solar Tự dùng / Tổng Solar ) * 100",
-                pv_curtailed: "Tổng Solar - Solar Tự dùng",
-                pv_curtailed_pct: "( Cắt giảm / Tổng Solar ) * 100",
-                grid_import: "Tổng tải - Solar Tự dùng",
-                total_load: "Σ ( Phụ tải hàng tháng )",
-                loss_pct: "( 1 - Tỷ lệ hiệu chỉnh tổng ) * 100",
-                pv_used_normal: "Σ Solar Tự dùng (Giờ Bình thường)",
-                pv_used_normal_pct: "( Tự dùng Bình thường / Tổng Tự dùng ) * 100",
-                pv_used_peak: "Σ Solar Tự dùng (Giờ Cao điểm)",
-                pv_used_peak_pct: "( Tự dùng Cao điểm / Tổng Tự dùng ) * 100",
-                curtailed_normal: "Σ Cắt giảm (Giờ Bình thường)",
-                curtailed_normal_pct: "( Cắt giảm Bình thường / Tổng Cắt giảm ) * 100",
-                curtailed_peak: "Σ Cắt giảm (Giờ Cao điểm)",
-                curtailed_peak_pct: "( Cắt giảm Cao điểm / Tổng Cắt giảm ) * 100"
-            }
-        },
-        en: {
-            dashboard: "Dashboard",
-            design: "Design & Config",
-            finance: "Financial Scenarios",
-            report: "Detailed Report",
-            project_name: "Project Name",
-            sidebar_open: "Open Sidebar",
-            sidebar_close: "Close Sidebar",
-            actions: "Actions",
-            report_config: "Report Configuration",
-            view_formulas: "View Formulas",
-            export_pdf: "Export PDF Report",
-            generating_pdf: "Generating PDF...",
-            project_info: "Project Information",
-            input_data: "Input Data",
-            load_profile: "Load Profile",
-            solar_data: "Solar Data",
-            load_tuning: "Load Tuning",
-            simulate_sun: "Simulate Sun",
-            area_province: "Region / Province",
-            solar_capacity: "Solar Capacity",
-            max_load: "Max Load",
-            loss_percent: "Loss",
-            interpolate_msg: "Interpolate 30m data",
-            stats: {
-                pv_yield: "PV Yield",
-                solar_energy: "Solar Energy",
-                savings: "Savings",
-                self_consumption: "Self-consumption",
-                efficiency: "Efficiency"
-            },
-            landing: {
-                headline_1: "Optimize Your",
-                headline_2: "Solar Energy",
-                headline_3: "System",
-                description: "Load profile analysis tool, PV yield simulation, and optimal Inverter/BESS configuration for businesses.",
-                btn_select: "Select Load Profile File",
-                loading: "Loading libraries...",
-                solar: "Solar",
-                load: "Load",
-                roi: "ROI"
-            },
-            units: {
-                m_units: "MWh/year",
-                m_units_short: "MWh",
-                m_units_yr: "MWh/year",
-                kw: "kW",
-                kwp: "kWp",
-                m_vnd: "M VND"
-            },
-            loss_labels: {
-                temp: "Temperature",
-                soiling: "Soiling",
-                cable: "Cabling",
-                inverter: "Inverter",
-                availability: "Availability",
-                total_derate: "Total Derate"
-            },
-            export: {
-                loading_excel: "Excel library not loaded. Please wait.",
-                col_param: "Parameter",
-                col_value: "Value",
-                col_unit: "Unit",
-                col_month: "Month",
-                col_pv_yield: "PV Yield (kWh)",
-                col_load: "Load (kWh)",
-                col_self_use: "Self-Use (kWh)",
-                col_self_use_pct: "Self-Use (%)"
-            },
-            pdf: {
-                exec_summary: "Operational Performance Evaluation",
-                max_solar_month: "Max Solar Month",
-                max_curtailed_month: "Max Curtailed Month",
-                avg_self_use: "Self-Consumption Ratio",
-                grid_independence: "Grid Independence Ratio",
-                yearly_avg: "Yearly Average",
-                pv_coverage: "Load covered by Solar",
-                energy_scenario_comparison: "Energy Scenario Comparison",
-                title: "Solar Capacity & Financial Design Report",
-                report_date: "Report Date",
-                tech_overview: "Technical Performance Overview",
-                tech_config: "Preliminary Technical Configuration",
-                energy_analysis: "Scenario-based Energy Analysis",
-                daily_charts: "Typical Daily Charts",
-                peak_load_chart: "Peak Load Chart (Max Day)",
-                legend_load_peak: "Peak Load",
-                monthly_overview: "Monthly Energy Overview",
-                energy_dispatch: "Energy Dispatch & BESS Activity",
-                correlation: "Load-Solar Correlation",
-                power_curves: "Power Curves (12 Months)",
-                pv_capacity: "PV CAPACITY (DC)",
-                panels: "PV PANELS",
-                inverters: "INVERTERS",
-                bess: "STORAGE (BESS)",
-                qty: "Quantity",
-                capacity: "Capacity",
-                dc_ac_ratio: "DC/AC Ratio",
-                not_used: "Not used",
-                scenario: "Scenario",
-                self_use: "Self-Consumption",
-                excess: "Excess (Export/Curtail)",
-                peak: "Peak",
-                normal: "Normal",
-                solar_yield_chart: "Monthly Energy Balance",
-                solar_energy_name: "Solar Energy",
-                grid_import_name: "Grid Import",
-                solar_yield_name: "Solar Yield",
-                energy_solar_used: "Solar Energy (Consumed)",
-                curtailed: "Curtailed (Excess)",
-                total_load: "Total Load",
-                import: "Grid Import",
-                bess_charge_avg: "BESS Charge",
-                bess_discharge_avg: "BESS Discharge",
-                dispatch_desc: "* Chart shows typical hourly BESS charging/discharging activity",
-                detailed_specs_title: "Detailed Technical Specifications",
-                cash_flow_roi_title: "Cash Flow & ROI Analysis",
-                financial_chart_title: "Cash Flow (Cumulative)",
-                finance_table: {
-                    year: "Year",
-                    year_0: "Investment (Year 0)",
-                    revenue: "Revenue",
-                    om: "O&M",
-                    replacement: "Equipment Replacement",
-                    net_flow: "Cashflow",
-                    acc: "Cumulative"
-                },
-                payback: "Payback",
-                roi: "ROI",
-                mon_sat: "Mon-Sat",
-                sun: "Sun",
-                col_month: "Month",
-                col_solar: "Solar (MWh)",
-                col_load: "Load (MWh)",
-                col_pv_used: "Self-use (MWh)",
-                col_self_use_pct: "Self-use %",
-                tech_efficiency_title: "Technical Performance Overview",
-                pv_yield_yearly: "PV YIELD",
-                solar_used_yearly: "SOLAR SELF-CONSUMPTION",
-                grid_import_yearly: "FROM GRID",
-                mwh_year: "MWh/year",
-                yearly_summary: "Yearly Energy Summary",
-                curtailment: "Curtailment (MWh)",
-                ratio_pct: "Ratio %",
-                total_year: "TOTAL YEAR",
-                investment_indicators: "Investment Performance Indicators",
-                cashflow_chart: "Cash Flow Chart (Cumulative)",
-                energy_dispatch_day: "Typical Day Profile",
-                bess_dispatch_day: "BESS Dispatch (Typical Day)",
-                header_report: "CAPACITY CALCULATION REPORT",
-                header_install: "INSTALLATION DESIGN",
-                header_operation: "OPERATION DETAILS",
-                header_finance: "FINANCIAL ANALYSIS",
-                header_specs: "DETAILED SPECIFICATIONS",
-                load_weekday: "Load (Mon-Sat)",
-                load_weekend: "Load (Weekend)",
-                legend_self_use: "Self-Consumption",
-                legend_curtail: "Grid Export/Curtail",
-                legend_load: "Load Profile",
-                legend_grid_import: "Grid Import",
-                legend_bess_charge: "BESS Charge",
-                legend_bess_discharge: "BESS Discharge",
-                legend_load_avg: "Average Load",
-                legend_load_we: "Weekend Load",
-                no_bess: "Not used",
-                not_selected: "Not selected",
-                chart_load_solar: "Load vs Solar",
-                chart_grid_import_bess: "Grid Import vs Solar (with BESS)",
-                axis_solar_kw: "Solar Generation (kW)",
-                axis_load_kw: "Load Consumption (kW)",
-                axis_grid_kw: "Grid Import (kW)",
-                detailed_specs: "Detailed Technical Specifications (16 Items)",
-                spec_name: "SPECIFICATION",
-                spec_value: "VALUE",
-                spec_unit: "UNIT",
-                scenario_comparison: "Investment Scenario Comparison",
-                scenario_name: "SCENARIO"
-            },
-            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-            months_short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-            tech_labels: {
-                pv_total: "Total PV Yield",
-                pv_used: "Solar Energy Used",
-                pv_used_pct: "Solar Self-Use %",
-                pv_curtailed: "Curtailment (Excess)",
-                pv_curtailed_pct: "Curtailment %",
-                grid_import: "Grid Import",
-                total_load: "Total Load Consumption",
-                loss_pct: "System Loss Percent",
-                pv_used_normal: "Solar Used (Normal)",
-                pv_used_normal_pct: "Normal Use %",
-                pv_used_peak: "Solar Used (Peak)",
-                pv_used_peak_pct: "Peak Use %",
-                curtailed_normal: "Curtailment (Normal)",
-                curtailed_normal_pct: "Curtail normal %",
-                curtailed_peak: "Curtailment (Peak)",
-                curtailed_peak_pct: "Curtail peak %"
-            },
-            pdf_config: {
-                title: "PDF Export Options",
-                desc: "Select the sections to include in your report:",
-                chart_mode: "CHART DATA",
-                mode_avg: "Yearly Average",
-                mode_peak: "Peak Load",
-                overview: "Overview & Monthly Yield",
-                system_config: "System Config & Scenarios",
-                daily_charts: "Daily & Weekly Charts",
-                energy_dispatch: "Energy Dispatch & BESS",
-                correlation: "Correlation Charts",
-                monthly_table: "Monthly Data Table",
-                power_curves: "12-Month Power Curves",
-                detailed_specs: "Detailed Specifications",
-                cashflow: "Cash Flow Chart",
-                cashflow_table: "Detailed Cash Flow Table",
-                investment_analysis: "Investment Analysis",
-                close: "Close",
-                export: "Export PDF",
-                env_impact: "Environmental Impact",
-                co2_saved: "CO2 Emissions Reduced",
-                trees_planted: "Trees Planted",
-                coal_saved: "Standard Coal Saved",
-                ton_year: "Tons/year",
-                trees: "Trees",
-                ton_coal: "Tons coal",
-                oil_saved: "Standard Oil Saved",
-                liters: "Liters",
-                env_desc: "This project contributes positively to environmental protection and climate change mitigation."
-            },
-            alerts: {
-                lib_not_ready: "Libraries are not yet loaded. Please wait a moment.",
-                pdf_error: "PDF Generation Error: ",
-                new_project: "NEW PROJECT"
-            },
-            scenarios: {
-                base: "Base Load Scenario",
-                curtailment: "Curtailment"
-            },
-            profile_types: {
-                shift_1: "🏢 1 Shift (Office)",
-                shift_2: "🌅 2 Shifts (Day/Eve)",
-                shift_3: "🏭 3 Shifts (24/7)",
-                weekend_off: "📅 Weekend Off",
-                fnb_retail: "🍽️ F&B/Retail",
-                none: "None"
-            },
-            status: {
-                select_layer: "SELECT LAYER",
-                loaded_short: "Loaded",
-                loaded: "Loaded: ",
-                pvout_explanation: "PVOUT data includes system losses (Temperature, Soiling, Cables, Inverter).",
-                sun_off: "Sun Off"
-            },
-            formulas: {
-                pv_total: "Σ ( Monthly Solar Generation )",
-                pv_used: "Σ Min( Solar, Load )",
-                pv_used_pct: "( PV Used / PV Total ) * 100",
-                pv_curtailed: "PV Total - PV Used",
-                pv_curtailed_pct: "( PV Curtailed / PV Total ) * 100",
-                grid_import: "Total Load - PV Used",
-                total_load: "Σ ( Monthly Load Consumption )",
-                loss_pct: "( 1 - Total Derate Factor ) * 100",
-                pv_used_normal: "Σ PV Used (Normal Hours)",
-                pv_used_normal_pct: "( PV Used Normal / Total PV Used ) * 100",
-                pv_used_peak: "Σ PV Used (Peak Hours)",
-                pv_used_peak_pct: "( PV Used Peak / Total PV Used ) * 100",
-                curtailed_normal: "Σ PV Curtailed (Normal Hours)",
-                curtailed_normal_pct: "( Curtailed Normal / Total Curtailed ) * 100",
-                curtailed_peak: "Σ PV Curtailed (Peak Hours)",
-                curtailed_peak_pct: "( Curtailed Peak / Total Curtailed ) * 100"
-            }
-        }
-    };
 
-    const t = TRANSLATIONS[lang];
+
 
     const handleDesignModeSelect = (mode, data = null, profileType = 'commercial_day', options = {}) => {
         setDesignMode(mode);
@@ -951,6 +1040,7 @@ const SolarOptimizer = () => {
                     // Format for rawData (cleanData mapping expects { rawTime, loadKw })
                     // generateSyntheticProfile ALREADY returns { rawTime, loadKw }
                     setRawData(syntheticProfile);
+                    setSimulateWeekend(false); // Disable override for generated profiles
                     setIsManualConfig(false); // treat as if we have a file
                     setActiveTab('dashboard');
                 } catch (e) {
@@ -1051,13 +1141,17 @@ const SolarOptimizer = () => {
         const t = (currentSolarLayer.title || '').toUpperCase();
         const n = (currentSolarLayer.name || '').toUpperCase();
         const s = (currentSolarLayer.source || '').toUpperCase();
-        const type = (solarMetadata && solarMetadata.sourceType) || '';
+        
+        // Exclude standard province profiles from being treated as "Actual Yield"
+        // so that technical losses (temp, soiling, etc.) are applied to them.
+        const isStandard = t.startsWith('TIÊU CHUẨN') || t.startsWith('STANDARD');
+        if (isStandard) return false;
 
-        // PVOUT, GSA Monthly, or Synthetic profiles represent actual AC/DC yield
+        // PVOUT, GSA Monthly, or Synthetic profiles from uploaded files represent actual AC/DC yield
         return t.includes('PVOUT') || n.includes('PVOUT') || t.includes('SẢN LƯỢNG ĐIỆN') ||
             s.includes('GSA MONTHLY') || s.includes('GSA TRANSPOSED') ||
-            type === 'MET_SYNTHETIC' || s.includes('EXCEL (PVOUT');
-    }, [currentSolarLayer, solarMetadata]);
+            s.includes('EXCEL (PVOUT');
+    }, [currentSolarLayer]);
 
     useEffect(() => {
         setTechParams(prev => {
@@ -1113,6 +1207,66 @@ const SolarOptimizer = () => {
         checkAndLoadLib();
 
     }, []);
+
+    // Handle the loaded GSA Profile (Standard/Jagged vs Missing Base)
+    useEffect(() => {
+        if (!loadedGsaProfile) return;
+        // If user wants Sine Wave, skip: the province-change effect (line ~904) handles it
+        if (isSmoothSolarProfile) return;
+
+        // If the API call succeeded, we have 8760 hourly data.
+        // We structure it as a new Solar Layer 
+        const gsaMap = new Map();
+        let annualSum = 0;
+        loadedGsaProfile.forEach((val, hourOfYear) => {
+            // Very critical: The 8760 array is 0-indexed. Convert to M-D-H-0.
+            const date = new Date(Date.UTC(2023, 0, 1, Math.floor(hourOfYear)));
+            const m = date.getUTCMonth();
+            const d = date.getUTCDate();
+            const h = date.getUTCHours();
+            gsaMap.set(`${m}-${d}-${h}-0`, val);
+            annualSum += val;
+        });
+
+        const prefix = lang === 'vi' ? 'Tiêu chuẩn' : 'Standard';
+        const suffix = t.pdf.monthly_agg || (lang === 'vi' ? 'Dữ liệu tháng tổng hợp' : 'Monthly Aggregated Data');
+        const pName = (lang === 'en' && selectedProvince.id === 'viet_nam') ? 'Viet Nam' : selectedProvince.name;
+
+        let newLayer;
+
+        if (isSmoothSolarProfile) {
+            // If they want smooth, we ignore the jagged JSON data and generate a smooth curve from monthly totals
+            const monthlyGhi = selectedProvince.monthly_distribution || Array(12).fill(selectedProvince.peakSunHours * 30);
+            newLayer = generateSolarProfile(monthlyGhi, {
+                siteName: selectedProvince.name,
+                lat: 0, lon: 0,
+                yield_yearly: selectedProvince.yield_yearly
+            }, `${prefix}: ${pName} - ${suffix}`, true)[0];
+        } else {
+            newLayer = {
+                title: `${prefix}: ${pName} - ${suffix}`,
+                map: gsaMap,
+                source: "GSA Hourly Profile",
+                name: "PVOUT",
+                score: 10,
+                meta: {
+                    dataType: "Total Generation",
+                    annualValue: annualSum,
+                    capacity: 1 // Normalize to 1kWp equivalent if possible, but keeping simple
+                }
+            };
+        }
+
+        setSolarLayers(prev => {
+            // Remove existing standard layers
+            const filteredPrev = prev.filter(l => !l.title.startsWith('Standard: ') && !l.title.startsWith('Tiêu chuẩn: '));
+            return [newLayer, ...filteredPrev];
+        });
+
+        // Auto-select
+        setSelectedLayerIndex(0);
+
+    }, [loadedGsaProfile, setSolarLayers, setSelectedLayerIndex, lang, t, selectedProvince, isSmoothSolarProfile]);
 
     useEffect(() => {
         if (!isManualConfig) {
@@ -1202,6 +1356,20 @@ const SolarOptimizer = () => {
                     { ...deferredTechParams, inverterMaxAcKw: totalACPower, isActualYield } // Removed hardcoded weatherDerate override
                 );
                 setCustomStats(results);
+
+                // Peak Shaving calculation for 2-component tariff
+                if (deferredBessKwh > 0 && results && results.hourlyBatteryData) {
+                    const psResult = simulatePeakShaving(
+                        results.hourlyBatteryData,
+                        deferredBessKwh,
+                        bessMaxPower,
+                        deferredTechParams.bessEffRoundTrip || 0.90,
+                        deferredTechParams.bessDod || 0.90
+                    );
+                    setPeakShavingResult(psResult);
+                } else {
+                    setPeakShavingResult(null);
+                }
             } catch (err) {
                 console.error("Simulation error:", err);
             } finally {
@@ -1234,39 +1402,79 @@ const SolarOptimizer = () => {
             ? Number(finParams.manualCapex)
             : (systemCapex + batteryCapex);
 
-        // Prices obj
-        const prices = {
-            peak: params.pricePeak,
-            normal: params.priceNormal,
-            offPeak: params.priceOffPeak,
-            gridInjection: techParams.gridInjectionPrice
-        };
+        // Prices obj — use 2-part tariff Ca prices when enabled
+        let prices;
+        if (enableTwoPartTariff) {
+            const twoPartRate = getTwoPartTariff(voltageLevelId);
+            prices = {
+                peak: twoPartRate.peak,
+                normal: twoPartRate.normal,
+                offPeak: twoPartRate.offPeak,
+                gridInjection: techParams.gridInjectionPrice
+            };
+        } else {
+            prices = {
+                peak: params.pricePeak,
+                normal: params.priceNormal,
+                offPeak: params.priceOffPeak,
+                gridInjection: techParams.gridInjectionPrice
+            };
+        }
 
         const finParamsFull = {
             ...finParams,
+            tax: {
+                enable: false,
+                rate: 0,
+                depreciationParam: 20 // Default value
+            },
+            insuranceRate: 0.5, // Default value
+            carbonPrice: finParams.carbonPrice,
+            usdExchangeRate: finParams.usdExchangeRate,
             batteryCapex // Pass explicit battery capex for replacement calculation
         };
 
-        return calculateAdvancedFinancials(totalCapex, customStats, prices, finParamsFull);
-    }, [customStats, realSystemSize, params, bessKwh, techParams, finParams]);
+        // Calculate demand charge saving if 2-part tariff is enabled
+        let demandSaving = 0;
+        if (enableTwoPartTariff && peakShavingResult) {
+            const twoPartRate = getTwoPartTariff(voltageLevelId);
+            const dsResult = calculateDemandChargeSavings(peakShavingResult, twoPartRate.cp);
+            demandSaving = dsResult.annualDemandSaving || 0;
+        }
+
+        return calculateAdvancedFinancials(totalCapex, customStats, prices, finParamsFull, demandSaving);
+    }, [customStats, realSystemSize, params, bessKwh, techParams, finParams, enableTwoPartTariff, peakShavingResult, voltageLevelId]);
 
     // --- DATA PROCESSING ---
     useEffect(() => {
         if (rawData.length === 0) return;
         setIsProcessing(true);
-        setTimeout(() => {
+        const processingTimer = setTimeout(() => {
             let failCount = 0;
             const cleanData = rawData.map((d) => {
                 const date = parseAnyDate(d.rawTime, isSwappedDate);
                 if (!date || isNaN(date.getTime())) { failCount++; return null; }
                 let solarUnit = 0;
+                // Priority:
+                // 1. If it's a specific user-uploaded file (not 'Standard' province default)
+                // 2. If it's the jagged 8760 GSA data
+                // 3. Fallback to math curve
+
                 if (realSolarProfile) {
                     const keyExact = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}`;
                     const keyHour = `${date.getMonth()}-${date.getDate()}-${date.getHours()}-0`;
                     const keyMonthly = `MONTHLY-${date.getMonth()}-${date.getHours()}`;
                     const realVal = realSolarProfile.get(keyExact) ?? realSolarProfile.get(keyHour) ?? realSolarProfile.get(keyMonthly);
                     solarUnit = (realVal !== undefined) ? realVal : 0;
-                } else { solarUnit = generateInstantaneousSolar(date, params.psh); }
+                } else {
+                    let currentPsh = params.psh;
+                    if (selectedProvince && selectedProvince.monthly_distribution) {
+                        const m = date.getMonth();
+                        const daysInMonth = new Date(date.getFullYear(), m + 1, 0).getDate();
+                        currentPsh = selectedProvince.monthly_distribution[m] / daysInMonth;
+                    }
+                    solarUnit = generateInstantaneousSolar(date, currentPsh);
+                }
 
                 // Ensure numeric values to prevent NaN propagation
                 const safeLoad = isNaN(Number(d.loadKw)) ? 0 : Number(d.loadKw);
@@ -1383,12 +1591,13 @@ const SolarOptimizer = () => {
             setProcessedData(processedWithStep);
 
             setDetectedMaxLoad(maxLoad);
-            const autoMaxKwp = Math.max(Math.ceil(maxLoad * 5), 5000);
+            const autoMaxKwp = Math.max(Math.ceil(maxLoad * 5), 2000);
             setMaxKwpRef(autoMaxKwp);
             if (isNewFileLoad.current) { setTargetKwp(detectedKwp || Math.round(maxLoad)); isNewFileLoad.current = false; }
             setIsProcessing(false);
         }, 50); // Reduced delay
-    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp]);
+        return () => clearTimeout(processingTimer);
+    }, [rawData, params.psh, realSolarProfile, isSwappedDate, loadScaling, simulateWeekend, detectedKwp, selectedProvince]);
 
 
 
@@ -1459,7 +1668,7 @@ const SolarOptimizer = () => {
                     const estimatedAcKw = mid / 1.25;
                     const optParams = { ...techParams, inverterMaxAcKw: estimatedAcKw, gridInjectionPrice: 0, isActualYield };
 
-                    const stats = calculateSystemStats(mid, simData, 0, 0, false, false, { ...params, calibrationFactor }, optParams);
+                    const stats = calculateSystemStats(mid, simData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, optParams);
                     const diff = stats.curtailmentRate - targetVal;
                     if (Math.abs(diff) < minDiff) {
                         minDiff = Math.abs(diff);
@@ -1476,12 +1685,13 @@ const SolarOptimizer = () => {
                 // Final Stats Calc (reuse simData from above)
                 const { totalAcKw: finalAcKw, selectedInverters: finalInverters } = selectOptimalInverters(finalKwp, INVERTER_DB, 1.25);
                 const scenarioTechParams = { ...techParams, inverterMaxAcKw: finalAcKw, gridInjectionPrice: 0, isActualYield };
-                const stats = calculateSystemStats(finalKwp, simData, 0, 0, useTouMode, false, { ...params, calibrationFactor }, scenarioTechParams);
-                const capex = finalKwp * params.systemPrice;
+                const stats = calculateSystemStats(finalKwp, simData, bessKwh, bessMaxPower, useTouMode, isGridCharge, { ...params, calibrationFactor }, scenarioTechParams);
+                const bessCapexScenario = bessKwh * params.bessPrice;
+                const capex = finalKwp * params.systemPrice + bessCapexScenario;
                 const scenarioPrices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: 0 };
-                const fin = calculateAdvancedFinancials(capex, stats, scenarioPrices, { ...finParams, batteryCapex: 0 });
+                const fin = calculateAdvancedFinancials(capex, stats, scenarioPrices, { ...finParams, batteryCapex: bessCapexScenario });
 
-                return { ...tScenario, kwp: finalKwp, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, lcoe: fin.lcoe, config: finalInverters };
+                return { ...tScenario, kwp: finalKwp, bessKwh, bessMaxPower, realRate: stats.curtailmentRate, stats, capex, annualSaving: fin.firstYearRevenue, paybackYears: fin.payback, npv: fin.npv, irr: fin.irr, lcoe: fin.lcoe, config: finalInverters };
             });
 
             // Base Scenario
@@ -1491,18 +1701,23 @@ const SolarOptimizer = () => {
             const prices = { peak: params.pricePeak, normal: params.priceNormal, offPeak: params.priceOffPeak, gridInjection: techParams.gridInjectionPrice };
             const blFin = calculateAdvancedFinancials(blCapex, blStats, prices, { ...finParams, batteryCapex: bessKwh * params.bessPrice });
 
-            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, lcoe: blFin.lcoe, config: blInverters }, ...computedScenarios]);
+            setScenarios([{ label: t.scenarios.base, kwp: baseLoadKwp, bessKwh, bessMaxPower, realRate: blStats.curtailmentRate, stats: blStats, capex: blCapex, annualSaving: blFin.firstYearRevenue, paybackYears: blFin.payback, npv: blFin.npv, irr: blFin.irr, lcoe: blFin.lcoe, config: blInverters }, ...computedScenarios]);
 
         }, 100); // 100ms Delay to unblock UI
 
         return () => clearTimeout(timer);
 
-    }, [processedData, maxKwpRef, calculateSystemStats, params, bessKwh, bessMaxPower, bessStrategy, isGridCharge, calculateAdvancedFinancials, finParams, dcAcRatio, lang, t]);
+    }, [processedData, maxKwpRef, calculateSystemStats, params, techParams, bessKwh, bessMaxPower, bessStrategy, isGridCharge, calculateAdvancedFinancials, finParams, dcAcRatio, lang, t]);
 
 
     // --- HANDLER: SELECT SCENARIO ---
     const handleSelectScenario = (scenario) => {
         setTargetKwp(scenario.kwp);
+        // Apply BESS config from the selected scenario
+        if (scenario.bessKwh !== undefined) {
+            setBessKwh(scenario.bessKwh);
+            setBessMaxPower(scenario.bessMaxPower || 0);
+        }
         // Auto-configure Inverters from the optimized result
         if (scenario.config && scenario.config.length > 0) {
             // Apply first inverter type
@@ -1586,18 +1801,24 @@ const SolarOptimizer = () => {
             });
         }
 
-        return hourly.map((h, i) => ({
-            hour: `${i}:00`,
-            avgLoad: Number(h.load / (h.count || 1)) || 0,
-            solarProfile: Number(h.solar / (h.count || 1)) || 0,
-            avgBessCharge: Number(h.charge / (h.count || 1)) || 0,
-            avgGridCharge: Number(h.gridCharge / (h.count || 1)) || 0,
-            avgBessDischarge: Number(h.discharge / (h.count || 1)) || 0,
-            avgSoc: Number(h.soc / (h.count || 1)) || 0,
-            avgSelfConsumption: Number(h.selfConsumption / (h.count || 1)) || 0,
-            weekday: Number(h.wdCount ? h.wdSum / h.wdCount : 0) || 0,
-            weekend: Number(h.weCount ? h.weSum / h.weCount : 0) || 0
-        }));
+        return hourly.map((h, i) => {
+            const avgLoad = Number(h.load / (h.count || 1)) || 0;
+            const solarProfile = Number(h.solar / (h.count || 1)) || 0;
+            const avgSelfConsumption = Number(h.selfConsumption / (h.count || 1)) || 0;
+            return {
+                hour: `${i}:00`,
+                avgLoad,
+                solarProfile,
+                avgBessCharge: Number(h.charge / (h.count || 1)) || 0,
+                avgGridCharge: Number(h.gridCharge / (h.count || 1)) || 0,
+                avgBessDischarge: Number(h.discharge / (h.count || 1)) || 0,
+                avgSoc: Number(h.soc / (h.count || 1)) || 0,
+                avgSelfConsumption,
+                netGridLoad: Math.max(0, avgLoad - avgSelfConsumption),
+                weekday: Number(h.wdCount ? h.wdSum / h.wdCount : 0) || 0,
+                weekend: Number(h.weCount ? h.weSum / h.weCount : 0) || 0
+            };
+        });
     }, [customStats, processedData, realSystemSize, bessKwh, bessMaxPower, params, techParams, useTouMode, isGridCharge, calibrationFactor]);
 
     // Peak Load Day Profile: actual 24h profile of the day with highest peak load
@@ -1906,7 +2127,11 @@ const SolarOptimizer = () => {
 
         const safeCalibration = isNaN(Number(calibrationFactor)) ? 100 : Number(calibrationFactor);
         const scale = safeCalibration / 100.0;
-        const safeSize = isNaN(Number(realSystemSize)) ? 0 : Number(realSystemSize);
+
+        // Use customStats.systemSize if available (when a scenario is selected in Report), 
+        // otherwise fallback to realSystemSize (main UI)
+        const activeSystemSize = customStats?.systemSize || realSystemSize;
+        const safeSize = isNaN(Number(activeSystemSize)) ? 0 : Number(activeSystemSize);
 
         processedData.forEach(d => {
             if (!d.date) return;
@@ -1929,7 +2154,7 @@ const SolarOptimizer = () => {
                 solar: Number(h.solarCount ? h.solarSum / h.solarCount : 0) || 0
             }))
         }));
-    }, [processedData, realSystemSize, calibrationFactor, t]);
+    }, [processedData, realSystemSize, calibrationFactor, t, customStats]);
 
     // Base correlation data (without BESS) for comparison
     const baseCorrelationData = useMemo(() => {
@@ -2164,7 +2389,17 @@ const SolarOptimizer = () => {
 
     // 4. SMART DESIGN SELECTOR
     if (!designMode) {
-        return <SmartDesignSelector onSelect={handleDesignModeSelect} lang={lang} setLang={setLang} />;
+        return (
+            <SmartDesignSelector
+                onSelect={handleDesignModeSelect}
+                lang={lang}
+                setLang={setLang}
+                voltageLevelId={voltageLevelId}
+                setVoltageLevelId={setVoltageLevelId}
+                EVN_TARIFFS={EVN_TARIFFS}
+                onSignOut={onSignOut}
+            />
+        );
     }
 
 
@@ -2260,17 +2495,17 @@ const SolarOptimizer = () => {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Sun size={24} className="text-green-500 mb-2" />
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.pv_yield_yearly || "SẢN LƯỢNG PV"}</span>
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t.pdf.pv_yield_yearly || "SẢN LƯỢNG PV"}</span>
                                         <span className="text-xl font-black text-green-600">{(customStats.totalSolarGen / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Zap size={24} className="text-blue-500 mb-2" />
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.solar_used_yearly || "NĂNG LƯỢNG SOLAR TỰ DÙNG"}</span>
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t.pdf.solar_used_yearly || "NĂNG LƯỢNG SOLAR TỰ DÙNG"}</span>
                                         <span className="text-xl font-black text-blue-600">{(customStats.totalUsed / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                     <div className="border border-slate-200 rounded-lg p-4 flex flex-col items-center bg-slate-50">
                                         <Grid3X3 size={24} className="text-slate-500 mb-2" />
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf.grid_import_yearly || "TỪ LƯỚI"}</span>
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t.pdf.grid_import_yearly || "TỪ LƯỚI"}</span>
                                         <span className="text-xl font-black text-slate-700">{((customStats.totalLoad - customStats.totalUsed) / 1000).toFixed(1)} <small className="text-xs text-slate-400 font-medium">{t.pdf.mwh_year || "MWh/năm"}</small></span>
                                     </div>
                                 </div>
@@ -2284,18 +2519,18 @@ const SolarOptimizer = () => {
                                 2. {t.pdf.tech_config || "Cấu hình Kỹ thuật Sơ bộ"}
                             </h3>
                             <div className="border border-blue-100 rounded-lg overflow-hidden">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-base">
                                     <tbody className="divide-y divide-blue-50">
                                         <tr className="bg-blue-50/30">
-                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px] w-1/3">{t.pdf.pv_capacity}</td>
+                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs w-1/3">{t.pdf.pv_capacity}</td>
                                             <td className="px-4 py-2 font-bold text-blue-700">{formatNumber(realSystemSize)} kWp</td>
                                         </tr>
                                         <tr>
-                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.panels}</td>
+                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs">{t.pdf.panels}</td>
                                             <td className="px-4 py-2 font-medium text-slate-700">{totalPanels}x Panel 580W (N-Type)</td>
                                         </tr>
                                         <tr className="bg-blue-50/30">
-                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.inverters}</td>
+                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs">{t.pdf.inverters}</td>
                                             <td className="px-4 py-2 font-medium text-slate-700">
                                                 <div>{inv1Qty}x {inv1Id ? INVERTER_DB.find(i => i.id === inv1Id)?.name : "Inverter"} ({inv1Qty > 0 ? formatNumber(inv1Qty * (INVERTER_DB.find(i => i.id === inv1Id)?.acPower || 0)) : 0} kW)</div>
                                                 {inv2Qty > 0 && inv2Id && (
@@ -2306,12 +2541,16 @@ const SolarOptimizer = () => {
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.pdf.bess}</td>
+                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs">{t.pdf.bess}</td>
                                             <td className="px-4 py-2 font-medium text-slate-700">{bessKwh > 0 ? `${bessKwh} kWh / ${bessMaxPower} kW` : (t.pdf.no_bess || "Không sử dụng")}</td>
                                         </tr>
                                         <tr className="bg-blue-50/30">
-                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-[11px]">{t.area_province || "KHU VỰC / TỈNH THÀNH"}</td>
-                                            <td className="px-4 py-2 font-medium text-slate-700">{selectedProvince?.name || (t.pdf.not_selected || "Chưa chọn")}</td>
+                                            <td className="px-4 py-2 font-bold text-slate-500 uppercase text-xs">{t.area_province || "KHU VỰC / TỈNH THÀNH"}</td>
+                                            <td className="px-4 py-2 font-medium text-slate-700">
+                                                {solarSourceName && !["Mặc định (mô phỏng)", "Default (Simulation)", "GSA Hourly Profile"].includes(solarSourceName)
+                                                    ? solarSourceName
+                                                    : (selectedProvince?.name || (t.pdf.not_selected || "Chưa chọn"))}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -2411,7 +2650,7 @@ const SolarOptimizer = () => {
                                 5. {t.pdf.energy_analysis || "Phân tích Năng lượng theo Kịch bản"}
                             </h3>
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
-                                <table className="w-full text-[10px] text-left">
+                                <table className="w-full text-xs text-left">
                                     <thead className="bg-blue-50/50 text-slate-600 font-bold border-b border-blue-100 uppercase tracking-wider">
                                         <tr>
                                             <th rowSpan={2} className="px-4 py-2 border-r border-blue-100 align-middle text-center">{t.pdf.scenario}</th>
@@ -2428,7 +2667,7 @@ const SolarOptimizer = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {scenarios.map((s, i) => (
                                             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}>
-                                                <td className="px-4 py-2 border-r border-slate-100 font-medium text-slate-700">{s.label} ({s.kwp} kWp)</td>
+                                                <td className="px-4 py-2 border-r border-slate-100 font-medium text-slate-700">{s.label} ({formatNumber(s.kwp)} kWp)</td>
                                                 <td className="px-4 py-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats?.usedPeak || 0)}</td>
                                                 <td className="px-4 py-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats?.usedNormal || 0)}</td>
                                                 <td className="px-4 py-2 text-right text-amber-700 border-r border-slate-100">{formatNumber((s.stats?.curtailedPeak || 0) + (s.stats?.exportedPeak || 0))}</td>
@@ -2467,7 +2706,7 @@ const SolarOptimizer = () => {
                             <div className="grid grid-cols-4 gap-2">
                                 {monthlyPowerCurves.map((mItem, idx) => (
                                     <div key={idx} className="border border-slate-200 rounded p-1.5 h-48 bg-white">
-                                        <div className="text-[8px] font-bold text-slate-500 mb-0.5 text-center uppercase">{mItem.month}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 mb-0.5 text-center uppercase">{mItem.month}</div>
                                         <div className="h-36 w-full">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <AreaChart data={mItem.data} margin={{ top: 5, right: 5, left: 0, bottom: 15 }}>
@@ -2494,7 +2733,7 @@ const SolarOptimizer = () => {
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
-                                        <div className="flex justify-center items-center gap-1.5 mt-0.5 w-full text-[6px] text-slate-500">
+                                        <div className="flex justify-center items-center gap-1.5 mt-0.5 w-full text-[8px] text-slate-500">
                                             <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-blue-500"></div> {t.pdf.mon_sat}</div>
                                             <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-red-500"></div> {t.pdf.sun}</div>
                                             <div className="flex items-center gap-0.5"><div className="w-1 h-1 rounded-full bg-yellow-400"></div> Solar</div>
@@ -2511,7 +2750,7 @@ const SolarOptimizer = () => {
                                 7. {t.pdf.yearly_summary || "Tổng hợp Năng lượng theo Năm"}
                             </h3>
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
-                                <table className="w-full text-[10px] text-left">
+                                <table className="w-full text-xs text-left">
                                     <thead className="bg-blue-50/50 text-slate-600 font-bold border-b border-blue-100 uppercase tracking-wider">
                                         <tr>
                                             <th className="px-3 py-2 border-r border-blue-100 text-center">{t.pdf.col_month || "Tháng"}</th>
@@ -2556,30 +2795,30 @@ const SolarOptimizer = () => {
                                 <div className="grid grid-cols-4 gap-3">
                                     <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
                                         <div className="p-1.5 bg-amber-100 rounded-full text-amber-600 mb-1"><Sun size={16} /></div>
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.max_solar_month || "Tháng Nắng Nhiều Nhất"}</div>
+                                        <div className="text-xs font-bold text-slate-500 uppercase">{t.pdf.max_solar_month || "Tháng Nắng Nhiều Nhất"}</div>
                                         <div className="text-lg font-black text-amber-600 mt-1">{executiveSummaryData.maxSolarMonth.month}</div>
-                                        <div className="text-[9px] font-medium text-slate-400">{executiveSummaryData.maxSolarMonth.value} MWh</div>
+                                        <div className="text-[11px] font-medium text-slate-400">{executiveSummaryData.maxSolarMonth.value} MWh</div>
                                     </div>
 
                                     <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
                                         <div className="p-1.5 bg-red-100 rounded-full text-red-600 mb-1"><Activity size={16} /></div>
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.max_curtailed_month || "Tháng Dư Thừa Nhiều Nhất"}</div>
+                                        <div className="text-xs font-bold text-slate-500 uppercase">{t.pdf.max_curtailed_month || "Tháng Dư Thừa Nhiều Nhất"}</div>
                                         <div className="text-lg font-black text-red-600 mt-1">{executiveSummaryData.maxCurtailedMonth.month}</div>
-                                        <div className="text-[9px] font-medium text-slate-400">{executiveSummaryData.maxCurtailedMonth.value} MWh {t.pdf.curtailed || "Cắt giảm"}</div>
+                                        <div className="text-[11px] font-medium text-slate-400">{executiveSummaryData.maxCurtailedMonth.value} MWh {t.pdf.curtailed || "Cắt giảm"}</div>
                                     </div>
 
                                     <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
                                         <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 mb-1"><Zap size={16} /></div>
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.avg_self_use || "Tỷ Lệ Tự Dùng Năng Lượng"}</div>
+                                        <div className="text-xs font-bold text-slate-500 uppercase">{t.pdf.avg_self_use || "Tỷ Lệ Tự Dùng Năng Lượng"}</div>
                                         <div className="text-xl font-black text-emerald-600 mt-1">{executiveSummaryData.avgSelfUsePct}%</div>
-                                        <div className="text-[9px] font-medium text-slate-400">{t.pdf.yearly_avg || "Bình quân năm"}</div>
+                                        <div className="text-[11px] font-medium text-slate-400">{t.pdf.yearly_avg || "Bình quân năm"}</div>
                                     </div>
 
                                     <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col justify-center items-center text-center shadow-sm">
                                         <div className="p-1.5 bg-indigo-100 rounded-full text-indigo-600 mb-1"><ShieldCheck size={16} /></div>
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase">{t.pdf.grid_independence || "Tỷ lệ Tự chủ Năng lượng"}</div>
+                                        <div className="text-xs font-bold text-slate-500 uppercase">{t.pdf.grid_independence || "Tỷ lệ Tự chủ Năng lượng"}</div>
                                         <div className="text-xl font-black text-indigo-600 mt-1">{executiveSummaryData.avgPvCoveragePct}%</div>
-                                        <div className="text-[9px] font-medium text-slate-400">{t.pdf.pv_coverage || "Tải được đáp ứng bởi Solar"}</div>
+                                        <div className="text-[11px] font-medium text-slate-400">{t.pdf.pv_coverage || "Tải được đáp ứng bởi Solar"}</div>
                                     </div>
                                 </div>
                             </div>
@@ -2596,7 +2835,7 @@ const SolarOptimizer = () => {
                                     <div className="absolute top-0 right-0 p-4 opacity-10">
                                         <Leaf size={120} className="text-emerald-500 transform rotate-12" />
                                     </div>
-                                    <p className="text-[10px] text-emerald-600 mb-3 max-w-[80%] relative z-10 font-medium">{t.pdf_config.env_desc}</p>
+                                    <p className="text-xs text-emerald-600 mb-3 max-w-[80%] relative z-10 font-medium">{t.pdf_config.env_desc}</p>
 
                                     <div className="grid grid-cols-4 gap-3 relative z-10">
                                         {/* CO2 Saved */}
@@ -2607,8 +2846,8 @@ const SolarOptimizer = () => {
                                             <span className="text-lg font-black text-slate-700">
                                                 {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH / 1000)}
                                             </span>
-                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{t.pdf_config.ton_year}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.co2_saved}</span>
+                                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{t.pdf_config.ton_year}</span>
+                                            <span className="text-xs text-slate-400 font-medium mt-1">{t.pdf_config.co2_saved}</span>
                                         </div>
 
                                         {/* Trees Planted */}
@@ -2619,8 +2858,8 @@ const SolarOptimizer = () => {
                                             <span className="text-lg font-black text-slate-700">
                                                 {formatNumber((customStats?.totalSolarGen || 0) * CO2_KG_PER_KWH * TREES_PER_CO2_KG)}
                                             </span>
-                                            <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">{t.pdf_config.trees}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.trees_planted}</span>
+                                            <span className="text-xs font-bold text-green-600 uppercase tracking-widest">{t.pdf_config.trees}</span>
+                                            <span className="text-xs text-slate-400 font-medium mt-1">{t.pdf_config.trees_planted}</span>
                                         </div>
 
                                         {/* Coal Saved */}
@@ -2631,8 +2870,8 @@ const SolarOptimizer = () => {
                                             <span className="text-lg font-black text-slate-700">
                                                 {formatNumber((customStats?.totalSolarGen || 0) * COAL_KG_PER_KWH / 1000)}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t.pdf_config.ton_coal}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.coal_saved}</span>
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t.pdf_config.ton_coal}</span>
+                                            <span className="text-xs text-slate-400 font-medium mt-1">{t.pdf_config.coal_saved}</span>
                                         </div>
 
                                         {/* Oil Saved */}
@@ -2643,8 +2882,8 @@ const SolarOptimizer = () => {
                                             <span className="text-lg font-black text-slate-700">
                                                 {formatNumber((customStats?.totalSolarGen || 0) * OIL_LITERS_PER_KWH)}
                                             </span>
-                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{t.pdf_config.liters}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium mt-1">{t.pdf_config.oil_saved}</span>
+                                            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">{t.pdf_config.liters}</span>
+                                            <span className="text-xs text-slate-400 font-medium mt-1">{t.pdf_config.oil_saved}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2668,13 +2907,13 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
                         {/* 10. SCENARIO COMPARISON TABLE */}
-                        <h3 className="text-blue-700 font-bold text-lg mb-2 flex items-center gap-2">
+                        <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><BarChart2 size={18} /></div>
-                            10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư (So sánh Kịch bản)"}
+                            10. {t.pdf.scenario_comparison || "Phân tích Hiệu quả Đầu tư"}
                         </h3>
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                <table className="w-full text-[9px] text-left">
+                                <table className="w-full text-xs text-left">
                                     <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
                                         <tr>
                                             <th className="p-2 border-r border-slate-100">{t.pdf.col_scenario || "Kịch bản"}</th>
@@ -2706,63 +2945,124 @@ const SolarOptimizer = () => {
                         </div>
 
                         {/* 11. CASH FLOW & ROI */}
-                        <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
+                        <h3 className="text-blue-700 font-bold text-lg mb-1 flex items-center gap-2">
                             <div className="p-1.5 bg-blue-50 rounded text-blue-600"><TrendingUp size={18} /></div>
                             11. {t.pdf.cash_flow_roi_title || "Phân tích Dòng tiền & ROI"}
                         </h3>
 
                         {/* FRAME 2: CASH FLOW CHART */}
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <div className="h-[350px] w-full">
-                                <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền (Tích lũy)"}</h4>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={currentFinance.cumulativeData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-                                        <YAxis
-                                            yAxisId="left"
-                                            tick={({ x, y, payload }) => {
-                                                const val = payload.value;
-                                                const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
-                                                return <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fill="#666">{formatted}</text>;
-                                            }}
-                                            width={60}
-                                            label={{ value: t.pdf.finance_table.net_flow, angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 10, fill: '#64748b' } }}
-                                        />
-                                        <YAxis
-                                            yAxisId="right"
-                                            orientation="right"
-                                            tick={({ x, y, payload }) => {
-                                                const val = payload.value;
-                                                const formatted = Math.abs(val) >= 1e9 ? `${(val / 1e9).toFixed(1)} Tỷ` : Math.abs(val) >= 1e6 ? `${(val / 1e6).toFixed(0)} Tr` : val;
-                                                return <text x={x} y={y} dy={4} textAnchor="start" fontSize={10} fill="#666">{formatted}</text>;
-                                            }}
-                                            width={60}
-                                            label={{ value: t.pdf.finance_table.acc, angle: 90, position: 'insideRight', offset: 10, style: { fontSize: 10, fill: '#64748b' } }}
-                                        />
-                                        <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
-                                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} />
-                                        <Bar yAxisId="left" dataKey="net" name={t.pdf.finance_table.net_flow} barSize={20} isAnimationActive={false}>
-                                            {currentFinance.cumulativeData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#3b82f6' : '#ef4444'} />
-                                            ))}
-                                        </Bar>
-                                        <Line yAxisId="right" type="monotone" dataKey="acc" name={t.pdf.finance_table.acc} stroke="#10b981" strokeWidth={3} dot={false} isAnimationActive={false} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
+                            <div className="h-[280px] w-full">
+                                <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.cashflow_chart || "Biểu đồ Dòng tiền"}</h4>
+                                {(() => {
+                                    const chartData = currentFinance.cumulativeData.map(d => ({
+                                        ...d,
+                                        chartNet: d.year === 0 ? 0 : d.net,
+                                        chartDebt: d.year === 0 ? -(currentFinance.loanAmount || 0) : (d.debt || 0)
+                                    }));
+
+                                    let min = 0, max = 0;
+                                    chartData.forEach(d => {
+                                        if (d.year > 0) {
+                                            min = Math.min(min, d.chartNet);
+                                            max = Math.max(max, d.chartNet);
+                                        }
+                                        min = Math.min(min, d.acc);
+                                        max = Math.max(max, d.acc);
+                                        if (d.chartDebt) min = Math.min(min, d.chartDebt);
+                                        if (d.chartDebt) max = Math.max(max, d.chartDebt);
+                                    });
+                                    const unifiedDomain = (max === 0 && min === 0) ? [0, 1] : [min * 1.05, max * 1.05];
+
+                                    const renderCustomLegend = () => (
+                                        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-xs text-slate-600 font-medium">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                                                <span>{t.pdf.finance_table.net_flow || (lang === 'vi' ? "Dòng tiền ròng" : "Net Cash Flow")}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                                                <span>{lang === 'vi' ? "Vốn đầu tư ban đầu" : "Initial Investment"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-orange-400 rounded-sm"></div>
+                                                <span>{lang === 'vi' ? "Đang thu hồi vốn" : "Recovering Capital"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                                                <span>{lang === 'vi' ? "Đã sinh lời" : "Profitable"}</span>
+                                            </div>
+                                            {finParams.loan.enable && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-3 h-3 bg-amber-400 rounded-sm"></div>
+                                                    <span>{lang === 'vi' ? "Vốn vay / Trả nợ" : "Loan / Debt"}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+
+                                    return (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 25 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" strokeOpacity={0.8} />
+                                                <XAxis dataKey="year" tick={{ fontSize: 10 }} />
+                                                <YAxis
+                                                    domain={unifiedDomain}
+                                                    yAxisId="left"
+                                                    tick={({ x, y, payload }) => {
+                                                        const val = payload.value;
+                                                        const formatted = Math.abs(val) >= 1e9
+                                                            ? `${(val / 1e9).toFixed(1)} ${lang === 'vi' ? 'Tỷ' : 'B'}`
+                                                            : Math.abs(val) >= 1e6
+                                                                ? `${(val / 1e6).toFixed(0)} ${lang === 'vi' ? 'Tr' : 'M'}`
+                                                                : val;
+                                                        return <text x={x} y={y} dy={4} textAnchor="end" fontSize={10} fill="#666">{formatted}</text>;
+                                                    }}
+                                                    width={60}
+                                                />
+                                                <Tooltip formatter={(value) => formatMoney(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" />
+                                                <Legend content={renderCustomLegend} verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px' }} />
+                                                <Bar yAxisId="left" dataKey="chartNet" name={t.pdf.finance_table.net_flow || "Dòng tiền ròng"} barSize={20} isAnimationActive={false}>
+                                                    {chartData.map((entry, index) => (
+                                                        <Cell key={`net-${index}`} fill={entry.year === 0 ? 'transparent' : (entry.chartNet >= 0 ? '#3b82f6' : '#ef4444')} />
+                                                    ))}
+                                                </Bar>
+                                                {finParams.loan.enable && (
+                                                    <Bar yAxisId="left" dataKey="chartDebt" name={lang === 'vi' ? 'Vốn vay / Trả nợ' : 'Loan / Debt'} barSize={20} isAnimationActive={false}>
+                                                        {chartData.map((entry, index) => (
+                                                            <Cell key={`debt-${index}`} fill={'#fbbf24'} />
+                                                        ))}
+                                                    </Bar>
+                                                )}
+                                                <Bar yAxisId="left" dataKey="acc" name={t.pdf.finance_table.acc || "Tích lũy"} barSize={20} isAnimationActive={false}>
+                                                    {chartData.map((entry, index) => {
+                                                        let fillColor = '#10b981';
+                                                        if (entry.year === 0) fillColor = '#ef4444';
+                                                        else if (entry.acc < 0) fillColor = '#fb923c';
+                                                        return <Cell key={`acc-${index}`} fill={fillColor} />;
+                                                    })}
+                                                </Bar>
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    );
+                                })()}
                             </div>
                         </div>
 
                         {/* FRAME 3: CASH FLOW TABLE */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mb-2">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                <table className="w-full text-[10px] text-left">
+                                <table className="w-full text-xs text-left">
                                     <thead className="bg-slate-50 font-black text-slate-500 uppercase">
                                         <tr>
                                             <th className="p-3 border-r border-slate-100">{t.pdf.finance_table.year}</th>
                                             <th className="p-3 border-r border-slate-100 text-right">{t.pdf.finance_table.revenue}</th>
                                             <th className="p-3 border-r border-slate-100 text-right">{t.pdf.finance_table.om}</th>
                                             <th className="p-3 border-r border-slate-100 text-right text-red-500">{t.pdf.finance_table.replacement}</th>
+                                            {finParams.loan.enable && (
+                                                <th className="p-3 border-r border-slate-100 text-right text-red-500">{lang === 'vi' ? 'Trả nợ' : 'Debt Service'}</th>
+                                            )}
                                             <th className="p-3 border-r border-slate-100 text-right font-black text-blue-600">{t.pdf.finance_table.net_flow}</th>
                                             <th className="p-3 text-right font-black text-emerald-600">{t.pdf.finance_table.acc}</th>
                                         </tr>
@@ -2774,6 +3074,9 @@ const SolarOptimizer = () => {
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.revenue) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-slate-600">{y.year > 0 ? formatMoney(y.om) : '-'}</td>
                                                 <td className="p-2 text-right font-medium text-red-500">{y.replace < 0 ? formatMoney(y.replace) : '-'}</td>
+                                                {finParams.loan.enable && (
+                                                    <td className="p-2 text-right font-medium text-red-500">{y.debt < 0 ? formatMoney(y.debt) : '-'}</td>
+                                                )}
                                                 <td className="p-2 text-right font-black text-blue-600">{formatMoney(y.net)}</td>
                                                 <td className={`p-2 text-right font-black ${y.acc >= 0 ? 'text-emerald-600' : 'text-orange-500'}`}>{formatMoney(y.acc)}</td>
                                             </tr>
@@ -2784,24 +3087,24 @@ const SolarOptimizer = () => {
                         </div>
 
                         {/* FRAME 4: INVESTMENT INDICATORS */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
-                            <h4 className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.investment_indicators || "Chỉ số Hiệu quả Đầu tư"}</h4>
+                        <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                            <h4 className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.pdf.investment_indicators || "Chỉ số Hiệu quả Đầu tư"}</h4>
                             <div className="grid grid-cols-4 gap-2">
-                                <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
-                                    <p className="text-[9px] font-black text-emerald-600 uppercase">NPV</p>
+                                <div className="p-1.5 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase">NPV</p>
                                     <p className="text-sm font-black text-emerald-700">{formatMoney(currentFinance.npv)}</p>
                                 </div>
-                                <div className="p-2 bg-blue-50 rounded-lg border border-blue-100 text-center">
-                                    <p className="text-[9px] font-black text-blue-600 uppercase">IRR</p>
+                                <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                                    <p className="text-[10px] font-black text-blue-600 uppercase">IRR</p>
                                     <p className="text-sm font-black text-blue-700">{currentFinance.irr.toFixed(1)}%</p>
                                 </div>
-                                <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-center">
-                                    <p className="text-[9px] font-black text-indigo-600 uppercase">{t.pdf.payback}</p>
-                                    <p className="text-sm font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-[9px] font-normal">{lang === 'en' ? 'years' : 'Năm'}</small></p>
+                                <div className="p-1.5 bg-indigo-50 rounded-lg border border-indigo-100 text-center">
+                                    <p className="text-[10px] font-black text-indigo-600 uppercase">{t.pdf.payback}</p>
+                                    <p className="text-sm font-black text-indigo-700">{currentFinance.payback.toFixed(1)} <small className="text-[10px] font-normal">{lang === 'en' ? 'years' : 'Năm'}</small></p>
                                 </div>
-                                <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                                    <p className="text-[9px] font-black text-slate-600 uppercase">ROI</p>
-                                    <p className="text-sm font-black text-slate-700">{((currentFinance.npv / currentFinance.initialCapex) * 100).toFixed(0)}%</p>
+                                <div className="p-1.5 bg-purple-50 rounded-lg border border-purple-100 text-center">
+                                    <p className="text-[10px] font-black text-purple-600 uppercase">ROI</p>
+                                    <p className="text-sm font-black text-purple-700">{currentFinance.roi.toFixed(0)}%</p>
                                 </div>
                             </div>
                         </div>
@@ -2823,46 +3126,46 @@ const SolarOptimizer = () => {
                             </div>
                         </div>
 
-                        {/* SECTION 12: DETAILED TECHNICAL SPECIFICATIONS (16 items) */}
+                        {/* SECTION 12: DETAILED TECHNICAL SPECIFICATIONS */}
                         <h3 className="text-blue-700 font-bold text-lg mb-3 flex items-center gap-2">
                             <div className="p-1.5 bg-indigo-50 rounded text-indigo-600"><Settings size={18} /></div>
-                            12. {t.pdf.detailed_specs || "Thông số Kỹ thuật Chi tiết (16 Mục)"}
+                            12. {t.pdf.detailed_specs || "Thông số Kỹ thuật Chi tiết"}
                         </h3>
 
                         {/* Frame 1: 16 Detailed Specs Table */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
-                            <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                <table className="w-full text-[10px]">
-                                    <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
-                                        <tr>
-                                            <th className="p-2 text-center w-8 border-r border-slate-100">#</th>
-                                            <th className="p-2 text-left border-r border-slate-100">{t.pdf.spec_name || "Thông số"}</th>
-                                            <th className="p-2 text-right border-r border-slate-100 w-24">{t.pdf.spec_value || "Giá trị"}</th>
-                                            <th className="p-2 text-center w-12">{t.pdf.spec_unit || "ĐV"}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {/* Row 1-8: Energy Stats */}
-                                        <tr className="hover:bg-slate-50"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">1</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_total}</td><td className="p-1.5 text-right font-bold border-r border-slate-100">{formatNumber(customStats?.totalSolarGen || 0)}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-green-50/50 bg-green-50/30"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">2</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used}</td><td className="p-1.5 text-right font-bold text-green-600 border-r border-slate-100">{formatNumber(customStats?.totalUsed || 0)}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-green-50/50 bg-green-50/30"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">3</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used_pct}</td><td className="p-1.5 text-right font-bold text-green-600 border-r border-slate-100">{((customStats?.totalUsed || 0) / (customStats?.totalSolarGen || 1) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        <tr className="hover:bg-red-50/50 bg-red-50/30"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">4</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_curtailed}</td><td className="p-1.5 text-right font-bold text-red-500 border-r border-slate-100">{formatNumber((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 0))}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-red-50/50 bg-red-50/30"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">5</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_curtailed_pct}</td><td className="p-1.5 text-right font-bold text-red-500 border-r border-slate-100">{(((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 0)) / (customStats?.totalSolarGen || 1) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        <tr className="hover:bg-slate-50"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">6</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.grid_import}</td><td className="p-1.5 text-right font-bold border-r border-slate-100">{formatNumber((customStats?.totalLoad || 0) - (customStats?.totalUsed || 0))}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-slate-50"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">7</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.total_load}</td><td className="p-1.5 text-right font-bold border-r border-slate-100">{formatNumber(customStats?.totalLoad || 0)}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-slate-50"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">8</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.loss_pct}</td><td className="p-1.5 text-right font-bold border-r border-slate-100">{customStats?.losses?.totalDerate || 0}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        {/* Row 9-12: Normal/Peak */}
-                                        <tr className="hover:bg-blue-50/50 bg-blue-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">9</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used_normal}</td><td className="p-1.5 text-right font-bold text-blue-600 border-r border-slate-100">{formatNumber(customStats?.usedNormal || 0)}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-blue-50/50 bg-blue-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">10</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used_normal_pct}</td><td className="p-1.5 text-right font-bold text-blue-600 border-r border-slate-100">{((customStats?.usedNormal || 0) / (customStats?.totalUsed || 1) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        <tr className="hover:bg-indigo-50/50 bg-indigo-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">11</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used_peak}</td><td className="p-1.5 text-right font-bold text-indigo-600 border-r border-slate-100">{formatNumber(customStats?.usedPeak || 0)}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-indigo-50/50 bg-indigo-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">12</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.pv_used_peak_pct}</td><td className="p-1.5 text-right font-bold text-indigo-600 border-r border-slate-100">{((customStats?.usedPeak || 0) / (customStats?.totalUsed || 1) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        {/* Row 13-16: Curtailed */}
-                                        <tr className="hover:bg-amber-50/50 bg-amber-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">13</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.curtailed_normal}</td><td className="p-1.5 text-right font-bold text-amber-600 border-r border-slate-100">{formatNumber((customStats?.curtailedNormal || 0) + (customStats?.exportedNormal || 0))}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-amber-50/50 bg-amber-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">14</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.curtailed_normal_pct}</td><td className="p-1.5 text-right font-bold text-amber-600 border-r border-slate-100">{(((customStats?.curtailedNormal || 0) + (customStats?.exportedNormal || 0)) / ((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 1)) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                        <tr className="hover:bg-orange-50/50 bg-orange-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">15</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.curtailed_peak}</td><td className="p-1.5 text-right font-bold text-orange-600 border-r border-slate-100">{formatNumber((customStats?.curtailedPeak || 0) + (customStats?.exportedPeak || 0))}</td><td className="p-1.5 text-center text-slate-400">kWh</td></tr>
-                                        <tr className="hover:bg-orange-50/50 bg-orange-50/20"><td className="p-1.5 text-center text-slate-400 border-r border-slate-100">16</td><td className="p-1.5 border-r border-slate-100">{t.tech_labels.curtailed_peak_pct}</td><td className="p-1.5 text-right font-bold text-orange-600 border-r border-slate-100">{(((customStats?.curtailedPeak || 0) + (customStats?.exportedPeak || 0)) / ((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 1)) * 100).toFixed(2)}</td><td className="p-1.5 text-center text-slate-400">%</td></tr>
-                                    </tbody>
-                                </table>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 mb-4">
+                            <div className="grid grid-cols-4 gap-3">
+                                {[
+                                    { id: 1, label: t.tech_labels.pv_total, value: customStats?.totalSolarGen || 0, unit: 'kWh' },
+                                    { id: 2, label: t.tech_labels.pv_used, value: customStats?.totalUsed || 0, unit: 'kWh', color: 'text-green-600' },
+                                    { id: 3, label: t.tech_labels.pv_used_pct, value: ((customStats?.totalUsed || 0) / (customStats?.totalSolarGen || 1) * 100).toFixed(2), unit: '%', color: 'text-green-600' },
+                                    { id: 4, label: t.tech_labels.pv_curtailed, value: (customStats?.totalCurtailed || 0) + (customStats?.totalExported || 0), unit: 'kWh', color: 'text-red-500' },
+                                    { id: 5, label: t.tech_labels.pv_curtailed_pct, value: (((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 0)) / (customStats?.totalSolarGen || 1) * 100).toFixed(2), unit: '%', color: 'text-red-500' },
+                                    { id: 6, label: t.tech_labels.grid_import, value: (customStats?.totalLoad || 0) - (customStats?.totalUsed || 0), unit: 'kWh' },
+                                    { id: 7, label: t.tech_labels.total_load, value: customStats?.totalLoad || 0, unit: 'kWh' },
+                                    { id: 8, label: t.tech_labels.loss_pct, value: customStats?.losses?.totalDerate || 0, unit: '%' },
+                                    { id: 9, label: t.tech_labels.pv_used_normal, value: customStats?.usedNormal || 0, unit: 'kWh', color: 'text-blue-600' },
+                                    { id: 10, label: t.tech_labels.pv_used_normal_pct, value: ((customStats?.usedNormal || 0) / (customStats?.totalUsed || 1) * 100).toFixed(2), unit: '%', color: 'text-blue-600' },
+                                    { id: 11, label: t.tech_labels.pv_used_peak, value: customStats?.usedPeak || 0, unit: 'kWh', color: 'text-indigo-600' },
+                                    { id: 12, label: t.tech_labels.pv_used_peak_pct, value: ((customStats?.usedPeak || 0) / (customStats?.totalUsed || 1) * 100).toFixed(2), unit: '%', color: 'text-indigo-600' },
+                                    { id: 13, label: t.tech_labels.curtailed_normal, value: (customStats?.curtailedNormal || 0) + (customStats?.exportedNormal || 0), unit: 'kWh', color: 'text-amber-600' },
+                                    { id: 14, label: t.tech_labels.curtailed_normal_pct, value: (((customStats?.curtailedNormal || 0) + (customStats?.exportedNormal || 0)) / ((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 1)) * 100).toFixed(2), unit: '%', color: 'text-amber-600' },
+                                    { id: 15, label: t.tech_labels.curtailed_peak, value: (customStats?.curtailedPeak || 0) + (customStats?.exportedPeak || 0), unit: 'kWh', color: 'text-orange-600' },
+                                    { id: 16, label: t.tech_labels.curtailed_peak_pct, value: (((customStats?.curtailedPeak || 0) + (customStats?.exportedPeak || 0)) / ((customStats?.totalCurtailed || 0) + (customStats?.totalExported || 1)) * 100).toFixed(2), unit: '%', color: 'text-orange-600' },
+                                ].map((row) => (
+                                    <div key={row.id} className="bg-slate-50 rounded p-2 border border-slate-100 flex flex-col justify-between">
+                                        <div className="text-xs uppercase font-bold text-slate-400 mb-1">
+                                            #{row.id}
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-slate-600 font-medium leading-tight h-8 truncate whitespace-normal" title={row.label}>{row.label}</div>
+                                            <div className={`text-base font-bold mt-1 flex items-baseline gap-1 ${row.color || 'text-slate-800'}`}>
+                                                {typeof row.value === 'number' ? formatNumber(row.value) : row.value}
+                                                <span className="text-xs font-normal text-slate-400">{row.unit}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -2875,31 +3178,31 @@ const SolarOptimizer = () => {
                         {/* Frame 2: Scenario Comparison Table */}
                         <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
                             <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                <table className="w-full text-[10px]">
+                                <table className="w-full text-sm">
                                     <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
                                         <tr>
-                                            <th rowSpan={2} className="p-2 text-left border-r border-slate-100">{t.pdf.scenario_name || "Kịch bản"}</th>
-                                            <th colSpan={2} className="p-2 text-center border-r border-slate-100 bg-blue-50 text-blue-600">{t.pdf.self_use || "Tự dùng (kWh)"}</th>
-                                            <th colSpan={2} className="p-2 text-center bg-amber-50 text-amber-600">{t.pdf.excess || "Dư thừa (kWh)"}</th>
+                                            <th rowSpan={2} className="px-2 py-1.5 text-left border-r border-slate-100">{t.pdf.scenario_name || "Kịch bản"}</th>
+                                            <th colSpan={2} className="px-2 py-1.5 text-center border-r border-slate-100 bg-blue-50 text-blue-600">{t.pdf.self_use || "Tự dùng (kWh)"}</th>
+                                            <th colSpan={2} className="px-2 py-1.5 text-center bg-amber-50 text-amber-600">{t.pdf.excess || "Dư thừa (kWh)"}</th>
                                         </tr>
                                         <tr>
-                                            <th className="p-2 text-center border-r border-slate-100 text-blue-500">{t.pdf.peak || "Peak"}</th>
-                                            <th className="p-2 text-center border-r border-slate-100 text-blue-500">{t.pdf.normal || "Normal"}</th>
-                                            <th className="p-2 text-center border-r border-slate-100 text-amber-500">{t.pdf.peak || "Peak"}</th>
-                                            <th className="p-2 text-center text-amber-500">{t.pdf.normal || "Normal"}</th>
+                                            <th className="px-2 py-1 text-center border-r border-slate-100 text-blue-500">{t.pdf.peak || "Peak"}</th>
+                                            <th className="px-2 py-1 text-center border-r border-slate-100 text-blue-500">{t.pdf.normal || "Normal"}</th>
+                                            <th className="px-2 py-1 text-center border-r border-slate-100 text-amber-500">{t.pdf.peak || "Peak"}</th>
+                                            <th className="px-2 py-1 text-center text-amber-500">{t.pdf.normal || "Normal"}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {scenarios.map((s, i) => (
                                             <tr key={i} className={`hover:bg-slate-50 ${targetKwp === s.kwp ? 'bg-indigo-50/50 font-bold' : ''}`}>
-                                                <td className="p-2 text-slate-700 font-medium border-r border-slate-100">
-                                                    {s.label} ({s.kwp} kWp)
-                                                    {targetKwp === s.kwp && <span className="ml-1 text-[8px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded">✓</span>}
+                                                <td className="px-2 py-1.5 text-slate-700 font-medium border-r border-slate-100">
+                                                    {s.label} <span className="text-xs text-slate-500 font-normal">({formatNumber(s.kwp)} kWp)</span>
+                                                    {targetKwp === s.kwp && <span className="ml-1 text-[10px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded">✓</span>}
                                                 </td>
-                                                <td className="p-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats.usedPeak)}</td>
-                                                <td className="p-2 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats.usedNormal)}</td>
-                                                <td className="p-2 text-right text-amber-700 border-r border-slate-100">{formatNumber(s.stats.curtailedPeak + (s.stats.exportedPeak || 0))}</td>
-                                                <td className="p-2 text-right text-amber-700">{formatNumber(s.stats.curtailedNormal + (s.stats.exportedNormal || 0))}</td>
+                                                <td className="px-2 py-1.5 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats.usedPeak)}</td>
+                                                <td className="px-2 py-1.5 text-right text-blue-700 border-r border-slate-100">{formatNumber(s.stats.usedNormal)}</td>
+                                                <td className="px-2 py-1.5 text-right text-amber-700 border-r border-slate-100">{formatNumber(s.stats.curtailedPeak + (s.stats.exportedPeak || 0))}</td>
+                                                <td className="px-2 py-1.5 text-right text-amber-700">{formatNumber(s.stats.curtailedNormal + (s.stats.exportedNormal || 0))}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -2912,7 +3215,7 @@ const SolarOptimizer = () => {
             }
 
             <aside className={`fixed inset-y-0 left-0 z-20 w-64 bg-slate-50 border-r border-slate-200 transform transition-transform duration-200 ease-in-out shrink-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="h-20 flex items-center justify-start pl-6 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => {
+                <div className="h-20 flex items-center justify-start pl-4 border-b border-blue-900 bg-gradient-to-r from-[#004e92] to-[#000428] cursor-pointer hover:opacity-95 transition-colors group" onClick={() => {
                     setDesignMode(null);
                     setProcessedData([]);
                     setRawData([]);
@@ -2923,18 +3226,23 @@ const SolarOptimizer = () => {
                     setScenarios([]);
                     setActiveTab('dashboard');
                 }}>
-                    <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-3 transition-transform group-hover:scale-105" />
+                    <img src={casLogo} alt="CAS Logo" className="h-8 w-auto mr-2 transition-transform group-hover:scale-105" />
                     <div className="flex flex-col">
                         <span className="font-black text-sm leading-tight text-white drop-shadow-sm">SOLAR</span>
-                        <span className="font-bold text-blue-100 text-[10px] tracking-widest uppercase">Optimizer</span>
+                        <div className="flex items-center gap-1">
+                            <span className="font-bold text-blue-100 text-[10px] tracking-wider uppercase">Optimizer</span>
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isSales ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
+                                {isSales ? 'Sales' : 'Engineer'}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 <div className="p-3 flex-1 overflow-y-auto space-y-3">
                     <div className="space-y-1">
                         {[
                             { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
-                            { id: 'design', label: t.design, icon: SlidersHorizontal },
-                            { id: 'finance', label: t.finance, icon: TrendingUp },
+                            ...(!isSales ? [{ id: 'design', label: t.design, icon: SlidersHorizontal }] : []),
+                            ...(!isSales ? [{ id: 'finance', label: t.finance, icon: TrendingUp }] : []),
                             { id: 'report', label: t.report, icon: ClipboardList }
                         ].map(item => (
                             <button key={item.id} onClick={() => { setActiveTab(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === item.id ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}><item.icon size={15} /> {item.label}</button>
@@ -2943,79 +3251,98 @@ const SolarOptimizer = () => {
                     <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.actions}</p>
                         {customStats && (
                             <div className="space-y-1">
-                                <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded text-xs transition font-medium"><Settings size={14} /> {t.report_config}</button>
-                                <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs transition font-medium"><Calculator size={14} /> {t.view_formulas}</button>
+                                {!isSales && <button onClick={() => setShowExportSettings(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded text-xs transition font-medium"><Settings size={14} /> {t.report_config}</button>}
+                                {!isSales && <button onClick={() => setShowFormulaModal(true)} className="w-full flex items-center justify-start gap-2 px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs transition font-medium"><Calculator size={14} /> {t.view_formulas}</button>}
                                 <button onClick={handleExportPDF} disabled={pdfLibStatus !== 'ready' || isExporting} className="w-full flex items-center justify-center gap-2 px-2 py-1.5 bg-gradient-to-r from-blue-700 to-blue-900 hover:shadow-lg text-white rounded text-xs transition disabled:bg-slate-400 shadow-sm">{isExporting ? <RefreshCw className="animate-spin" size={14} /> : <Printer size={14} />}{isExporting ? t.generating_pdf : t.export_pdf}</button>
                             </div>
                         )}
                     </div>
+
                     <div className="border-t border-slate-200 pt-2 px-1">
                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">{t.project_info}</label>
                         <DebouncedInput value={projectName} onChange={setProjectName} placeholder={t.project_name + "..."} className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white" />
                     </div>
-                    <div className="border-t border-slate-200 pt-2"><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>
+                    <div className="border-t border-slate-200 pt-2">{!isSales && <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">{t.input_data}</p>}
                         <div className="space-y-2">
-                            <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
+                            {!isSales && <div className="px-2 py-1.5 bg-white rounded border border-slate-200 text-xs shadow-sm group hover:border-blue-300 transition-colors">
                                 <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Zap size={12} className="text-amber-500" />{t.load_profile}</span><button onClick={() => fileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><RefreshCw size={10} /></button></div><div className="text-[10px] text-slate-500 whitespace-normal">{loadTag.label ? t.status.loaded + loadTag.label : t.profile_types.none}</div>
-                            </div>
+                            </div>}
                             <input type="file" ref={fileInputRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFileUpload} onClick={(e) => e.target.value = null} />
 
-
-                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
-                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span><button onClick={() => solarFileInputRef.current?.click()} className="text-blue-600 hover:underline text-[10px]"><Upload size={10} /></button></div>
-                                <div className="text-[10px] text-slate-500 truncate" title={solarSourceName}>{solarLayers.length > 0 ? `${solarLayers.length} ${t.status.layers || 'Layers'}` : (realSolarProfile ? t.status.loaded_short : 'Default (Sine)')}</div>
-
-                                {solarLayers.length > 0 ? (
-                                    <div className="mt-2 pt-2 border-t border-slate-100">
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {['temp', 'soiling', 'cable', 'inverter'].map(k => (
-                                                <div key={k}><label className="text-[9px] font-bold text-slate-400 block mb-0.5">{t.loss_labels[k]}</label><input type="number" step="0.1" value={techParams.losses[k]} className="w-full p-1 border rounded text-xs text-center bg-slate-50 border-slate-200 text-slate-600" readOnly /></div>
-                                            ))}
-                                        </div>
-                                        <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>
-
-                                        {solarLayers[selectedLayerIndex]?.title.toLowerCase().includes('pvout') && (
-                                            <div className="mt-1 p-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-blue-600 leading-tight italic">
-                                                {t.status.pvout_explanation}
-                                            </div>
-                                        )}
-                                        {solarLayers.length > 1 ? (
-                                            <>
-                                                <label className="text-[10px] text-blue-500 font-bold block mb-1 flex items-center gap-1"><Layers size={10} /> {t.status.select_layer}</label>
-                                                <select
-                                                    className="w-full text-[10px] p-1 border rounded bg-white text-blue-700 font-medium border-blue-200"
-                                                    value={selectedLayerIndex}
-                                                    onChange={(e) => handleLayerChange(Number(e.target.value))}
-                                                >
-                                                    {solarLayers.map((layer, idx) => (
-                                                        <option key={idx} value={idx}>{layer.title} (Sc: {layer.score})</option>
-                                                    ))}
-                                                </select>
-                                            </>
-                                        ) : null}
+                            {/* Solar Profile Shape Toggle */}
+                            {!isSales && <div className="px-2 py-1.5 bg-white rounded border border-purple-200 text-xs shadow-sm">
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="font-medium text-slate-700 flex items-center gap-1"><Activity size={12} className="text-purple-500" />{t.status.profile_shape || "Loại Profile"}</span>
+                                    <div className="flex bg-slate-100 rounded p-0.5 border border-slate-200 w-full">
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(false)}
+                                            className={`flex-1 px-2 py-0.5 text-[9px] font-bold rounded transition-colors text-center ${!isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_realistic || "Realistic ⚡"}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsSmoothSolarProfile(true)}
+                                            className={`flex-1 px-2 py-0.5 text-[9px] font-bold rounded transition-colors text-center ${isSmoothSolarProfile ? 'bg-white shadow-sm text-blue-700 border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {t.status.shape_smooth || "Sine Wave 🌊"}
+                                        </button>
                                     </div>
-                                ) : null}
+                                </div>
+                            </div>}
+
+
+                            {/* Solar Data & Loss Factors (Engineer only) */}
+                            {!isSales && <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors group hover:border-blue-300 ${realSolarProfile ? 'bg-white border-blue-200' : 'bg-white border-slate-200'}`}>
+                                <div className="flex justify-between items-center"><span className="font-medium text-slate-700 flex items-center gap-1"><Sun size={12} className="text-orange-500" />{t.solar_data}</span></div>
+
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {['temp', 'soiling', 'cable', 'inverter'].map(k => (
+                                            <div key={k}>
+                                                <label className="text-[9px] font-bold text-slate-500 block mb-0.5 text-center">{t.loss_labels[k]}</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={techParams.losses[k]}
+                                                    onChange={(e) => setTechParams(prev => ({
+                                                        ...prev,
+                                                        losses: { ...prev.losses, [k]: e.target.value === '' ? '' : Number(e.target.value) }
+                                                    }))}
+                                                    onFocus={(e) => e.target.select()}
+                                                    className="w-full p-0.5 border rounded text-[10px] text-center bg-white hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none transition-colors border-slate-200 text-slate-700 font-medium"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="text-right text-[10px] font-bold text-blue-500 mt-1">{t.loss_labels.total_derate}: {((1 - (Object.values(techParams.losses).reduce((a, b) => a + b, 0) / 100)) * 100).toFixed(1)}%</div>
+
+                                    {solarLayers.length > 0 && solarLayers[selectedLayerIndex]?.title.toLowerCase().includes('pvout') && (
+                                        <div className="mt-1 p-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-blue-600 leading-tight italic">
+                                            {t.status.pvout_explanation}
+                                        </div>
+                                    )}
+                                </div>
                                 {solarMetadata && !!solarMetadata.lat && (<div className="text-[9px] text-blue-400 mt-1 flex gap-1 pt-1 border-t border-slate-100"><MapPin size={10} className="mt-0.5" /> {solarMetadata.siteName ? solarMetadata.siteName.substring(0, 10) : ''} ({solarMetadata.lat.toFixed(2)}, {solarMetadata.lon.toFixed(2)})</div>)}
 
-                            </div>
-                            <input type="file" ref={solarFileInputRef} accept=".csv,.txt,.xlsx,.xls,.met,.pdf" className="hidden" onChange={handleSolarUpload} onClick={(e) => e.target.value = null} />
 
-                            {/* Weather Scenario - Separate Box */}
-                            <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-green-50 border-green-200' :
-                                weatherScenario === 'rainy' ? 'bg-blue-50 border-blue-200' :
+                            </div>}
+
+                            {/* Weather Scenario - Separate Box (Engineer only) */}
+                            {!isSales && <div className={`px-2 py-1.5 rounded border text-xs shadow-sm transition-colors ${weatherScenario === 'normal' ? 'bg-blue-50 border-blue-200' :
+                                weatherScenario === 'rainy' ? 'bg-green-50 border-green-200' :
                                     weatherScenario === 'bad' ? 'bg-amber-50 border-amber-200' :
                                         'bg-red-50 border-red-200'
                                 }`}>
                                 <div className="flex justify-between items-center">
-                                    <span className={`font-medium flex items-center gap-1 ${weatherScenario === 'normal' ? 'text-green-700' :
-                                        weatherScenario === 'rainy' ? 'text-blue-700' :
+                                    <span className={`font-medium flex items-center gap-1 ${weatherScenario === 'normal' ? 'text-blue-700' :
+                                        weatherScenario === 'rainy' ? 'text-green-700' :
                                             weatherScenario === 'bad' ? 'text-amber-700' :
                                                 'text-red-700'
                                         }`}><CloudSun size={12} /> {lang === 'vi' ? 'Thời tiết' : 'Weather'}</span>
                                 </div>
                                 <select
-                                    className={`w-full text-xs p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-green-700 border-green-300' :
-                                        weatherScenario === 'rainy' ? 'bg-white text-blue-700 border-blue-300' :
+                                    className={`w-full text-[10px] p-1.5 border rounded font-medium transition ${weatherScenario === 'normal' ? 'bg-white text-blue-700 border-blue-300' :
+                                        weatherScenario === 'rainy' ? 'bg-white text-green-700 border-green-300' :
                                             weatherScenario === 'bad' ? 'bg-white text-amber-700 border-amber-300' :
                                                 'bg-white text-red-700 border-red-300'
                                         }`}
@@ -3029,7 +3356,7 @@ const SolarOptimizer = () => {
                                     ))}
                                 </select>
                                 {weatherScenario !== 'normal' && (
-                                    <div className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${weatherScenario === 'rainy' ? 'text-blue-600 bg-blue-100' :
+                                    <div className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${weatherScenario === 'rainy' ? 'text-green-600 bg-green-100' :
                                         weatherScenario === 'bad' ? 'text-amber-600 bg-amber-100' :
                                             'text-red-600 bg-red-100'
                                         }`}>
@@ -3040,93 +3367,137 @@ const SolarOptimizer = () => {
                                         }
                                     </div>
                                 )}
-                            </div>
+                            </div>}
 
 
                         </div>
                     </div>
                 </div>
-                <div className="p-2 border-t border-slate-200 text-[9px] text-slate-400 text-center"><span className="font-bold">CPS Solar Solutions</span> © 2026 • Engineering Division</div>
+                    <div className="border-t border-slate-100 p-2 text-[9px] text-slate-400 bg-slate-50/50">
+                        <div className="flex justify-between items-center opacity-80 hover:opacity-100 transition-all">
+                            <span className="font-medium">© 2026 CAS Energy Solutions • Solar Optimizer v2.0</span>
+                            {onSignOut && (
+                                <button onClick={onSignOut} className="flex items-center gap-1 hover:text-red-500 font-bold transition-colors">
+                                    <LogOut size={10} /> {t.logout}
+                                </button>
+                            )}
+                        </div>
+                    </div>
             </aside>
 
             <main className={`flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 gap-4">
+                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-40 gap-4">
                     <div className="flex items-center gap-3 shrink-0">
                         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600">
                             {isSidebarOpen ? <Menu size={20} className="rotate-180" /> : <Menu size={20} />}
                         </button>
-                        <div className="flex flex-col">
-                            <h2 className="font-bold text-slate-800 leading-none">{t[activeTab]}</h2>
-                            {loadTag.label && <span className="text-xs text-slate-500 mt-1 flex items-center gap-1">{loadTag.label} {loadTag.isWeekendOff && '• ' + t.status.sun_off}</span>}
+                        <div className="flex flex-col min-w-0">
+                            <h2 className="text-base font-bold text-slate-800 leading-none truncate">{t[activeTab]}</h2>
+                            {loadTag.label && <span className="text-[10px] text-slate-500 mt-1 flex items-center gap-1 truncate">{loadTag.label} {loadTag.isWeekendOff && '• ' + t.status.sun_off}</span>}
                         </div>
                     </div>
 
                     {/* Province Selector for Solar Yield */}
-                    <div className="relative border-l border-slate-200 pl-4" ref={provinceDropdownRef}>
+                    <div className="border-l border-slate-200 pl-4" ref={provinceDropdownRef}>
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block leading-none">{t.area_province}</span>
-                        <div
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition min-w-[180px] shadow-sm select-none"
-                            onClick={() => setShowProvinceDropdown(!showProvinceDropdown)}
-                        >
-                            {(() => {
-                                const style = getProvinceStyle(selectedProvince?.id);
-                                const SelectedIcon = style.icon;
-                                return <SelectedIcon size={14} className={style.color} />;
-                            })()}
-                            <div className="flex-1 overflow-hidden">
-                                <span className="text-sm font-bold text-slate-700 block truncate leading-tight">
-                                    {selectedProvince?.name}
-                                </span>
-                                <span className="text-[10px] text-slate-500 font-medium leading-none block pb-0.5">
-                                    {selectedProvince?.peakSunHours?.toFixed(2)}h/ngày
-                                </span>
-                            </div>
-                            <ChevronRight size={14} className={`text-slate-400 transition-transform ${showProvinceDropdown ? 'rotate-90' : ''}`} />
-                        </div>
-
-                        {showProvinceDropdown && (
-                            <div className="absolute top-full mt-2 left-4 w-60 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in duration-200">
-                                <div className="grid grid-cols-1 gap-1">
-                                    {PROVINCES.map(p => {
-                                        const style = getProvinceStyle(p.id);
-                                        const Icon = style.icon;
-                                        return (
-                                            <div
-                                                key={p.id}
-                                                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${selectedProvince?.id === p.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-slate-50 text-slate-600'}`}
-                                                onClick={() => {
-                                                    handleProvinceChange(p.id);
-                                                    setShowProvinceDropdown(false);
-                                                }}
-                                            >
-                                                <div className="flex items-center">
-                                                    <div className={`mr-3 p-1.5 rounded-full transition-colors ${selectedProvince?.id === p.id ? 'bg-white' : style.bg} ${style.color}`}>
-                                                        <Icon size={16} strokeWidth={2} />
-                                                    </div>
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="text-sm font-semibold">{p.name}</span>
-                                                        {p.id === 'vietnam_average' && <span className="text-[10px] opacity-70">Vietnam Default</span>}
-                                                    </div>
-                                                </div>
-                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${selectedProvince?.id === p.id ? 'bg-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
-                                                    {p.peakSunHours.toFixed(2)}h
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                        <div className="relative w-[250px]">
+                            <div
+                                className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition w-full shadow-sm select-none"
+                                onClick={() => {
+                                    if (showProvinceDropdown) setSearchTerm('');
+                                    setShowProvinceDropdown(!showProvinceDropdown);
+                                }}
+                            >
+                                {(() => {
+                                    const style = getProvinceStyle(selectedProvince?.id);
+                                    const SelectedIcon = style.icon;
+                                    return <SelectedIcon size={12} className={style.color} />;
+                                })()}
+                                <div className="flex-1 overflow-hidden">
+                                    <span className="text-[12px] font-bold text-slate-700 block truncate leading-tight">
+                                        {selectedProvince?.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-medium leading-none block pb-0.5">
+                                        {selectedProvince?.peakSunHours?.toFixed(2)}h/ngày
+                                    </span>
                                 </div>
+                                <ChevronRight size={14} className={`text-slate-400 transition-transform ${showProvinceDropdown ? 'rotate-90' : ''}`} />
                             </div>
-                        )}
+
+                            {showProvinceDropdown && (
+                                <div className="absolute top-full mt-2 left-0 right-0 max-h-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 z-[100] flex flex-col animate-in fade-in zoom-in duration-200">
+                                    {/* Search Input Box */}
+                                    <div className="relative mb-2 sticky top-0 bg-white z-10">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder={lang === 'vi' ? "Tìm kiếm tỉnh thành..." : "Search provinces..."}
+                                            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all bg-slate-50/50"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                        {searchTerm && (
+                                            <button 
+                                                onClick={() => setSearchTerm('')}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="overflow-y-auto overflow-x-hidden flex-1 pr-1 custom-scrollbar">
+                                        <div className="grid grid-cols-1 gap-1">
+                                            {filteredProvinces.length > 0 ? (
+                                                filteredProvinces.map(p => {
+                                            const style = getProvinceStyle(p.id);
+                                            const Icon = style.icon;
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    className={`flex items-center justify-between gap-2 px-2 py-1 rounded-lg cursor-pointer transition min-h-[40px] ${selectedProvince?.id === p.id ? 'bg-emerald-50 text-emerald-700' : 'hover:bg-slate-50 text-slate-600'}`}
+                                                    onClick={() => {
+                                                        handleProvinceChange(p.id);
+                                                        setShowProvinceDropdown(false);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center min-w-0 flex-1">
+                                                        <div className={`mr-2 w-6 h-6 rounded-full transition-colors shrink-0 flex items-center justify-center ${selectedProvince?.id === p.id ? 'bg-white' : style.bg} ${style.color}`}>
+                                                            <Icon size={12} strokeWidth={2} />
+                                                        </div>
+                                                        <div className="flex flex-col text-left overflow-hidden min-w-0 justify-center">
+                                                            <span className="text-[12px] font-semibold truncate leading-tight">{p.name}</span>
+                                                            {p.id === 'viet_nam' && <span className="text-[9px] opacity-70 leading-none mt-0.5">Vietnam Default</span>}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${selectedProvince?.id === p.id ? 'bg-emerald-100' : 'bg-slate-100 text-slate-500'}`}>
+                                                        {p.peakSunHours.toFixed(2)}h
+                                                    </span>
+                                                </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="py-8 text-center text-slate-400 flex flex-col items-center gap-2">
+                                                    <MapPin size={24} className="opacity-20" />
+                                                    <span className="text-xs italic">{lang === 'vi' ? 'Không tìm thấy kết quả' : 'No provinces found'}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
 
                     {/* Dynamic Solar Slider (Debounced) */}
-                    <div className="hidden md:flex flex-1 max-w-md mx-4 items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+                    <div className="hidden md:flex flex-1 max-w-[450px] mx-4 items-center gap-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
                         <span className="text-xs font-bold text-slate-600 whitespace-nowrap">{t.solar_capacity}:</span>
                         <DebouncedSlider targetKwp={targetKwp} setTargetKwp={setTargetKwp} maxKwp={maxKwpRef || 1000} />
                     </div>
 
-                    <div className="flex items-center gap-4">{detectedMaxLoad > 0 && (<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100"><Maximize size={14} /> {t.max_load}: {formatNumber(detectedMaxLoad)} kW</div>)}<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-100"><Leaf size={14} /> {t.loss_percent}: {estimatedLosses?.systemLossPct?.toFixed(1) || '0.0'}%</div></div>
+                    <div className="flex items-center gap-4">{detectedMaxLoad > 0 && (<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-medium border border-blue-100"><Maximize size={14} /> {t.max_load}: {formatNumber(detectedMaxLoad)} kW</div>)}<div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-medium border border-emerald-100"><Leaf size={14} /> {t.loss_percent}: {estimatedLosses?.systemLossPct?.toFixed(1) || '0.0'}%</div></div>
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
@@ -3135,7 +3506,7 @@ const SolarOptimizer = () => {
                             <SmartDesignSelector
                                 lang={lang}
                                 setLang={setLang}
-                                onSelect={handleInitialSelect}
+                                onSelect={handleDesignModeSelect}
                                 pricingType={pricingType}
                                 setPricingType={setPricingType}
                                 voltageLevelId={voltageLevelId}
@@ -3152,6 +3523,8 @@ const SolarOptimizer = () => {
                                 params={params}
                                 bessKwh={bessKwh}
                                 averageDayData={averageDayData}
+                                peakShavingResult={peakShavingResult}
+                                enableTwoPartTariff={enableTwoPartTariff}
                                 peakDayProfiles={peakDayProfiles}
                                 dailyStats={dailyStats}
                                 solarMetadata={solarMetadata}
@@ -3194,6 +3567,10 @@ const SolarOptimizer = () => {
                                 voltageLevel={voltageLevelId} setVoltageLevel={setVoltageLevelId}
                                 lang={lang}
                                 t={t}
+                                enableTwoPartTariff={enableTwoPartTariff}
+                                setEnableTwoPartTariff={setEnableTwoPartTariff}
+                                peakShavingResult={peakShavingResult}
+                                formatMoney={formatMoney}
                             />
                         )}
 
@@ -3228,6 +3605,7 @@ const SolarOptimizer = () => {
                                 handleDownloadExcelTable={handleDownloadExcelTable}
                                 monthlyDetails={monthlyDetails}
                                 currentFinance={currentFinance}
+                                finParams={finParams}
                                 estimatedLosses={estimatedLosses}
                                 formatMoney={formatMoney}
                                 lang={lang}
@@ -3278,7 +3656,7 @@ const DebouncedSlider = ({ targetKwp, setTargetKwp, maxKwp }) => {
                     type="number"
                     value={localKwp || 0}
                     onChange={(e) => setLocalKwp(Number(e.target.value))}
-                    className="w-16 text-center text-sm font-bold text-blue-700 bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 px-1 py-0.5"
+                    className="w-[72px] text-center text-xs font-bold text-blue-700 bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 px-1 py-0.5"
                 />
                 <span className="text-xs text-slate-500 font-bold">kWp</span>
             </div>

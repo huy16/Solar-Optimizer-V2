@@ -57,25 +57,81 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
 
 
     // Auto Select Inverter
+    // Helper: Auto Select Inverters (Main + Secondary) to match target AC
+    const autoSelectInverters = useCallback((targetAC) => {
+        if (targetAC <= 0) return;
+
+        const sortedInverters = [...INVERTER_DB].sort((a, b) => b.acPower - a.acPower);
+        let bestMain = sortedInverters[0];
+        let mainQty = 0;
+
+        for (const inv of sortedInverters) {
+            if (targetAC >= inv.acPower) {
+                bestMain = inv;
+                mainQty = Math.floor(targetAC / inv.acPower);
+                break;
+            }
+        }
+
+        if (mainQty === 0) {
+            bestMain = sortedInverters[sortedInverters.length - 1]; // Smallest
+            mainQty = 1;
+            setInv1Id(bestMain.id);
+            setInv1Qty(mainQty);
+            setInv2Id('');
+            setInv2Qty(0);
+            return;
+        }
+
+        const remainingAC = targetAC - (bestMain.acPower * mainQty);
+
+        if (remainingAC > 2) { // Add sub-inverter if remaining > 2kW
+            let bestSub = null;
+            let minDiff = Infinity;
+
+            // Find smallest inverter that covers remainingAC
+            for (const inv of sortedInverters) {
+                const diff = inv.acPower - remainingAC;
+                if (diff >= 0 && diff < minDiff) {
+                    minDiff = diff;
+                    bestSub = inv;
+                }
+            }
+
+            if (!bestSub) {
+                bestSub = sortedInverters.reduce((prev, curr) =>
+                    Math.abs(curr.acPower - remainingAC) < Math.abs(prev.acPower - remainingAC) ? curr : prev
+                );
+            }
+
+            if (bestSub.id === bestMain.id) {
+                mainQty += 1;
+                setInv1Id(bestMain.id);
+                setInv1Qty(mainQty);
+                setInv2Id('');
+                setInv2Qty(0);
+            } else {
+                setInv1Id(bestMain.id);
+                setInv1Qty(mainQty);
+                setInv2Id(bestSub.id);
+                setInv2Qty(1);
+            }
+        } else {
+            setInv1Id(bestMain.id);
+            setInv1Qty(mainQty);
+            setInv2Id('');
+            setInv2Qty(0);
+        }
+    }, [setInv1Id, setInv1Qty, setInv2Id, setInv2Qty]);
+
     // Auto Suggest Configuration (Inverter + BESS)
     const handleMagicSuggest = useCallback(() => {
         if (targetKwp <= 0) return;
 
-        // 1. Select Inverter (DC/AC ~ 1.25)
         // 1. Select Inverter (DC/AC ~ techParams.oversizingRatio || 1.25)
         const ratio = techParams.oversizingRatio || 1.25;
         const targetAC = targetKwp / ratio;
-        const bestInv = INVERTER_DB.reduce((prev, curr) =>
-            Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
-        );
-
-        if (bestInv) {
-            const qty = Math.ceil(targetAC / bestInv.acPower);
-            setInv1Id(bestInv.id);
-            setInv1Qty(qty);
-            setInv2Id('');
-            setInv2Qty(0);
-        }
+        autoSelectInverters(targetAC);
 
         // 2. Suggest BESS (approx 20% of Solar Capacity, 2h duration)
         // ONLY suggest if currently 'custom' with 0 capacity (initial state)
@@ -104,17 +160,8 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
             setBessMaxPower(0);
 
             // Auto-select inverters for the new Solar size
-            const targetAC = kwp / 1.25;
-            const bestInv = INVERTER_DB.reduce((prev, curr) =>
-                Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
-            );
-            if (bestInv) {
-                const qty = Math.ceil(targetAC / bestInv.acPower);
-                setInv1Id(bestInv.id);
-                setInv1Qty(qty);
-                setInv2Id('');
-                setInv2Qty(0);
-            }
+            const targetAC = kwp / (techParams.oversizingRatio || 1.25);
+            autoSelectInverters(targetAC);
             return result.best;
         }
         return null;
@@ -137,17 +184,8 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
             setBessMaxPower(bestBessKw);
 
             // Auto-select inverters for the new Solar size
-            const targetAC = kwp / 1.25;
-            const bestInv = INVERTER_DB.reduce((prev, curr) =>
-                Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
-            );
-            if (bestInv) {
-                const qty = Math.ceil(targetAC / bestInv.acPower);
-                setInv1Id(bestInv.id);
-                setInv1Qty(qty);
-                setInv2Id('');
-                setInv2Qty(0);
-            }
+            const targetAC = kwp / (techParams.oversizingRatio || 1.25);
+            autoSelectInverters(targetAC);
             return result.best;
         }
         return null;
@@ -214,17 +252,8 @@ export const useSolarConfiguration = (initialParams, initialTechParams) => {
         if (suggestedKwp && suggestedKwp > 0) {
             setTargetKwp(suggestedKwp);
             // After setting capacity, auto-select inverters
-            const targetAC = suggestedKwp / 1.25;
-            const bestInv = INVERTER_DB.reduce((prev, curr) =>
-                Math.abs(curr.acPower - targetAC) < Math.abs(prev.acPower - targetAC) ? curr : prev
-            );
-            if (bestInv) {
-                const qty = Math.ceil(targetAC / bestInv.acPower);
-                setInv1Id(bestInv.id);
-                setInv1Qty(qty);
-                setInv2Id('');
-                setInv2Qty(0);
-            }
+            const targetAC = suggestedKwp / (techParams.oversizingRatio || 1.25);
+            autoSelectInverters(targetAC);
             return suggestedKwp;
         }
     }, []);

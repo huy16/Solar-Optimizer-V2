@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Zap, RefreshCw, BatteryCharging, Coins, Settings, Wand2, Target, ChevronDown, ShieldCheck, HelpCircle } from 'lucide-react';
-import { EVN_TARIFFS, getTariffOptions, getVoltageLevelOptions } from '../../../data/evn_tariffs';
+import { EVN_TARIFFS, TWO_PART_TARIFF, getTariffOptions, getVoltageLevelOptions, getTwoPartTariff } from '../../../data/evn_tariffs';
 import { execute as verifyTechnicalConfig } from '../../../domain/usecases/VerifyTechnicalConfig';
 import { INVERTER_DB, PANEL_SPECS } from '../../../data/sources/HardwareDatabase';
 
@@ -32,8 +32,11 @@ export const Design = ({
     finParams, setFinParams,
     tariffCategory, setTariffCategory,
     voltageLevel, setVoltageLevel,
+    enableTwoPartTariff, setEnableTwoPartTariff,
+    peakShavingResult,
     lang,
-    t
+    t,
+    formatMoney
 }) => {
     // Auto-update prices when tariff or voltage level changes
     useEffect(() => {
@@ -124,6 +127,8 @@ export const Design = ({
             weather_derate: "Hệ số Thời tiết (%)",
             bess_rt_eff: "Hiệu suất (RT) %",
             bess_dod_limit: "DoD Giới hạn %",
+            tip_strategy: "Chọn cách hệ thống vận hành Pin lưu trữ: ưu tiên tiêu dùng nội bộ (Self-consumption) hoặc cắt giảm chi phí công suất đỉnh (Peak Shaving).",
+            tip_grid_charge: "Cho phép Pin lưu trữ sạc từ lưới điện vào các khung giờ có giá thấp (Off-peak) để xả vào lúc giá cao hoặc giờ cao điểm."
         },
         en: {
             title_inverter: "Inverter Configuration",
@@ -176,12 +181,14 @@ export const Design = ({
             weather_derate: "Weather Derate (%)",
             bess_rt_eff: "Round-trip Eff. (RT) %",
             bess_dod_limit: "DoD Limit %",
+            tip_strategy: "Choose the operating mode for BESS: prioritize self-consumption or shave peak demand to reduce capacity charges.",
+            tip_grid_charge: "Allow the battery to charge from the grid during off-peak hours to discharge during high-price or peak hours."
         }
     }[lang];
     return (
         <div className="space-y-4">
             {/* MAIN LAYOUT GRID: 2x2 Grid with equal size cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 auto-rows-fr">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                 {/* INVERTER SECTION */}
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 min-h-[200px]">
@@ -192,7 +199,7 @@ export const Design = ({
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleMagicSuggest}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
                             >
                                 <Wand2 size={12} />
                                 <span>{dt.magic_btn}</span>
@@ -203,7 +210,7 @@ export const Design = ({
                             </button>
                             <button
                                 onClick={() => handleSuggestSafeCapacity(processedData)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
                             >
                                 <ShieldCheck size={12} />
                                 <span>{dt.expert_suggest_btn}</span>
@@ -214,7 +221,7 @@ export const Design = ({
                             </button>
                             <button
                                 onClick={() => handleOptimizeNoBess(processedData, params, finParams)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
                             >
                                 <Target size={12} />
                                 <span>{dt.optimize_no_bess}</span>
@@ -316,13 +323,31 @@ export const Design = ({
                                             </div>
                                         ))
                                     ) : (
-                                        // Force show if high ratio but no warning (sanity check)
-                                        (targetKwp / totalACPower > 1.5) && (
-                                            <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-orange-50 text-orange-600 border border-orange-100">
-                                                <ShieldCheck size={12} />
-                                                <span className="font-bold">Check: Ratio {(targetKwp / totalACPower).toFixed(2)} is High</span>
-                                            </div>
-                                        )
+                                        // Check for Ratio warnings if no strict tech warning
+                                        (() => {
+                                            const ratio = targetKwp / totalACPower;
+                                            if (ratio > 1.45) {
+                                                return (
+                                                    <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-orange-50 text-orange-600 border border-orange-100">
+                                                        <ShieldCheck size={12} />
+                                                        <span className="font-bold">
+                                                            {lang === 'vi' ? `Lưu ý: DC/AC Ratio (${ratio.toFixed(2)}) đang khá CAO (Thiếu công suất Inverter)` : `Check: DC/AC Ratio (${ratio.toFixed(2)}) is HIGH (Undersized Inverter)`}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+                                            if (ratio > 0 && ratio < 1.15) {
+                                                return (
+                                                    <div className="text-[10px] flex items-center gap-1.5 p-1.5 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                                                        <ShieldCheck size={12} />
+                                                        <span className="font-bold">
+                                                            {lang === 'vi' ? `Lưu ý: DC/AC Ratio (${ratio.toFixed(2)}) đang khá THẤP (Thừa công suất Inverter)` : `Check: DC/AC Ratio (${ratio.toFixed(2)}) is LOW (Oversized Inverter)`}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()
                                     )}
                                 </div>
                             );
@@ -352,7 +377,7 @@ export const Design = ({
                             <label className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1 group relative cursor-help">
                                 {dt.dc_ac_ratio} <HelpCircle size={8} />
                                 <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
-                                    Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).
+                                    {lang === 'vi' ? 'Tỷ lệ giữa công suất Pin và Inverter. Mặc định 1.25 (Oversizing 25%). Tăng lên để tối ưu hiệu quả đầu tư, giảm xuống để tránh cắt ngọn (clipping).' : 'Ratio between panel DC power and inverter AC power. Default 1.25 (25% oversizing). Increase to optimize investment, decrease to avoid clipping.'}
                                     <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
                                 </div>
                             </label>
@@ -386,119 +411,289 @@ export const Design = ({
                 </div>
 
                 {/* BESS SECTION */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 min-h-[200px]">
-                    <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            <BatteryCharging size={16} className="text-emerald-500" /> {dt.title_bess}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 min-h-[200px] flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <BatteryCharging size={18} className="text-emerald-500" /> {dt.title_bess}
                         </h4>
-                        <div className="flex gap-1.5 align-middle">
+                        <div className="flex gap-2">
                             <button
                                 onClick={() => handleOptimizeBess(processedData, params, finParams)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-[10px] font-bold transition shadow-sm group relative cursor-help"
                             >
-                                <Target size={12} /> {dt.optimize_fixed_btn}
-                                <div className="absolute top-full mt-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight whitespace-normal">
+                                <Target size={14} /> {dt.optimize_fixed_btn}
+                                <div className="absolute top-full mt-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight whitespace-normal">
                                     {dt.tip_opt_bess_fixed}
                                     <div className="absolute bottom-full left-4 border-4 border-transparent border-b-slate-800"></div>
                                 </div>
                             </button>
                             <button
                                 onClick={() => handleOptimize(processedData, params, finParams)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold transition shadow-sm group relative cursor-help"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-[10px] font-bold transition shadow-sm group relative cursor-help"
                             >
-                                <Zap size={12} /> {dt.optimize_btn}
-                                <div className="absolute top-full mt-2 right-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight whitespace-normal">
+                                <Zap size={14} /> {dt.optimize_btn}
+                                <div className="absolute top-full mt-2 right-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight whitespace-normal">
                                     {dt.tip_opt_all}
                                     <div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800"></div>
                                 </div>
                             </button>
                         </div>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.bess_model}</label>
-                                <select value={selectedBess} onChange={(e) => handleBessSelect(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500">
-                                    {BESS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.value === 'none' ? dt.bess_none : (opt.value === 'custom' ? dt.bess_custom : opt.label)}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.bess_strategy}</label>
-                                <select value={bessStrategy} onChange={(e) => setBessStrategy(e.target.value)} className="w-full p-1.5 border border-slate-300 rounded bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500">
-                                    <option value="self-consumption">{dt.strat_self}</option>
-                                    <option value="peak-shaving">{dt.strat_shaving}</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        {/* BESS Advanced Params */}
-                        {selectedBess !== 'none' && (
-                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                                <div className="flex justify-between items-center bg-white p-1.5 px-2 rounded border border-slate-200">
-                                    <label className="text-[9px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
-                                        {dt.bess_rt_eff} <HelpCircle size={8} />
-                                        <div className="absolute bottom-full mb-2 left-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
-                                            {dt.tip_bess_eff}
-                                            <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
-                                        </div>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={Math.round((techParams.bessEffRoundTrip || 0.90) * 100)}
-                                        onChange={(e) => setTechParams(prev => ({ ...prev, bessEffRoundTrip: Number(e.target.value) / 100 }))}
-                                        className="w-12 text-right text-[10px] font-bold text-emerald-600 outline-none border-b border-emerald-100 focus:border-emerald-500"
-                                    />
+                    <div className="space-y-4 flex-1">
+                        {/* 1. CẤU HÌNH THIẾT BỊ LƯU TRỮ */}
+                        <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5">
+                            <div className="flex items-center gap-2 mb-3 border-b border-slate-200/80 pb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{lang === 'vi' ? '1. Cấu hình phần cứng' : '1. Hardware Config'}</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 block mb-1.5">{dt.bess_model}</label>
+                                    <select value={selectedBess} onChange={(e) => handleBessSelect(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm">
+                                        {BESS_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.value === 'none' ? dt.bess_none : (opt.value === 'custom' ? dt.bess_custom : opt.label)}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                                <div className="flex justify-between items-center bg-white p-1.5 px-2 rounded border border-slate-200">
-                                    <label className="text-[9px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
-                                        {dt.bess_dod_limit} <HelpCircle size={8} />
-                                        <div className="absolute bottom-full mb-2 right-0 w-40 p-2 bg-slate-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
-                                            {dt.tip_dod}
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 flex items-center gap-1 mb-1.5 group relative cursor-help">
+                                        {dt.bess_strategy} <HelpCircle size={10} className="text-slate-400" />
+                                        <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                            {dt.tip_strategy}
                                             <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
                                         </div>
                                     </label>
-                                    <input
-                                        type="number"
-                                        value={Math.round((techParams.bessDod || 0.90) * 100)}
-                                        onChange={(e) => setTechParams(prev => ({ ...prev, bessDod: Number(e.target.value) / 100 }))}
-                                        className="w-12 text-right text-[10px] font-bold text-emerald-600 outline-none border-b border-emerald-100 focus:border-emerald-500"
-                                    />
+                                    <select value={bessStrategy} onChange={(e) => setBessStrategy(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg bg-white text-xs font-semibold outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm">
+                                        <option value="self-consumption">{dt.strat_self}</option>
+                                        <option value="peak-shaving">{dt.strat_shaving}</option>
+                                    </select>
                                 </div>
                             </div>
-                        )}
 
-                        {selectedBess === 'custom' && (
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <label className="text-[10px] font-bold text-slate-400 block">{dt.capacity}</label>
-                                        <button
-                                            onClick={() => handleSuggestBessSize(processedData)}
-                                            className="text-[9px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5"
-                                        >
-                                            <Wand2 size={10} /> {dt.suggest_btn}
-                                        </button>
+                            {selectedBess === 'custom' && (
+                                <div className="grid grid-cols-2 gap-4 mt-3 animate-in fade-in slide-in-from-top-1">
+                                    <div className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
+                                        <label className="text-[10px] font-bold text-slate-500">{dt.capacity}</label>
+                                        <input
+                                            type="number"
+                                            value={bessKwh}
+                                            onChange={(e) => setBessKwh(e.target.value === '' ? '' : Number(e.target.value))}
+                                            className="w-16 text-right text-xs font-black text-slate-700 outline-none bg-slate-50 rounded p-1 focus:ring-1 focus:ring-emerald-300"
+                                        />
                                     </div>
-                                    <input type="number" value={bessKwh} onChange={(e) => setBessKwh(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-1 focus:ring-emerald-500" />
+                                    <div className="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
+                                        <label className="text-[10px] font-bold text-slate-500">{dt.power}</label>
+                                        <input
+                                            type="number"
+                                            value={bessMaxPower}
+                                            onChange={(e) => setBessMaxPower(e.target.value === '' ? '' : Number(e.target.value))}
+                                            className="w-16 text-right text-xs font-black text-slate-700 outline-none bg-slate-50 rounded p-1 focus:ring-1 focus:ring-emerald-300"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-400 block mb-1">{dt.power}</label>
-                                    <input type="number" value={bessMaxPower} onChange={(e) => setBessMaxPower(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-1 focus:ring-emerald-500" />
+                            )}
+                        </div>
+
+                        {/* 2. THAM SỐ VẬN HÀNH */}
+                        {selectedBess !== 'none' && (
+                            <div className="bg-blue-50/30 border border-blue-100 rounded-xl p-3.5 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center gap-2 mb-3 border-b border-blue-100 pb-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">{lang === 'vi' ? '2. Tham số vận hành' : '2. Operating Params'}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white p-3 rounded-lg border border-blue-100 flex justify-between items-center shadow-sm">
+                                        <label className="text-[10px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
+                                            {dt.bess_rt_eff} <HelpCircle size={10} className="text-slate-400" />
+                                            <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                                {dt.tip_bess_eff}
+                                                <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={Math.round((techParams.bessEffRoundTrip || 0.90) * 100)}
+                                                onChange={(e) => setTechParams(prev => ({ ...prev, bessEffRoundTrip: Number(e.target.value) / 100 }))}
+                                                className="w-16 text-right text-xs font-black text-blue-600 outline-none bg-blue-50/50 rounded p-1 pr-4 focus:ring-1 focus:ring-blue-300"
+                                            />
+                                            <span className="absolute right-1.5 top-1.5 text-[8px] font-bold text-blue-400 select-none pointer-events-none">%</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border border-blue-100 flex justify-between items-center shadow-sm">
+                                        <label className="text-[10px] font-bold text-slate-500 flex items-center gap-1 group relative cursor-help">
+                                            {dt.bess_dod_limit} <HelpCircle size={10} className="text-slate-400" />
+                                            <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                                {dt.tip_dod}
+                                                <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={Math.round((techParams.bessDod || 0.90) * 100)}
+                                                onChange={(e) => setTechParams(prev => ({ ...prev, bessDod: Number(e.target.value) / 100 }))}
+                                                className="w-16 text-right text-xs font-black text-blue-600 outline-none bg-blue-50/50 rounded p-1 pr-4 focus:ring-1 focus:ring-blue-300"
+                                            />
+                                            <span className="absolute right-1.5 top-1.5 text-[8px] font-bold text-blue-400 select-none pointer-events-none">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 bg-white p-3 rounded-lg border border-blue-100 shadow-sm">
+                                    <label className="flex items-center gap-3 cursor-pointer w-fit">
+                                        <div className="relative flex items-center">
+                                            <input type="checkbox" checked={isGridCharge} onChange={(e) => setIsGridCharge(e.target.checked)} className="peer sr-only" />
+                                            <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                        </div>
+                                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1 group relative cursor-help">
+                                            {dt.grid_charge} <HelpCircle size={10} className="text-slate-400" />
+                                            <div className="absolute bottom-full mb-2 left-0 w-48 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                                {dt.tip_grid_charge}
+                                                <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                            </div>
+                                        </span>
+                                    </label>
                                 </div>
                             </div>
                         )}
 
-                        <label className="flex items-center gap-2 cursor-pointer mt-1">
-                            <div className="relative flex items-center">
-                                <input type="checkbox" checked={isGridCharge} onChange={(e) => setIsGridCharge(e.target.checked)} className="peer sr-only" />
-                                <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                        {/* 3. CƠ CHẾ GIÁ 2 THÀNH PHẦN */}
+                        {selectedBess !== 'none' && bessKwh > 0 && (
+                            <div className="bg-amber-50/40 border border-amber-200/60 rounded-xl p-3.5 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center justify-between mb-3 border-b border-amber-200/50 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white">
+                                            <Zap size={10} fill="currentColor" />
+                                        </span>
+                                        <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                                            {lang === 'vi' ? '3. Giá điện 2 Thành phần (Kịch bản)' : '3. 2-Part Tariff (Scenario)'}
+                                        </span>
+                                    </div>
+                                    <label className="relative flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={enableTwoPartTariff || false} onChange={(e) => setEnableTwoPartTariff && setEnableTwoPartTariff(e.target.checked)} className="peer sr-only" />
+                                        <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-amber-500"></div>
+                                    </label>
+                                </div>
+
+                                {enableTwoPartTariff && (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                        {/* Validation check for manufacturing tariff */}
+                                        {(!TWO_PART_TARIFF || !voltageLevel || !TWO_PART_TARIFF[voltageLevel]) ? (
+                                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                                                <p className="text-[10px] font-bold text-red-600 flex items-center justify-center gap-1.5"><ShieldCheck size={14} /> {lang === 'vi' ? 'Giá 2 thành phần chỉ hỗ trợ Biểu giá Sản xuất' : '2-Part Tariff only supports Manufacturing tariff'}</p>
+                                                <p className="text-[9px] text-red-500 mt-1">{lang === 'vi' ? `Vui lòng xuống mục "${dt.title_finance}" chọn loại biểu giá "Sản xuất" để sử dụng.` : `Please go to "${dt.title_finance}" section and select a Manufacturing tariff.`}</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-[10px] text-amber-700/80 font-bold bg-amber-100/50 w-fit px-2 py-0.5 rounded group relative cursor-help">
+                                                    TC = Cp × Pmax + Ca × Ap
+                                                    <div className="absolute bottom-full mb-2 left-0 w-56 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight">
+                                                        {lang === 'vi' ? 'Tổng chi phí = Giá công suất × Công suất đỉnh + Giá điện năng × Sản lượng tiêu thụ' : 'Total Cost = Demand Charge × Peak Demand + Energy Charge × Energy Consumed'}
+                                                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                                                    </div>
+                                                </p>
+
+                                                {/* Tariff rates */}
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    <div className="bg-white rounded-lg p-2 text-center border border-amber-200 shadow-sm relative overflow-visible group cursor-help">
+                                                        <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-44 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                            {lang === 'vi' ? 'Giá công suất hàng tháng, tính theo kW đỉnh đo được' : 'Monthly demand charge based on measured peak kW'}
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
+                                                        <p className="text-[8px] text-amber-600 font-bold uppercase tracking-wider mt-1">{lang === 'vi' ? 'CÔNG SUẤT (Cp)' : 'DEMAND (Cp)'}</p>
+                                                        <p className="text-xs font-black text-amber-900 mt-0.5">{new Intl.NumberFormat().format(TWO_PART_TARIFF[voltageLevel].cp)}</p>
+                                                        <p className="text-[7px] text-amber-500/80 font-medium">đ/kW/{lang === 'vi' ? 'tháng' : 'mo'}</p>
+                                                    </div>
+                                                    <div className="bg-white rounded-lg p-2 text-center border border-slate-200 shadow-sm relative overflow-visible group cursor-help">
+                                                        <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-44 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                            {lang === 'vi' ? 'Giá điện năng khung giờ cao điểm (9:30-11:30, 17:00-20:00)' : 'Energy rate during peak hours (9:30-11:30, 17:00-20:00)'}
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
+                                                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-1">{lang === 'vi' ? 'Đ.NĂNG CAO' : 'PEAK Ca'}</p>
+                                                        <p className="text-xs font-black text-slate-800 mt-0.5">{new Intl.NumberFormat().format(TWO_PART_TARIFF[voltageLevel].peak)}</p>
+                                                        <p className="text-[7px] text-slate-400 font-medium">đ/kWh</p>
+                                                    </div>
+                                                    <div className="bg-white rounded-lg p-2 text-center border border-slate-200 shadow-sm relative overflow-visible group cursor-help">
+                                                        <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-44 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                            {lang === 'vi' ? 'Giá điện năng khung giờ bình thường (còn lại trong ngày)' : 'Energy rate during normal hours (remaining daytime)'}
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
+                                                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-1">{lang === 'vi' ? 'Đ.NĂNG B.THƯỜNG' : 'NORMAL Ca'}</p>
+                                                        <p className="text-xs font-black text-slate-800 mt-0.5">{new Intl.NumberFormat().format(TWO_PART_TARIFF[voltageLevel].normal)}</p>
+                                                        <p className="text-[7px] text-slate-400 font-medium">đ/kWh</p>
+                                                    </div>
+                                                    <div className="bg-white rounded-lg p-2 text-center border border-slate-200 shadow-sm relative overflow-visible group cursor-help">
+                                                        <div className="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-44 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                            {lang === 'vi' ? 'Giá điện năng khung giờ thấp điểm (22:00-4:00)' : 'Energy rate during off-peak hours (22:00-4:00)'}
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
+                                                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-1">{lang === 'vi' ? 'Đ.NĂNG THẤP' : 'OFF.P Ca'}</p>
+                                                        <p className="text-xs font-black text-slate-800 mt-0.5">{new Intl.NumberFormat().format(TWO_PART_TARIFF[voltageLevel].offPeak)}</p>
+                                                        <p className="text-[7px] text-slate-400 font-medium">đ/kWh</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Peak Shaving Results */}
+                                                {peakShavingResult ? (
+                                                    <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-amber-200/50">
+                                                        <div className="bg-white rounded-lg p-2.5 text-center border border-slate-200 shadow-sm group relative cursor-help">
+                                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                                {lang === 'vi' ? 'Công suất tiêu thụ đỉnh (kW) cao nhất đo được từ lưới điện. Đây là giá trị điện lực dùng để tính phí công suất Cp hàng tháng.' : 'Maximum peak demand (kW) measured from the grid. This value is used by the utility to calculate the monthly demand charge Cp.'}
+                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            </div>
+                                                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Pmax {lang === 'vi' ? 'Gốc' : 'Before'}</p>
+                                                            <p className="text-[16px] font-black text-slate-800 leading-tight my-0.5">{peakShavingResult.pmaxBefore}</p>
+                                                            <p className="text-[8px] font-bold text-slate-400">kW</p>
+                                                        </div>
+                                                        <div className="bg-emerald-50 rounded-lg p-2.5 text-center border border-emerald-200 shadow-sm relative group cursor-help">
+                                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                                {lang === 'vi' ? 'Công suất đỉnh sau khi BESS xả điện vào giờ cao điểm để san phẳng phụ tải. BESS dung lượng lớn hơn cắt được nhiều hơn, nhưng hiệu quả kinh tế giảm dần khi đỉnh đã san phẳng.' : 'Peak demand after BESS discharges during peak hours to flatten the load curve. Larger BESS cuts more, but economic efficiency diminishes as the peak flattens.'}
+                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            </div>
+                                                            <div className="absolute -left-2 top-1/2 -translate-y-1/2 text-slate-300">
+                                                                <Zap size={10} className="fill-current" />
+                                                            </div>
+                                                            <p className="text-[8px] text-emerald-700 font-bold uppercase tracking-wider">Pmax {lang === 'vi' ? 'Sau BESS' : 'After BESS'}</p>
+                                                            <p className="text-[16px] font-black text-emerald-600 leading-tight my-0.5">{peakShavingResult.pmaxAfter}</p>
+                                                            <p className="text-[8px] font-bold text-emerald-500 bg-emerald-100/50 rounded inline-block px-1">↓ {peakShavingResult.annualDemandReduction} kW</p>
+                                                        </div>
+                                                        <div className="bg-amber-100/50 rounded-lg p-2.5 text-center border-2 border-amber-300 shadow-sm relative group cursor-help">
+                                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-2 bg-slate-800 text-white text-[9px] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 font-normal normal-case leading-tight text-center">
+                                                                {lang === 'vi' ? 'Tiền tiết kiệm hàng năm từ việc giảm phí công suất. Công thức: (Pmax gốc − Pmax sau BESS) × Cp × 12 tháng. Đây chỉ là phần tiết kiệm Cp, chưa tính tiết kiệm điện năng.' : 'Annual savings from demand charge reduction. Formula: (Pmax before − Pmax after BESS) × Cp × 12 months. This is only the demand charge savings, not including energy savings.'}
+                                                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                                            </div>
+                                                            <div className="absolute -left-2 top-1/2 -translate-y-1/2 text-slate-300">
+                                                                <div className="w-1.5 h-px bg-slate-300"></div>
+                                                            </div>
+                                                            <p className="text-[8px] text-amber-800 font-bold uppercase tracking-wider">{lang === 'vi' ? 'Tiết kiệm Cp/Năm' : 'Demand Save/Yr'}</p>
+                                                            <p className="text-sm font-black text-amber-600 my-0.5">
+                                                                {formatMoney ? formatMoney(peakShavingResult.annualDemandReduction * TWO_PART_TARIFF[voltageLevel].cp * 12) : new Intl.NumberFormat().format(peakShavingResult.annualDemandReduction * TWO_PART_TARIFF[voltageLevel].cp * 12)}
+                                                            </p>
+                                                            <p className="text-[8px] font-bold text-amber-500">VNĐ</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-4 bg-white/50 rounded-lg border border-amber-100 border-dashed">
+                                                        <RefreshCw size={14} className="animate-spin text-amber-400 mx-auto mb-1" />
+                                                        <span className="text-[9px] font-medium text-amber-600">{lang === 'vi' ? 'Hệ thống đang mô phỏng Peak Shaving...' : 'Simulating Peak Shaving...'}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <span className="text-xs font-medium text-slate-600">{dt.grid_charge}</span>
-                        </label>
+                        )}
                     </div>
                 </div>
 
